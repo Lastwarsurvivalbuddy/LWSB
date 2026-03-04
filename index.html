@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Last War: Survival Buddy — Your Personal War Commander</title>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet"/>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script type="text/javascript" src="//s3.amazonaws.com/downloads.mailchimp.com/js/mc-validate.js"></script>
+<script type="text/javascript">(function($) {window.fnames = new Array(); window.ftypes = new Array();fnames[0]='EMAIL';ftypes[0]='email';}(jQuery));var $mcj = jQuery.noConflict(true);</script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -667,15 +670,23 @@
   <!-- SIGN UP BOX -->
   <div class="cta-group">
     <div class="cta-box">
-      <div class="cta-box-label">🎖️ Create Your Commander Profile</div>
-      <input class="cta-input" type="text" placeholder="Commander name or email"/>
-      <input class="cta-input" type="text" placeholder="Server number (e.g. 1032)"/>
-      <input class="cta-input" type="password" placeholder="Create a password"/>
-      <button class="cta-btn">Deploy — Get Started Free →</button>
-      <div class="cta-terms">
-        Free to join. No credit card required.<br/>
-        By signing up you agree to our <a>Terms</a> and <a>Privacy Policy</a>.
-      </div>
+      <div class="cta-box-label">🎖️ Join the Waitlist — Free</div>
+      <form action="https://lastwarsurvivalbuddy.us5.list-manage.com/subscribe/post?u=18c493eb1ee556997ddefe218&amp;id=8c7ab30157&amp;f_id=003021ebf0" method="post" id="mc-embedded-subscribe-form" name="mc-embedded-subscribe-form" target="_blank" novalidate>
+        <input class="cta-input" type="email" name="EMAIL" placeholder="Your email address" required/>
+        <!-- Mailchimp bot protection -->
+        <div style="position:absolute;left:-5000px;" aria-hidden="true">
+          <input type="text" name="b_18c493eb1ee556997ddefe218_8c7ab30157" tabindex="-1" value=""/>
+        </div>
+        <div id="mce-responses">
+          <div id="mce-error-response" style="display:none;color:#ff6b6b;font-size:13px;margin-bottom:8px;"></div>
+          <div id="mce-success-response" style="display:none;color:#30b870;font-size:13px;margin-bottom:8px;"></div>
+        </div>
+        <button type="submit" class="cta-btn">Notify Me When It's Live →</button>
+        <div class="cta-terms">
+          Free to join. No credit card required. No spam — ever.<br/>
+          By signing up you agree to our <a>Terms</a> and <a>Privacy Policy</a>.
+        </div>
+      </form>
     </div>
   </div>
 </section>
@@ -829,7 +840,7 @@
         <div class="learn-step-num">3</div>
         <div class="learn-step-text">
           <strong>Your server gets smarter</strong><br/>
-          Every player on Server 1032 benefits from what you contributed.
+          Every player on your server benefits from what you contributed.
         </div>
       </div>
       <div class="learn-step">
@@ -857,6 +868,9 @@
 
     <!-- Two-col: silhouette + chat -->
     <div style="display:flex;align-items:center;gap:48px;flex-wrap:wrap;">
+    <div style="width:100%;text-align:center;margin-bottom:-32px;">
+      <span style="font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.2em;color:#606878;text-transform:uppercase;background:#0e1014;border:1px solid #222830;border-radius:100px;padding:4px 14px;">— Example Conversation —</span>
+    </div>
 
     <!-- Soldier silhouette -->
     <div style="flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:0;position:relative;user-select:none;">
@@ -917,7 +931,7 @@
       <!-- Rank badge -->
       <div style="margin-top:16px;background:rgba(232,160,32,0.08);border:1px solid rgba(232,160,32,0.25);border-radius:8px;padding:7px 16px;text-align:center;">
         <div style="font-family:'Rajdhani',sans-serif;font-size:9px;letter-spacing:0.2em;color:#e8a020;text-transform:uppercase;margin-bottom:3px;">Commander</div>
-        <div style="font-family:'Oswald',sans-serif;font-size:13px;color:#e8e8e8;font-weight:600;letter-spacing:0.06em;">Server 1032</div>
+        <div style="font-family:'Oswald',sans-serif;font-size:13px;color:#e8e8e8;font-weight:600;letter-spacing:0.06em;">Your Server</div>
         <div style="font-size:10px;color:#606878;margin-top:2px;">Day 500 · HQ 35</div>
       </div>
     </div>
@@ -934,7 +948,7 @@
             Online · Knows your full profile
           </div>
         </div>
-        <div style="margin-left:auto;font-family:'Rajdhani',sans-serif;font-size:10px;color:#606878;letter-spacing:0.1em;text-transform:uppercase;">Server 1032 · Day 500 · HQ 35</div>
+        <div style="margin-left:auto;font-family:'Rajdhani',sans-serif;font-size:10px;color:#606878;letter-spacing:0.1em;text-transform:uppercase;">Your Server · Day 500 · HQ 35</div>
       </div>
 
       <!-- Chat messages -->
@@ -955,7 +969,7 @@
             <div style="font-size:13px;color:#e8e8e8;line-height:1.7;">
               <span style="color:#e8a020;font-weight:700;font-family:'Rajdhani',sans-serif;letter-spacing:0.05em;">YES — strong timing.</span> That pack contains 180 Armament Cores. At your current T11 Weapon branch pace you'll need them in approximately <span style="color:#e8e8e8;font-weight:600;">6–8 days.</span>
               <br/><br/>
-              More importantly: <span style="color:#30b870;font-weight:600;">Kill Event is in 3 days</span> on Server 1032. The troop training speedups in this pack are better used after Day 5 of Alliance Duel for the <span style="color:#e8e8e8;font-weight:600;">4× multiplier</span> — hold those. Use the Cores now.
+              More importantly: <span style="color:#30b870;font-weight:600;">Kill Event is in 3 days</span> on your server. The troop training speedups in this pack are better used after Day 5 of Alliance Duel for the <span style="color:#e8e8e8;font-weight:600;">4× multiplier</span> — hold those. Use the Cores now.
               <br/><br/>
               <span style="color:#8090a0;font-size:12px;">Gap to Rank 15: 1.27M · This pack closes ~0.3M of that.</span>
             </div>
@@ -1007,8 +1021,13 @@
   <h2 class="bottom-cta-title">Stop Guessing.<br/><span>Start Winning.</span></h2>
   <p class="bottom-cta-sub">Free to join. Takes 2 minutes. Your daily action plan awaits.</p>
   <div class="bottom-signup">
-    <input type="email" placeholder="Your email address"/>
-    <button class="bottom-signup-btn">Deploy Now →</button>
+    <form action="https://lastwarsurvivalbuddy.us5.list-manage.com/subscribe/post?u=18c493eb1ee556997ddefe218&amp;id=8c7ab30157&amp;f_id=003021ebf0" method="post" id="mc-embedded-subscribe-form-2" name="mc-embedded-subscribe-form-2" target="_blank" novalidate style="display:flex;gap:10px;flex-wrap:wrap;width:100%;justify-content:center;">
+      <input type="email" name="EMAIL" placeholder="Your email address" required/>
+      <div style="position:absolute;left:-5000px;" aria-hidden="true">
+        <input type="text" name="b_18c493eb1ee556997ddefe218_8c7ab30157" tabindex="-1" value=""/>
+      </div>
+      <button type="submit" class="bottom-signup-btn">Notify Me →</button>
+    </form>
   </div>
 </section>
 
