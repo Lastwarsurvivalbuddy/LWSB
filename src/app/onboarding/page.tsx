@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase =
@@ -22,11 +22,13 @@ const theme = {
   textMuted: '#6b7280',
   textDim: '#9ca3af',
   red: '#ef4444',
+  green: '#22c55e',
 };
 
-const TOTAL_STEPS = 11;
+const TOTAL_STEPS = 12; // Now 12 steps (added Commander Tag)
 
 interface ProfileData {
+  commander_name: string;
   server_number: string | number;
   server_day: string | number;
   hq_level: string | number;
@@ -39,6 +41,8 @@ interface ProfileData {
   total_power: string | number;
   goals: string[];
 }
+
+// ─── SHARED COMPONENTS ────────────────────────────────────────────────────────
 
 function ProgressBar({ step }: { step: number }) {
   const pct = ((step - 1) / (TOTAL_STEPS - 1)) * 100;
@@ -101,7 +105,11 @@ function NavButtons({
       <button
         onClick={onNext}
         disabled={nextDisabled}
-        style={{ ...btnStyle('gold'), flex: 1, opacity: nextDisabled ? 0.4 : 1, cursor: nextDisabled ? 'not-allowed' : 'pointer' }}
+        style={{
+          ...btnStyle('gold'), flex: 1,
+          opacity: nextDisabled ? 0.4 : 1,
+          cursor: nextDisabled ? 'not-allowed' : 'pointer',
+        }}
       >
         {nextLabel}
       </button>
@@ -203,7 +211,7 @@ function NumberInput({ value, onChange, placeholder, min, max }: {
   );
 }
 
-// ─── STEPS ───────────────────────────────────────────────────────────────────
+// ─── STEPS ────────────────────────────────────────────────────────────────────
 
 function Step1_Welcome({ onNext }: { onNext: () => void }) {
   return (
@@ -240,6 +248,160 @@ function Step1_Welcome({ onNext }: { onNext: () => void }) {
   );
 }
 
+// ─── COMMANDER TAG STEP ───────────────────────────────────────────────────────
+
+type TagStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid';
+
+function Step2_CommanderTag({ data, setData, onNext, onBack, step }: StepProps) {
+  const [status, setStatus] = useState<TagStatus>('idle');
+  const [statusMsg, setStatusMsg] = useState('');
+
+  const validate = (val: string): string | null => {
+    if (val.length < 3) return 'Too short — minimum 3 characters';
+    if (val.length > 20) return 'Too long — maximum 20 characters';
+    if (!/^[a-zA-Z0-9_]+$/.test(val)) return 'Letters, numbers, and underscores only — no spaces';
+    return null;
+  };
+
+  const checkAvailability = useCallback(async (val: string) => {
+    const err = validate(val);
+    if (err) {
+      setStatus('invalid');
+      setStatusMsg(err);
+      return;
+    }
+    if (!supabase) return;
+    setStatus('checking');
+    setStatusMsg('Checking availability...');
+    try {
+      const { data: existing } = await supabase
+        .from('profiles')
+        .select('id')
+        .ilike('commander_name', val)
+        .limit(1);
+      if (existing && existing.length > 0) {
+        setStatus('taken');
+        setStatusMsg('That tag is already taken — try another');
+      } else {
+        setStatus('available');
+        setStatusMsg('✓ Available!');
+      }
+    } catch {
+      setStatus('idle');
+      setStatusMsg('');
+    }
+  }, []);
+
+  // Debounce the availability check
+  useEffect(() => {
+    if (!data.commander_name || data.commander_name.length < 3) {
+      if (data.commander_name && data.commander_name.length > 0) {
+        const err = validate(data.commander_name);
+        if (err) { setStatus('invalid'); setStatusMsg(err); }
+      } else {
+        setStatus('idle'); setStatusMsg('');
+      }
+      return;
+    }
+    const timer = setTimeout(() => checkAvailability(data.commander_name), 500);
+    return () => clearTimeout(timer);
+  }, [data.commander_name, checkAvailability]);
+
+  const statusColor =
+    status === 'available' ? theme.green :
+    status === 'taken' || status === 'invalid' ? theme.red :
+    theme.textMuted;
+
+  const canContinue = status === 'available';
+
+  return (
+    <div>
+      <StepTitle
+        title="Choose your Commander Tag"
+        subtitle="This is your identity in the app — use your in-game name or gaming tag."
+      />
+
+      {/* Preview */}
+      {data.commander_name && status === 'available' && (
+        <div style={{
+          textAlign: 'center', padding: '16px', marginBottom: 20,
+          background: `${theme.gold}10`, border: `1px solid ${theme.goldDim}`,
+          borderRadius: 10,
+        }}>
+          <p style={{ color: theme.textMuted, fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 4 }}>
+            You'll appear as
+          </p>
+          <p style={{ fontFamily: '"Rajdhani", "Oswald", sans-serif', fontSize: 22, fontWeight: 700, color: theme.gold, letterSpacing: '0.04em' }}>
+            Commander {data.commander_name}
+          </p>
+        </div>
+      )}
+
+      {/* Input */}
+      <div style={{ position: 'relative' }}>
+        <input
+          type="text"
+          value={data.commander_name}
+          onChange={e => {
+            const val = e.target.value.replace(/\s/g, ''); // no spaces
+            setData({ ...data, commander_name: val });
+          }}
+          placeholder="e.g. IronWolf_1032"
+          maxLength={20}
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
+          style={{
+            width: '100%', padding: '14px 16px', background: theme.surface,
+            border: `1px solid ${
+              status === 'available' ? theme.green :
+              status === 'taken' || status === 'invalid' ? theme.red :
+              theme.border
+            }`,
+            borderRadius: 8, color: theme.text,
+            fontSize: 18, fontFamily: '"Rajdhani", "Oswald", sans-serif',
+            fontWeight: 600, letterSpacing: '0.05em', outline: 'none',
+            boxSizing: 'border-box', transition: 'border-color 0.15s',
+          }}
+        />
+        {/* Character count */}
+        <span style={{
+          position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)',
+          fontSize: 11, color: theme.textMuted,
+        }}>
+          {(data.commander_name || '').length}/20
+        </span>
+      </div>
+
+      {/* Status message */}
+      {statusMsg && (
+        <p style={{ color: statusColor, fontSize: 13, marginTop: 8, minHeight: 20 }}>
+          {status === 'checking' ? '⏳ ' : ''}{statusMsg}
+        </p>
+      )}
+
+      {/* Rules */}
+      <div style={{ marginTop: 16, padding: '12px 14px', background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 8 }}>
+        {[
+          '3–20 characters',
+          'Letters, numbers, and underscores only',
+          'No spaces — use underscores instead',
+          'Must be unique across all commanders',
+        ].map(rule => (
+          <div key={rule} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+            <span style={{ color: theme.goldDim, fontSize: 12 }}>—</span>
+            <span style={{ color: theme.textMuted, fontSize: 12 }}>{rule}</span>
+          </div>
+        ))}
+      </div>
+
+      <NavButtons step={step} onBack={onBack} onNext={onNext} nextDisabled={!canContinue} />
+    </div>
+  );
+}
+
+// ─── REMAINING STEPS ──────────────────────────────────────────────────────────
+
 interface StepProps {
   data: ProfileData;
   setData: (d: ProfileData) => void;
@@ -248,7 +410,7 @@ interface StepProps {
   step: number;
 }
 
-function Step2_Server({ data, setData, onNext, onBack, step }: StepProps) {
+function Step3_Server({ data, setData, onNext, onBack, step }: StepProps) {
   const valid = data.server_number && parseInt(String(data.server_number)) > 0;
   return (
     <div>
@@ -262,7 +424,7 @@ function Step2_Server({ data, setData, onNext, onBack, step }: StepProps) {
   );
 }
 
-function Step3_ServerDay({ data, setData, onNext, onBack, step }: StepProps) {
+function Step4_ServerDay({ data, setData, onNext, onBack, step }: StepProps) {
   const valid = data.server_day && parseInt(String(data.server_day)) > 0;
   return (
     <div>
@@ -276,7 +438,7 @@ function Step3_ServerDay({ data, setData, onNext, onBack, step }: StepProps) {
   );
 }
 
-function Step4_HQ({ data, setData, onNext, onBack, step }: StepProps) {
+function Step5_HQ({ data, setData, onNext, onBack, step }: StepProps) {
   const valid = data.hq_level && parseInt(String(data.hq_level)) >= 1 && parseInt(String(data.hq_level)) <= 40;
   return (
     <div>
@@ -301,7 +463,7 @@ function Step4_HQ({ data, setData, onNext, onBack, step }: StepProps) {
   );
 }
 
-function Step5_SpendTier({ data, setData, onNext, onBack, step }: StepProps) {
+function Step6_SpendTier({ data, setData, onNext, onBack, step }: StepProps) {
   const options = [
     { value: 'f2p', label: 'Free to Play', sublabel: 'No real money spent', icon: '🆓' },
     { value: 'budget', label: 'Budget', sublabel: 'Occasional small packs (<$20/mo)', icon: '💵' },
@@ -321,12 +483,12 @@ function Step5_SpendTier({ data, setData, onNext, onBack, step }: StepProps) {
   );
 }
 
-function Step6_Playstyle({ data, setData, onNext, onBack, step }: StepProps) {
+function Step7_Playstyle({ data, setData, onNext, onBack, step }: StepProps) {
   const options = [
     { value: 'fighter', label: 'Player vs. Player', sublabel: 'Kill events, rallies, war — you live for combat', icon: '⚔️' },
     { value: 'developer', label: 'Player vs. Event', sublabel: 'Alliance Duel, Arms Race, Zombie Siege — max efficiency', icon: '🎯' },
     { value: 'commander', label: '50/50 Commander', sublabel: 'You do both and optimize everything', icon: '⚖️' },
-    { value: 'scout', label: 'Still Figuring It Out', sublabel: "New to the meta, learning the ropes", icon: '🗺️' },
+    { value: 'scout', label: 'Still Figuring It Out', sublabel: 'New to the meta, learning the ropes', icon: '🗺️' },
   ];
   return (
     <div>
@@ -339,7 +501,7 @@ function Step6_Playstyle({ data, setData, onNext, onBack, step }: StepProps) {
   );
 }
 
-function Step7_TroopType({ data, setData, onNext, onBack, step }: StepProps) {
+function Step8_TroopType({ data, setData, onNext, onBack, step }: StepProps) {
   const options = [
     { value: 'aircraft', label: 'Aircraft', icon: '✈️' },
     { value: 'tank', label: 'Tank', icon: '🛡️' },
@@ -357,7 +519,7 @@ function Step7_TroopType({ data, setData, onNext, onBack, step }: StepProps) {
   );
 }
 
-function Step8_TroopTier({ data, setData, onNext, onBack, step }: StepProps) {
+function Step9_TroopTier({ data, setData, onNext, onBack, step }: StepProps) {
   const options = [
     { value: 't8', label: 'T8' },
     { value: 't9', label: 'T9' },
@@ -377,7 +539,7 @@ function Step8_TroopTier({ data, setData, onNext, onBack, step }: StepProps) {
   );
 }
 
-function Step9_Rank({ data, setData, onNext, onBack, step }: StepProps) {
+function Step10_Rank({ data, setData, onNext, onBack, step }: StepProps) {
   const options = [
     { value: 'top_5', label: 'Top 5', sublabel: 'Elite — server anchor', icon: '🥇' },
     { value: 'top_10', label: 'Top 6–10', sublabel: 'Dominant force', icon: '🥈' },
@@ -397,7 +559,7 @@ function Step9_Rank({ data, setData, onNext, onBack, step }: StepProps) {
   );
 }
 
-function Step10_Power({ data, setData, onNext, onBack, step }: StepProps) {
+function Step11_Power({ data, setData, onNext, onBack, step }: StepProps) {
   const formatPower = (val: string | number) => {
     if (!val) return '';
     const n = parseInt(String(val).replace(/,/g, ''));
@@ -437,21 +599,27 @@ function Step10_Power({ data, setData, onNext, onBack, step }: StepProps) {
   );
 }
 
-function Step11_Goals({ data, setData, onNext, onBack, step }: StepProps) {
-  const options = [
+function Step12_Goals({ data, setData, onNext, onBack, step }: StepProps) {
+  const allOptions = [
     { value: 'crack_top10', label: 'Crack Top 10', icon: '🏆' },
-    { value: 'unlock_t10', label: 'Unlock T10', icon: '🔓' },
-    { value: 'finish_t11', label: 'Finish T11', icon: '⚙️' },
+    { value: 'unlock_t10', label: 'Unlock T10', icon: '🔓', tiers: ['t8', 't9'] },
+    { value: 'unlock_t11', label: 'Unlock T11', icon: '⚙️', tiers: ['t10_working', 't10_unlocked'] },
+    { value: 'finish_t11', label: 'Finish T11', icon: '✅', tiers: ['t11'] },
     { value: 'max_hero_power', label: 'Max Hero Power', icon: '💪' },
     { value: 'prep_season5', label: 'Prep for Season 5', icon: '🗺️' },
     { value: 'dominate_alliance_war', label: 'Dominate Alliance War', icon: '⚔️' },
     { value: 'spend_smarter', label: 'Spend Smarter', icon: '💰' },
   ];
+
+  // Filter goals by troop tier where relevant
+  const options = allOptions.filter(o => !o.tiers || o.tiers.includes(data.troop_tier));
+
   const toggle = (val: string) => {
     const current = data.goals || [];
     const updated = current.includes(val) ? current.filter(g => g !== val) : [...current, val];
     setData({ ...data, goals: updated });
   };
+
   return (
     <div>
       <StepTitle title="What are your goals?" subtitle="Pick everything that applies — Buddy will prioritize around these." />
@@ -468,10 +636,19 @@ function Step11_Goals({ data, setData, onNext, onBack, step }: StepProps) {
 }
 
 function StepComplete({ data, onDone }: { data: ProfileData; onDone: () => void }) {
-  const tierLabels: Record<string, string> = { f2p: 'Free to Play', budget: 'Budget', moderate: 'Moderate', investor: 'Investor', whale: 'Whale', mega_whale: 'Mega Whale' };
-  const playstyleLabels: Record<string, string> = { fighter: '⚔️ Fighter', developer: '🎯 Developer', commander: '⚖️ Commander', scout: '🗺️ Scout' };
-  const troopLabels: Record<string, string> = { aircraft: '✈️ Aircraft', tank: '🛡️ Tank', missile: '🚀 Missile', mixed: '⚖️ Mixed' };
+  const tierLabels: Record<string, string> = {
+    f2p: 'Free to Play', budget: 'Budget', moderate: 'Moderate',
+    investor: 'Investor', whale: 'Whale', mega_whale: 'Mega Whale',
+  };
+  const playstyleLabels: Record<string, string> = {
+    fighter: '⚔️ Fighter', developer: '🎯 Developer',
+    commander: '⚖️ Commander', scout: '🗺️ Scout',
+  };
+  const troopLabels: Record<string, string> = {
+    aircraft: '✈️ Aircraft', tank: '🛡️ Tank', missile: '🚀 Missile', mixed: '⚖️ Mixed',
+  };
   const stats: [string, string][] = [
+    ['Commander', data.commander_name],
     ['Server', `#${data.server_number} · Day ${data.server_day}`],
     ['HQ Level', String(data.hq_level)],
     ['Spend Tier', tierLabels[data.spend_tier]],
@@ -487,14 +664,14 @@ function StepComplete({ data, onDone }: { data: ProfileData; onDone: () => void 
           COMMANDER PROFILE COMPLETE
         </h2>
         <p style={{ color: theme.textMuted, fontSize: 14, marginTop: 8 }}>
-          Buddy is ready to build your daily action plan.
+          Welcome, Commander {data.commander_name}. Buddy is ready.
         </p>
       </div>
       <div style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: 20, marginBottom: 24 }}>
         {stats.map(([label, val]) => val && (
           <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: `1px solid ${theme.border}` }}>
             <span style={{ color: theme.textMuted, fontSize: 13 }}>{label}</span>
-            <span style={{ color: theme.text, fontWeight: 600, fontSize: 14, fontFamily: '"Rajdhani", "Oswald", sans-serif' }}>{val}</span>
+            <span style={{ color: label === 'Commander' ? theme.gold : theme.text, fontWeight: 600, fontSize: 14, fontFamily: '"Rajdhani", "Oswald", sans-serif' }}>{val}</span>
           </div>
         ))}
         {(data.goals || []).length > 0 && (
@@ -524,20 +701,40 @@ export default function OnboardingFlow() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<ProfileData>({
+    commander_name: '',
     server_number: '', server_day: '', hq_level: '',
     spend_tier: '', playstyle: '', troop_type: '',
     troop_tier: '', server_rank: '', hero_power: '',
     total_power: '', goals: [],
   });
 
+  // Load existing profile on mount and resume from last step
   useEffect(() => {
     async function loadProfile() {
       if (!supabase) return;
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
       if (profile && !profile.onboarding_complete) {
-        setData(prev => ({ ...prev, ...profile, goals: profile.goals || [] }));
+        setData(prev => ({
+          ...prev,
+          commander_name: profile.commander_name || '',
+          server_number: profile.server_number || '',
+          server_day: profile.server_day || '',
+          hq_level: profile.hq_level || '',
+          spend_tier: profile.spend_tier || '',
+          playstyle: profile.playstyle || '',
+          troop_type: profile.troop_type || '',
+          troop_tier: profile.troop_tier || '',
+          server_rank: profile.server_rank || '',
+          hero_power: profile.hero_power || '',
+          total_power: profile.total_power || '',
+          goals: profile.goals || [],
+        }));
         if (profile.onboarding_step > 1) setStep(profile.onboarding_step);
       }
     }
@@ -552,6 +749,7 @@ export default function OnboardingFlow() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not logged in');
       const { error: upsertError } = await supabase.from('profiles').update({
+        commander_name: data.commander_name || null,
         server_number: parseInt(String(data.server_number)) || 0,
         server_day: parseInt(String(data.server_day)) || 0,
         hq_level: parseInt(String(data.hq_level)) || 1,
@@ -602,6 +800,8 @@ export default function OnboardingFlow() {
       `}</style>
       <div style={{ minHeight: '100vh', background: theme.bg, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '24px 16px 60px' }}>
         <div style={{ width: '100%', maxWidth: 480 }}>
+
+          {/* Header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
             <span style={{ fontFamily: '"Rajdhani", "Oswald", sans-serif', fontSize: 13, fontWeight: 700, color: theme.gold, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
               LWSB
@@ -622,17 +822,19 @@ export default function OnboardingFlow() {
           {saving && <div style={{ color: theme.goldDim, fontSize: 12, textAlign: 'right', marginBottom: 8 }}>Saving...</div>}
 
           {step === 1  && <Step1_Welcome onNext={advance} />}
-          {step === 2  && <Step2_Server {...stepProps} />}
-          {step === 3  && <Step3_ServerDay {...stepProps} />}
-          {step === 4  && <Step4_HQ {...stepProps} />}
-          {step === 5  && <Step5_SpendTier {...stepProps} />}
-          {step === 6  && <Step6_Playstyle {...stepProps} />}
-          {step === 7  && <Step7_TroopType {...stepProps} />}
-          {step === 8  && <Step8_TroopTier {...stepProps} />}
-          {step === 9  && <Step9_Rank {...stepProps} />}
-          {step === 10 && <Step10_Power {...stepProps} />}
-          {step === 11 && <Step11_Goals {...stepProps} />}
-          {step === 12 && <StepComplete data={data} onDone={complete} />}
+          {step === 2  && <Step2_CommanderTag {...stepProps} />}
+          {step === 3  && <Step3_Server {...stepProps} />}
+          {step === 4  && <Step4_ServerDay {...stepProps} />}
+          {step === 5  && <Step5_HQ {...stepProps} />}
+          {step === 6  && <Step6_SpendTier {...stepProps} />}
+          {step === 7  && <Step7_Playstyle {...stepProps} />}
+          {step === 8  && <Step8_TroopType {...stepProps} />}
+          {step === 9  && <Step9_TroopTier {...stepProps} />}
+          {step === 10 && <Step10_Rank {...stepProps} />}
+          {step === 11 && <Step11_Power {...stepProps} />}
+          {step === 12 && <Step12_Goals {...stepProps} />}
+          {step === 13 && <StepComplete data={data} onDone={complete} />}
+
         </div>
       </div>
     </>
