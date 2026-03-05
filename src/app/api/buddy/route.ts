@@ -4,7 +4,23 @@ import { createClient } from '@supabase/supabase-js';
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 const MODEL = 'claude-sonnet-4-20250514';
 const MAX_TOKENS = 1024;
-const FREE_QUESTION_LIMIT = 5;
+
+// ─── TIERED LIMITS ────────────────────────────────────────────────────────────
+// text_limit: max text questions per day
+// screenshot_limit: max screenshot questions per day (subset of text_limit)
+
+const TIER_LIMITS: Record<string, { text: number; screenshots: number }> = {
+  free:             { text: 5,   screenshots: 0  },
+  pro:              { text: 30,  screenshots: 10 },
+  elite:            { text: 100, screenshots: 20 },
+  founding:         { text: 20,  screenshots: 5  },
+  alliance_premium: { text: 100, screenshots: 20 },
+};
+
+const UPGRADE_MESSAGE = `You've hit your daily limit. Upgrade to keep going:
+• Pro — $9.99/mo — 30 questions + 10 screenshots/day
+• Elite — $19.99/mo — 100 questions + 20 screenshots/day
+• Founding Member — $99 lifetime Elite access (limited spots)`;
 
 // ─── SYSTEM PROMPT BUILDER ────────────────────────────────────────────────────
 
@@ -31,7 +47,7 @@ function buildSystemPrompt(profile: Record<string, unknown>): string {
     top_50: 'Top 50', top_100: 'Top 100', still_building: 'Still Building',
   };
 
-  // Alliance Duel current day (same logic as dashboard)
+  // Alliance Duel current day
   const now = new Date();
   const year = now.getUTCFullYear();
   const dstStart = new Date(Date.UTC(year, 2, 8));
@@ -55,7 +71,7 @@ function buildSystemPrompt(profile: Record<string, unknown>): string {
   };
 
   const goals = (profile.goals as string[] || [])
-    .map(g => g.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()))
+    .map(g => (g as string).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()))
     .join(', ') || 'None set';
 
   return `You are Buddy, the AI coach inside Last War: Survival Buddy — a personalized coaching app for the mobile game Last War: Survival.
@@ -94,7 +110,7 @@ DEFENSE: Squads engage sequentially by position (1→2→3→4). Position order 
 ALLIANCE DUEL CYCLE (weekly, resets 8pm CT):
 - Day 1: Drones — 1 point (lowest)
 - Day 2: Building — 2 points
-- Day 3: Research — 2 points  
+- Day 3: Research — 2 points
 - Day 4: Heroes — 2 points
 - Day 5: Training — 2 points
 - Day 6: Enemy Buster — 4 points (HIGHEST — vs opponent server)
@@ -105,7 +121,7 @@ ARMS RACE: Daily event. Double-dipping with Alliance Duel is the highest efficie
 T10 TRACK: HQ 16–30, Seasons 1–3.
 T11 TRACK: HQ 31–35, Season 4+. Uses Armament Research system.
 
-HOT DEALS: Pack ROI depends on contents, current bottleneck, upcoming events, and spend tier. Always factor in the player's spend tier before recommending a purchase.
+HOT DEALS: Pack ROI depends on contents, current bottleneck, upcoming events, and spend tier. Always factor in the player's spend tier before recommending a purchase. If the player uploads a screenshot of a pack, analyze the contents and give a specific yes/no recommendation.
 
 ═══════════════════════════════════════
 RESPONSE RULES
@@ -115,7 +131,7 @@ RESPONSE RULES
 3. Use numbered lists for action items. Keep them scannable.
 4. If you don't have enough info to answer well, ask one clarifying question.
 5. Keep responses concise — this is a mobile app. Aim for under 200 words unless depth is genuinely needed.
-6. Use "Commander [name]" sparingly — once per response max to keep it personal without being annoying.
+6. Use "Commander [name]" sparingly — once per response max.
 7. Never recommend spending above the player's stated spend tier.
 8. You are NOT a generic AI assistant. You are Buddy — their personal Last War coach.`;
 }
@@ -124,17 +140,16 @@ RESPONSE RULES
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, sessionId } = await req.json();
+    const { messages, sessionId, hasScreenshot } = await req.json();
 
-    // Auth via Supabase
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
+    // Auth
     const authHeader = req.headers.get('authorization');
     if (!authHeader) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -145,25 +160,45 @@ export async function POST(req: NextRequest) {
       .select('*')
       .eq('id', user.id)
       .single();
-
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
 
-    // Check daily usage (free tier gate)
+    // Get tier limits
+    const subTier = (profile.subscription_tier as string) || 'free';
+    const limits = TIER_LIMITS[subTier] || TIER_LIMITS.free;
+
+    // Check daily usage
     const today = new Date().toISOString().split('T')[0];
     const { data: usage } = await supabase
       .from('daily_usage')
-      .select('question_count')
+      .select('question_count, screenshot_count')
       .eq('user_id', user.id)
       .eq('usage_date', today)
       .single();
 
     const questionCount = usage?.question_count || 0;
-    const isFree = profile.subscription_tier === 'free' || !profile.subscription_tier;
+    const screenshotCount = usage?.screenshot_count || 0;
 
-    if (isFree && questionCount >= FREE_QUESTION_LIMIT) {
+    // Check screenshot access
+    if (hasScreenshot && limits.screenshots === 0) {
       return NextResponse.json({
         error: 'limit_reached',
-        message: `You've used your ${FREE_QUESTION_LIMIT} free questions today. Upgrade to Pro for unlimited Buddy access — $4.99/mo, or grab a Founding Member spot while they last — $59 lifetime.`,
+        message: 'Screenshot analysis is available on Pro and above. Upgrade to Pro ($9.99/mo) to unlock pack analysis and screenshot questions.',
+      }, { status: 429 });
+    }
+
+    // Check screenshot daily limit
+    if (hasScreenshot && screenshotCount >= limits.screenshots) {
+      return NextResponse.json({
+        error: 'limit_reached',
+        message: `You've used your ${limits.screenshots} screenshot questions for today. Resets at midnight. Upgrade to Elite for 20 screenshots/day.`,
+      }, { status: 429 });
+    }
+
+    // Check question daily limit
+    if (questionCount >= limits.text) {
+      return NextResponse.json({
+        error: 'limit_reached',
+        message: UPGRADE_MESSAGE,
       }, { status: 429 });
     }
 
@@ -179,7 +214,7 @@ export async function POST(req: NextRequest) {
         model: MODEL,
         max_tokens: MAX_TOKENS,
         system: buildSystemPrompt(profile),
-        messages: messages.map((m: { role: string; content: string }) => ({
+        messages: messages.map((m: { role: string; content: unknown }) => ({
           role: m.role,
           content: m.content,
         })),
@@ -195,14 +230,15 @@ export async function POST(req: NextRequest) {
     const claudeData = await claudeRes.json();
     const reply = claudeData.content?.[0]?.text || '';
 
-    // Increment daily usage
+    // Increment usage
     await supabase.from('daily_usage').upsert({
       user_id: user.id,
       usage_date: today,
       question_count: questionCount + 1,
+      screenshot_count: hasScreenshot ? screenshotCount + 1 : screenshotCount,
     }, { onConflict: 'user_id,usage_date' });
 
-    // Save messages to chat history
+    // Save to chat history
     if (sessionId) {
       const lastUserMessage = messages[messages.length - 1];
       await supabase.from('chat_messages').insert([
@@ -210,7 +246,9 @@ export async function POST(req: NextRequest) {
           session_id: sessionId,
           user_id: user.id,
           role: 'user',
-          content: lastUserMessage.content,
+          content: typeof lastUserMessage.content === 'string'
+            ? lastUserMessage.content
+            : '[screenshot question]',
         },
         {
           session_id: sessionId,
@@ -219,18 +257,19 @@ export async function POST(req: NextRequest) {
           content: reply,
         },
       ]);
-
-      // Update session timestamp
       await supabase
         .from('chat_sessions')
         .update({ updated_at: new Date().toISOString() })
         .eq('id', sessionId);
     }
 
+    const remaining = limits.text - questionCount - 1;
+    const isFree = subTier === 'free';
+
     return NextResponse.json({
       reply,
       questionsUsed: questionCount + 1,
-      questionsRemaining: isFree ? Math.max(0, FREE_QUESTION_LIMIT - questionCount - 1) : null,
+      questionsRemaining: isFree ? Math.max(0, remaining) : null,
     });
 
   } catch (err) {
