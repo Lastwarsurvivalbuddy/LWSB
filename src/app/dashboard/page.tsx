@@ -503,7 +503,7 @@ export default function Dashboard() {
           position: 'fixed', bottom: 24, right: 20, zIndex: 100,
         }}>
           <button
-            onClick={() => alert('Buddy AI — coming soon!')}
+            onClick={() => router.push('/buddy')}
             style={{
               width: 58, height: 58, borderRadius: '50%',
               background: `linear-gradient(135deg, ${t.red}, ${t.gold})`,
