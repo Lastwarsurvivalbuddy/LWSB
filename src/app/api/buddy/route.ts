@@ -256,7 +256,7 @@ Keep responses concise, specific, and tactical. No fluff.`;
   }
 
   const duelLabels: Record<number, string> = {
-    1: 'Day 1 — Drones (1pt). Lowest value day. Use it for housekeeping, don't burn big speedups.',
+    1: "Day 1 — Drones (1pt). Lowest value day. Use it for housekeeping, don't burn big speedups.",
     2: 'Day 2 — Building (2pts). Upgrade buildings. Double-dip: Building upgrades score Arms Race too.',
     3: 'Day 3 — Research (2pts). Run research. Double-dip: Research scores Arms Race too.',
     4: 'Day 4 — Heroes (2pts). Level up heroes. Double-dip: Hero XP scores Arms Race too.',

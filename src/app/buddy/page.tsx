@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase';
+import supabase from '@/lib/supabase';
 
 interface Message {
   id: string;
@@ -22,7 +22,7 @@ const SUGGESTED_PROMPTS = [
 
 export default function BuddyPage() {
   const router = useRouter();
-  const supabase = createClient();
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
