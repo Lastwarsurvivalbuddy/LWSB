@@ -341,9 +341,9 @@ function Step6_Playstyle({ data, setData, onNext, onBack, step }: StepProps) {
 
 function Step7_TroopType({ data, setData, onNext, onBack, step }: StepProps) {
   const options = [
-    { value: 'aircraft', label: 'Aircraft', sublabel: 'Beats Infantry — high mobility', icon: '✈️' },
-    { value: 'tank', label: 'Tank', sublabel: 'Beats Aircraft — heavy armor', icon: '🛡️' },
-    { value: 'missile', label: 'Missile Vehicle', sublabel: 'Counters all types — lower sustained power', icon: '🚀' },
+    { value: 'aircraft', label: 'Aircraft', icon: '✈️' },
+    { value: 'tank', label: 'Tank', icon: '🛡️' },
+    { value: 'missile', label: 'Missile Vehicle', icon: '🚀' },
     { value: 'mixed', label: 'Mixed', sublabel: "Haven't specialized yet", icon: '⚖️' },
   ];
   return (
@@ -359,12 +359,12 @@ function Step7_TroopType({ data, setData, onNext, onBack, step }: StepProps) {
 
 function Step8_TroopTier({ data, setData, onNext, onBack, step }: StepProps) {
   const options = [
-    { value: 't8', label: 'T8', sublabel: 'HQ 8–12 range' },
-    { value: 't9', label: 'T9', sublabel: 'HQ 12–16 range' },
-    { value: 't10_working', label: 'T10 — Working Towards It', sublabel: 'HQ 16–29, not yet unlocked' },
-    { value: 't10_unlocked', label: 'T10 — Unlocked ✓', sublabel: 'Training T10 troops now' },
-    { value: 't11', label: 'T11', sublabel: 'HQ 31–35, Season 4+' },
-    { value: 't12', label: 'T12', sublabel: 'Endgame tier' },
+    { value: 't8', label: 'T8' },
+    { value: 't9', label: 'T9' },
+    { value: 't10_working', label: 'T10 — Working Towards It', sublabel: 'Not yet unlocked' },
+    { value: 't10_unlocked', label: 'T10 — Unlocked', sublabel: 'Training T10 troops now' },
+    { value: 't11', label: 'T11' },
+    { value: 't12', label: 'T12' },
   ];
   return (
     <div>
