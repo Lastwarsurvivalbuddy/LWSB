@@ -1,4 +1,4 @@
-  'use client';
+'use client';
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -14,7 +14,8 @@ export default function Home() {
 
     if (hash || params.get('code') || params.get('token_hash')) {
       // Let Supabase process the session from the URL
-      supabase.auth.getSession().then(({ data: { session } }) => {
+      supabase.auth.getSession().then(({ data }: { data: { session: import('@supabase/supabase-js').Session | null } }) => {
+        const session = data.session;
         if (session) {
           router.push('/dashboard');
         } else {
@@ -45,4 +46,3 @@ export default function Home() {
     </main>
   );
 }
-
