@@ -88,6 +88,19 @@ function StepTitle({ title, subtitle }: { title: string; subtitle?: string }) {
   );
 }
 
+function HintBox({ text }: { text: string }) {
+  return (
+    <div style={{
+      display: 'flex', gap: 10, alignItems: 'flex-start',
+      background: `${theme.gold}10`, border: `1px solid ${theme.goldDim}`,
+      borderRadius: 8, padding: '10px 14px', marginTop: 12, marginBottom: 4,
+    }}>
+      <span style={{ fontSize: 16 }}>💡</span>
+      <span style={{ color: theme.goldDim, fontSize: 13, lineHeight: 1.5 }}>{text}</span>
+    </div>
+  );
+}
+
 function NavButtons({
   onBack, onNext, nextLabel = 'Continue', nextDisabled = false, step
 }: {
@@ -428,11 +441,9 @@ function Step4_ServerDay({ data, setData, onNext, onBack, step }: StepProps) {
   const valid = data.server_day && parseInt(String(data.server_day)) > 0;
   return (
     <div>
-      <StepTitle title="What day is your server on?" subtitle="Check the Arms Race screen or your alliance info panel." />
+      <StepTitle title="What day is your server on?" subtitle="This tells us which events are active and what's coming up." />
       <NumberInput value={data.server_day} onChange={v => setData({ ...data, server_day: v })} placeholder="e.g. 502" min={1} />
-      <p style={{ color: theme.textMuted, fontSize: 12, marginTop: 10 }}>
-        Server day determines which events are active and what's coming up.
-      </p>
+      <HintBox text="Tap the VIP emblem at the top of your base screen. The number of days shown is your server day." />
       <NavButtons step={step} onBack={onBack} onNext={onNext} nextDisabled={!valid} />
     </div>
   );
@@ -521,6 +532,7 @@ function Step8_TroopType({ data, setData, onNext, onBack, step }: StepProps) {
 
 function Step9_TroopTier({ data, setData, onNext, onBack, step }: StepProps) {
   const options = [
+    { value: 'below_t8', label: 'Below T8 / Just Starting', sublabel: 'Still building up early troops' },
     { value: 't8', label: 'T8' },
     { value: 't9', label: 'T9' },
     { value: 't10_working', label: 'T10 — Working Towards It', sublabel: 'Not yet unlocked' },
@@ -550,7 +562,10 @@ function Step10_Rank({ data, setData, onNext, onBack, step }: StepProps) {
   ];
   return (
     <div>
-      <StepTitle title="What's your server rank?" subtitle="Check the leaderboard — top right of your map screen." />
+      <StepTitle
+        title="What is your total hero power rank on your server?"
+        subtitle="Find this in Rankings → Total Hero Power."
+      />
       {options.map(o => (
         <OptionCard key={o.value} {...o} selected={data.server_rank === o.value} onClick={() => setData({ ...data, server_rank: o.value })} />
       ))}
@@ -573,7 +588,7 @@ function Step11_Power({ data, setData, onNext, onBack, step }: StepProps) {
       <StepTitle title="What's your power?" subtitle="Open your profile in-game to check. Enter raw numbers — no commas needed." />
       {[
         { key: 'hero_power' as keyof ProfileData, label: 'Hero Power', placeholder: 'e.g. 178500000' },
-        { key: 'total_power' as keyof ProfileData, label: 'Total Power', placeholder: 'e.g. 450000000' },
+        { key: 'total_power' as keyof ProfileData, label: 'Total Individual Power', placeholder: 'e.g. 450000000' },
       ].map(f => (
         <div key={f.key} style={{ marginBottom: 16 }}>
           <label style={{ display: 'block', color: theme.textDim, fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>
@@ -602,7 +617,7 @@ function Step11_Power({ data, setData, onNext, onBack, step }: StepProps) {
 function Step12_Goals({ data, setData, onNext, onBack, step }: StepProps) {
   const allOptions = [
     { value: 'crack_top10', label: 'Crack Top 10', icon: '🏆' },
-    { value: 'unlock_t10', label: 'Unlock T10', icon: '🔓', tiers: ['t8', 't9'] },
+    { value: 'unlock_t10', label: 'Unlock T10', icon: '🔓', tiers: ['below_t8', 't8', 't9'] },
     { value: 'unlock_t11', label: 'Unlock T11', icon: '⚙️', tiers: ['t10_working', 't10_unlocked'] },
     { value: 'finish_t11', label: 'Finish T11', icon: '✅', tiers: ['t11'] },
     { value: 'max_hero_power', label: 'Max Hero Power', icon: '💪' },
@@ -756,7 +771,7 @@ export default function OnboardingFlow() {
         spend_tier: data.spend_tier || 'f2p',
         playstyle: data.playstyle || 'scout',
         troop_type: data.troop_type || 'mixed',
-        troop_tier: data.troop_tier || 't8',
+        troop_tier: data.troop_tier || 'below_t8',
         server_rank: data.server_rank || 'still_building',
         hero_power: data.hero_power ? parseInt(String(data.hero_power)) : null,
         total_power: data.total_power ? parseInt(String(data.total_power)) : null,
