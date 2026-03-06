@@ -1,532 +1,294 @@
-'use client';
+'use client'
 
-import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
+import DailyActionPlan from '@/components/DailyActionPlan'
 
-const supabase =
-  typeof window !== 'undefined'
-    ? createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      )
-    : null;
-
-// ─── THEME ────────────────────────────────────────────────────────────────────
-const t = {
-  bg: '#07080a',
-  surface: '#0e1014',
-  surfaceRaised: '#13161b',
-  border: '#1e2229',
-  borderHover: '#2a3040',
-  gold: '#c9a84c',
-  goldLight: '#e8c96a',
-  goldDim: '#7a6030',
-  goldFaint: '#c9a84c18',
-  red: '#c0281a',
-  text: '#e8e6e0',
-  textMuted: '#606878',
-  textDim: '#9ca3af',
-  green: '#22c55e',
-  greenFaint: '#22c55e15',
-};
-
-// ─── TYPES ────────────────────────────────────────────────────────────────────
 interface Profile {
-  id: string;
-  commander_name: string | null;
-  server_number: number;
-  server_day: number;
-  hq_level: number;
-  spend_tier: string;
-  playstyle: string;
-  troop_type: string;
-  troop_tier: string;
-  server_rank: string;
-  hero_power: number | null;
-  total_power: number | null;
-  goals: string[];
-  onboarding_complete: boolean;
+  id: string
+  commander_name: string
+  hq_level: number
+  troop_tier: string
+  troop_type: string
+  playstyle: string
+  spend_style: string
+  server_rank?: number
+  hero_power?: number
+  total_power?: number
+  goals?: string[]
+  server_number?: number
+  server_day?: number
+  subscription_tier?: string
+  onboarding_complete?: boolean
 }
 
-// ─── HELPERS ─────────────────────────────────────────────────────────────────
-function formatPower(n: number | null): string {
-  if (!n) return '—';
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
-  return String(n);
-}
-
-function getAllianceDuelDay(): { day: number; label: string; sublabel: string } {
-  // Duel resets at 8pm CT (2am UTC standard / 1am UTC DST)
-  // Sun=Day1(Drones), Mon=Day2(Building), Tue=Day3(Research)
-  // Wed=Day4(Heroes), Thu=Day5(Training), Fri=Day6(Enemy Buster), Sat=Day7(Reset)
-  const now = new Date();
-  const year = now.getUTCFullYear();
-  const dstStart = new Date(Date.UTC(year, 2, 8));
-  dstStart.setUTCDate(8 + ((7 - dstStart.getUTCDay()) % 7));
-  const dstEnd = new Date(Date.UTC(year, 10, 1));
-  dstEnd.setUTCDate(1 + ((7 - dstEnd.getUTCDay()) % 7));
-  const isDST = now >= dstStart && now < dstEnd;
-  const resetHourUTC = isDST ? 1 : 2;
-  const utcHour = now.getUTCHours();
-  let dayOfWeek = now.getUTCDay();
-  if (utcHour < resetHourUTC) {
-    dayOfWeek = (dayOfWeek + 6) % 7;
+// Alliance Duel day helper (mirrors actionPlan.ts)
+function getDuelDay(): { day: number; name: string; points: number } {
+  const duelDays: Record<number, { name: string; points: number }> = {
+    1: { name: 'Drones', points: 1 },
+    2: { name: 'Building', points: 2 },
+    3: { name: 'Research', points: 2 },
+    4: { name: 'Heroes', points: 2 },
+    5: { name: 'Training', points: 2 },
+    6: { name: 'Enemy Buster', points: 4 },
+    7: { name: 'Reset', points: 0 },
   }
-  const dowToDuel: Record<number, number> = { 4: 4, 5: 5, 6: 6, 0: 7, 1: 1, 2: 2, 3: 3 };
-  const cycle = dowToDuel[dayOfWeek];
-  const map: Record<number, { label: string; sublabel: string }> = {
-    1: { label: 'Day 1 — Drones', sublabel: '1 alliance point — lowest value day' },
-    2: { label: 'Day 2 — Building', sublabel: '2 alliance points' },
-    3: { label: 'Day 3 — Research', sublabel: '2 alliance points' },
-    4: { label: 'Day 4 — Heroes', sublabel: '2 alliance points' },
-    5: { label: 'Day 5 — Training', sublabel: '2 alliance points' },
-    6: { label: 'Day 6 — Enemy Buster', sublabel: '4 alliance points — fight your vs opponent' },
-    7: { label: 'Day 7 — Reset', sublabel: 'Cycle resets tonight at 8pm CT' },
-  };
-  return { day: cycle, ...map[cycle] };
+  const now = new Date()
+  const utcHour = now.getUTCHours()
+  const utcDay = now.getUTCDay()
+  const adjustedDay = utcHour < 2 ? (utcDay === 0 ? 6 : utcDay - 1) : utcDay
+  const dayMap: Record<number, number> = { 0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7 }
+  const day = dayMap[adjustedDay] ?? 1
+  return { day, ...duelDays[day] }
 }
 
-function getTierLabel(tier: string): string {
-  const map: Record<string, string> = {
-    f2p: 'F2P', budget: 'Budget', moderate: 'Moderate',
-    investor: 'Investor', whale: 'Whale', mega_whale: 'Mega Whale',
-  };
-  return map[tier] || tier;
+function formatPower(val?: number): string {
+  if (!val) return '—'
+  if (val >= 1_000_000) return `${(val / 1_000_000).toFixed(1)}M`
+  if (val >= 1_000) return `${(val / 1_000).toFixed(0)}K`
+  return val.toString()
 }
-
-function getPlaystyleLabel(p: string): string {
-  const map: Record<string, string> = {
-    fighter: '⚔️ Fighter', developer: '🎯 Developer',
-    commander: '⚖️ Commander', scout: '🗺️ Scout',
-  };
-  return map[p] || p;
-}
-
-function getTroopLabel(t: string): string {
-  const map: Record<string, string> = {
-    aircraft: '✈️ Aircraft', tank: '🛡️ Tank',
-    missile: '🚀 Missile', mixed: '⚖️ Mixed',
-  };
-  return map[t] || t;
-}
-
-function getRankLabel(r: string): string {
-  const map: Record<string, string> = {
-    top_5: 'Top 5', top_10: 'Top 10', top_20: 'Top 20',
-    top_50: 'Top 50', top_100: 'Top 100', still_building: 'Building',
-  };
-  return map[r] || r;
-}
-
-function getTierBadge(tier: string): string {
-  const map: Record<string, string> = {
-    t8: 'T8', t9: 'T9', t10_working: 'T10 →', t10_unlocked: 'T10',
-    t11: 'T11', t12: 'T12',
-  };
-  return map[tier] || tier.toUpperCase();
-}
-
-// ─── COMPONENTS ───────────────────────────────────────────────────────────────
-
-function StatPill({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center',
-      padding: '12px 16px', background: t.surfaceRaised,
-      border: `1px solid ${t.border}`, borderRadius: 8, minWidth: 80,
-    }}>
-      <span style={{ fontSize: 16, fontWeight: 700, color: t.gold, fontFamily: '"Rajdhani", sans-serif', letterSpacing: '0.04em' }}>
-        {value}
-      </span>
-      <span style={{ fontSize: 10, color: t.textMuted, letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 3 }}>
-        {label}
-      </span>
-    </div>
-  );
-}
-
-function SectionHeader({ title, tag }: { title: string; tag?: string }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-      <span style={{
-        fontFamily: '"Rajdhani", sans-serif', fontSize: 13, fontWeight: 700,
-        color: t.textMuted, letterSpacing: '0.14em', textTransform: 'uppercase',
-      }}>
-        {title}
-      </span>
-      {tag && (
-        <span style={{
-          fontSize: 10, padding: '2px 8px', borderRadius: 20,
-          background: t.goldFaint, border: `1px solid ${t.goldDim}`,
-          color: t.goldLight, letterSpacing: '0.08em', textTransform: 'uppercase',
-        }}>
-          {tag}
-        </span>
-      )}
-      <div style={{ flex: 1, height: 1, background: t.border }} />
-    </div>
-  );
-}
-
-function ActionCard({
-  icon, title, description, tag, tagColor, locked,
-}: {
-  icon: string; title: string; description: string;
-  tag?: string; tagColor?: string; locked?: boolean;
-}) {
-  return (
-    <div style={{
-      padding: '16px', background: t.surface,
-      border: `1px solid ${locked ? t.border : t.borderHover}`,
-      borderRadius: 10, marginBottom: 10,
-      opacity: locked ? 0.5 : 1,
-      position: 'relative', overflow: 'hidden',
-    }}>
-      {!locked && (
-        <div style={{
-          position: 'absolute', left: 0, top: 0, bottom: 0, width: 3,
-          background: `linear-gradient(180deg, ${t.gold}, ${t.red})`,
-          borderRadius: '3px 0 0 3px',
-        }} />
-      )}
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, paddingLeft: locked ? 0 : 8 }}>
-        <span style={{ fontSize: 22, minWidth: 28, marginTop: 1 }}>{icon}</span>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <span style={{
-              fontFamily: '"Rajdhani", sans-serif', fontSize: 15, fontWeight: 700,
-              color: locked ? t.textMuted : t.text, letterSpacing: '0.03em',
-            }}>
-              {title}
-            </span>
-            {tag && (
-              <span style={{
-                fontSize: 10, padding: '2px 7px', borderRadius: 20,
-                background: tagColor ? `${tagColor}20` : t.goldFaint,
-                border: `1px solid ${tagColor || t.goldDim}`,
-                color: tagColor || t.goldLight,
-                letterSpacing: '0.08em', textTransform: 'uppercase',
-              }}>
-                {tag}
-              </span>
-            )}
-          </div>
-          <p style={{ color: t.textMuted, fontSize: 13, lineHeight: 1.5, margin: 0 }}>
-            {description}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function DuelDayCard({ duel }: { duel: { day: number; label: string; sublabel: string } }) {
-  const isHighValue = duel.day === 6;
-  return (
-    <div style={{
-      padding: '14px 16px',
-      background: isHighValue ? `${t.gold}10` : t.surface,
-      border: `1px solid ${isHighValue ? t.gold : t.border}`,
-      borderRadius: 10, marginBottom: 16,
-      display: 'flex', alignItems: 'center', gap: 14,
-    }}>
-      <div style={{
-        width: 40, height: 40, borderRadius: 8,
-        background: isHighValue ? t.gold : t.surfaceRaised,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontFamily: '"Rajdhani", sans-serif', fontSize: 18, fontWeight: 700,
-        color: isHighValue ? '#07080a' : t.textMuted, flexShrink: 0,
-      }}>
-        {duel.day}
-      </div>
-      <div>
-        <div style={{
-          fontFamily: '"Rajdhani", sans-serif', fontSize: 15, fontWeight: 700,
-          color: isHighValue ? t.gold : t.text, letterSpacing: '0.03em',
-        }}>
-          Alliance Duel · {duel.label}
-        </div>
-        <div style={{ color: t.textMuted, fontSize: 12, marginTop: 2 }}>{duel.sublabel}</div>
-      </div>
-      {isHighValue && (
-        <div style={{
-          marginLeft: 'auto', fontSize: 10, padding: '3px 8px', borderRadius: 20,
-          background: `${t.gold}25`, border: `1px solid ${t.gold}`,
-          color: t.gold, letterSpacing: '0.1em', textTransform: 'uppercase', flexShrink: 0,
-        }}>
-          4× 🔥
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── MAIN DASHBOARD ───────────────────────────────────────────────────────────
 
 export default function Dashboard() {
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [userEmail, setUserEmail] = useState('');
-  const router = useRouter();
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const router = useRouter()
+  const duel = getDuelDay()
 
   useEffect(() => {
-    async function load() {
-      if (!supabase) return;
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/signin'); return; }
-      setUserEmail(user.email || '');
-
-      const { data: prof } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      if (prof) {
-        // If onboarding not complete, send them back
-        if (!prof.onboarding_complete) {
-          router.push('/onboarding');
-          return;
+    async function loadProfile() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+          router.push('/signin')
+          return
         }
-        setProfile(prof);
+
+        const { data, error } = await supabase
+          .from('commander_profile')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+
+        if (error) throw error
+
+        if (!data?.onboarding_complete) {
+          router.push('/onboarding')
+          return
+        }
+
+        setProfile(data)
+      } catch (err: any) {
+        setError(err.message || 'Failed to load profile')
+      } finally {
+        setLoading(false)
       }
-      setLoading(false);
     }
-    load();
-  }, [router]);
+
+    loadProfile()
+  }, [router])
 
   async function handleSignOut() {
-    if (!supabase) return;
-    await supabase.auth.signOut();
-    router.push('/signin');
+    await supabase.auth.signOut()
+    router.push('/signin')
   }
 
+  // ─── LOADING ───
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: t.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: t.goldDim, fontFamily: '"Rajdhani", sans-serif', letterSpacing: '0.2em', fontSize: 13 }}>
-          LOADING...
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-zinc-500 text-sm font-mono">Loading Intel...</p>
         </div>
       </div>
-    );
+    )
   }
 
-  if (!profile) return null;
+  // ─── ERROR ───
+  if (error || !profile) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center px-4">
+        <div className="text-center space-y-4">
+          <p className="text-red-400 text-sm">{error || 'Profile not found'}</p>
+          <button
+            onClick={() => router.push('/signin')}
+            className="text-zinc-400 text-xs underline"
+          >
+            Back to sign in
+          </button>
+        </div>
+      </div>
+    )
+  }
 
-  const duel = getAllianceDuelDay();
-  const displayName = profile.commander_name || userEmail.split('@')[0];
-
+  // ─── DASHBOARD ───
   return (
-    <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&display=swap');
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: ${t.bg}; }
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: ${t.bg}; }
-        ::-webkit-scrollbar-thumb { background: ${t.border}; border-radius: 2px; }
-      `}</style>
+    <div className="min-h-screen bg-zinc-950 text-white">
 
-      <div style={{ minHeight: '100vh', background: t.bg, paddingBottom: 100 }}>
-
-        {/* ── TOP NAV ── */}
-        <div style={{
-          position: 'sticky', top: 0, zIndex: 50,
-          background: `${t.bg}ee`, backdropFilter: 'blur(12px)',
-          borderBottom: `1px solid ${t.border}`,
-          padding: '12px 20px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        }}>
-          <span style={{
-            fontFamily: '"Rajdhani", sans-serif', fontSize: 14, fontWeight: 700,
-            color: t.gold, letterSpacing: '0.18em', textTransform: 'uppercase',
-          }}>
-            LWSB
-          </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <span style={{ color: t.textMuted, fontSize: 12 }}>
-              Server {profile.server_number} · Day {profile.server_day}
+      {/* Top nav bar */}
+      <header className="border-b border-zinc-800/80 bg-zinc-950/95 sticky top-0 z-20 backdrop-blur-sm">
+        <div className="max-w-2xl mx-auto px-4 h-12 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 bg-amber-500 rounded-sm flex items-center justify-center">
+              <svg className="w-3.5 h-3.5 text-black" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M8 1L2 5v6l6 4 6-4V5L8 1z" />
+              </svg>
+            </div>
+            <span className="text-sm font-bold tracking-wide text-white">
+              LWSB
             </span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* Duel day badge */}
+            <div className={`
+              flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold tracking-wider
+              ${duel.day === 6 ? 'bg-red-900/60 text-red-300 border border-red-800' :
+                duel.day === 7 ? 'bg-zinc-800 text-zinc-400 border border-zinc-700' :
+                'bg-amber-900/40 text-amber-300 border border-amber-800/60'}
+            `}>
+              <div className={`w-1.5 h-1.5 rounded-full ${duel.day === 6 ? 'bg-red-400 animate-pulse' : duel.day === 7 ? 'bg-zinc-500' : 'bg-amber-400'}`} />
+              DAY {duel.day} · {duel.name.toUpperCase()}
+            </div>
+
             <button
               onClick={handleSignOut}
-              style={{
-                background: 'transparent', border: `1px solid ${t.border}`,
-                borderRadius: 6, padding: '6px 12px', color: t.textMuted,
-                fontSize: 12, cursor: 'pointer', letterSpacing: '0.06em',
-                fontFamily: '"Rajdhani", sans-serif', textTransform: 'uppercase',
-              }}
+              className="text-zinc-500 hover:text-zinc-300 transition-colors"
+              title="Sign out"
             >
-              Sign Out
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16">
+                <path d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h3M10 11l3-3-3-3M13 8H6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </button>
           </div>
         </div>
+      </header>
 
-        {/* ── MAIN CONTENT ── */}
-        <div style={{ maxWidth: 480, margin: '0 auto', padding: '24px 16px' }}>
+      <main className="max-w-2xl mx-auto px-4 pb-24">
 
-          {/* ── COMMANDER HEADER ── */}
-          <div style={{ marginBottom: 28 }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        {/* ══════════════════════════════════════════
+            DAILY ACTION PLAN — TOP OF DASHBOARD
+        ══════════════════════════════════════════ */}
+        <section className="pt-6 pb-2">
+          <DailyActionPlan profile={profile} />
+        </section>
+
+        {/* Divider */}
+        <div className="my-6 h-px bg-zinc-800" />
+
+        {/* ══════════════════════════════════════════
+            COMMANDER PROFILE SNAPSHOT
+        ══════════════════════════════════════════ */}
+        <section>
+          <p className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest mb-3">
+            Commander Profile
+          </p>
+
+          <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 space-y-4">
+
+            {/* Name + tier */}
+            <div className="flex items-start justify-between">
               <div>
-                <p style={{ color: t.textMuted, fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 4 }}>
-                  Welcome back
+                <h3 className="text-base font-bold text-white">
+                  {profile.commander_name}
+                </h3>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Server {profile.server_number} · Day {profile.server_day}
                 </p>
-                <h1 style={{
-                  fontFamily: '"Rajdhani", sans-serif', fontSize: 28, fontWeight: 700,
-                  color: t.text, letterSpacing: '0.04em', lineHeight: 1.1,
-                }}>
-                  Commander {displayName}
-                </h1>
               </div>
-              <div style={{
-                padding: '6px 12px', borderRadius: 6,
-                background: t.goldFaint, border: `1px solid ${t.goldDim}`,
-                fontFamily: '"Rajdhani", sans-serif', fontSize: 13, fontWeight: 700,
-                color: t.gold, letterSpacing: '0.08em',
-              }}>
-                HQ {profile.hq_level}
+              <div className="text-right">
+                <span className={`
+                  text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded font-mono
+                  ${profile.subscription_tier === 'elite' ? 'bg-amber-900/60 text-amber-300 border border-amber-800' :
+                    profile.subscription_tier === 'pro' ? 'bg-sky-900/60 text-sky-300 border border-sky-800' :
+                    profile.subscription_tier === 'founding' ? 'bg-purple-900/60 text-purple-300 border border-purple-800' :
+                    'bg-zinc-800 text-zinc-500 border border-zinc-700'}
+                `}>
+                  {profile.subscription_tier ? profile.subscription_tier.toUpperCase() : 'FREE'}
+                </span>
               </div>
             </div>
 
-            {/* Stat pills */}
-            <div style={{ display: 'flex', gap: 8, marginTop: 16, overflowX: 'auto', paddingBottom: 4 }}>
-              <StatPill label="Rank" value={getRankLabel(profile.server_rank)} />
-              <StatPill label="Troops" value={getTierBadge(profile.troop_tier)} />
-              <StatPill label="Type" value={getTroopLabel(profile.troop_type).split(' ')[1] || getTroopLabel(profile.troop_type)} />
-              <StatPill label="Playstyle" value={getPlaystyleLabel(profile.playstyle).split(' ').slice(1).join(' ') || getPlaystyleLabel(profile.playstyle)} />
-              {profile.hero_power && <StatPill label="Hero Power" value={formatPower(profile.hero_power)} />}
+            {/* Stats grid */}
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { label: 'HQ Level', value: profile.hq_level },
+                { label: 'Troop Tier', value: profile.troop_tier?.replace('working_towards_', 'T').replace('unlocked', '✓') || '—' },
+                { label: 'Troop Type', value: profile.troop_type || '—' },
+                { label: 'Hero Power', value: formatPower(profile.hero_power) },
+                { label: 'Server Rank', value: profile.server_rank ? `#${profile.server_rank}` : '—' },
+                { label: 'Playstyle', value: profile.playstyle || '—' },
+              ].map(({ label, value }) => (
+                <div key={label} className="bg-zinc-950/50 rounded-lg p-2.5">
+                  <p className="text-[10px] text-zinc-600 font-mono uppercase tracking-wide mb-1">
+                    {label}
+                  </p>
+                  <p className="text-sm font-semibold text-zinc-200 truncate">
+                    {value}
+                  </p>
+                </div>
+              ))}
             </div>
-          </div>
 
-          {/* ── TODAY'S INTEL ── */}
-          <div style={{ marginBottom: 28 }}>
-            <SectionHeader title="Today's Intel" tag="Live" />
-            <DuelDayCard duel={duel} />
-
-            {/* Server day context */}
-            <div style={{
-              padding: '12px 16px', background: t.surface,
-              border: `1px solid ${t.border}`, borderRadius: 10,
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            }}>
+            {/* Goals */}
+            {profile.goals && profile.goals.length > 0 && (
               <div>
-                <div style={{ color: t.textMuted, fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 3 }}>
-                  Server Age
-                </div>
-                <div style={{ fontFamily: '"Rajdhani", sans-serif', fontSize: 15, fontWeight: 700, color: t.text }}>
-                  Day {profile.server_day}
-                </div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ color: t.textMuted, fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 3 }}>
-                  Spend Tier
-                </div>
-                <div style={{ fontFamily: '"Rajdhani", sans-serif', fontSize: 15, fontWeight: 700, color: t.text }}>
-                  {getTierLabel(profile.spend_tier)}
-                </div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ color: t.textMuted, fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 3 }}>
-                  Server
-                </div>
-                <div style={{ fontFamily: '"Rajdhani", sans-serif', fontSize: 15, fontWeight: 700, color: t.text }}>
-                  #{profile.server_number}
+                <p className="text-[10px] text-zinc-600 font-mono uppercase tracking-wide mb-2">
+                  Goals
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {profile.goals.map(goal => (
+                    <span
+                      key={goal}
+                      className="text-[10px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 border border-zinc-700"
+                    >
+                      {goal}
+                    </span>
+                  ))}
                 </div>
               </div>
+            )}
+
+            {/* Edit profile link */}
+            <div className="pt-1 border-t border-zinc-800">
+              <button
+                onClick={() => router.push('/profile/edit')}
+                className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1"
+              >
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
+                  <path d="M8.5 1.5l2 2-7 7H1.5v-2l7-7z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                Edit profile
+              </button>
             </div>
           </div>
+        </section>
 
-          {/* ── DAILY ACTION PLAN ── */}
-          <div style={{ marginBottom: 28 }}>
-            <SectionHeader title="Daily Action Plan" tag="Coming Soon" />
+      </main>
 
-            <ActionCard
-              icon="⚔️"
-              title="Your top moves for today"
-              description="Personalized recommendations based on your server day, Alliance Duel cycle, and current goals. Coming in the next update."
-              locked
-            />
-            <ActionCard
-              icon="💰"
-              title="Pack advisor"
-              description="Buddy will scan active Hot Deals and tell you which are worth buying at your spend tier and current bottlenecks."
-              locked
-            />
-            <ActionCard
-              icon="📈"
-              title="Arms Race optimizer"
-              description="Know exactly which actions score today and how to double-dip with Alliance Duel for maximum efficiency."
-              locked
-            />
-          </div>
-
-          {/* ── GOALS ── */}
-          {profile.goals && profile.goals.length > 0 && (
-            <div style={{ marginBottom: 28 }}>
-              <SectionHeader title="Your Goals" />
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {profile.goals.map(g => (
-                  <div key={g} style={{
-                    padding: '8px 14px', borderRadius: 8,
-                    background: t.surface, border: `1px solid ${t.border}`,
-                    fontSize: 13, color: t.textDim,
-                    fontFamily: '"Rajdhani", sans-serif', fontWeight: 600,
-                    letterSpacing: '0.04em',
-                  }}>
-                    {g.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* ── EDIT PROFILE LINK ── */}
-          <button
-            onClick={() => router.push('/onboarding')}
-            style={{
-              width: '100%', padding: '12px', background: 'transparent',
-              border: `1px solid ${t.border}`, borderRadius: 8,
-              color: t.textMuted, fontSize: 13, cursor: 'pointer',
-              fontFamily: '"Rajdhani", sans-serif', letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-            }}
-          >
-            ✏️ Edit Commander Profile
-          </button>
-
-        </div>
-
-        {/* ── BUDDY AI FLOATING BUTTON ── */}
-        <div style={{
-          position: 'fixed', bottom: 24, right: 20, zIndex: 100,
-        }}>
-          <button
-            onClick={() => router.push('/buddy')}
-            style={{
-              width: 58, height: 58, borderRadius: '50%',
-              background: `linear-gradient(135deg, ${t.red}, ${t.gold})`,
-              border: 'none', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 24,
-              boxShadow: `0 4px 24px ${t.gold}40`,
-            }}
-          >
-            💬
-          </button>
-          <div style={{
-            position: 'absolute', bottom: '110%', right: 0,
-            background: t.surfaceRaised, border: `1px solid ${t.border}`,
-            borderRadius: 6, padding: '6px 10px', whiteSpace: 'nowrap',
-            fontSize: 11, color: t.textMuted, letterSpacing: '0.06em',
-            pointerEvents: 'none',
-          }}>
-            Ask Buddy
-          </div>
-        </div>
-
+      {/* ══════════════════════════════════════════
+          FLOATING BUDDY BUTTON
+      ══════════════════════════════════════════ */}
+      <div className="fixed bottom-6 right-4 z-30">
+        <button
+          onClick={() => router.push('/buddy')}
+          className="
+            flex items-center gap-2.5 bg-amber-500 hover:bg-amber-400
+            text-black font-bold text-sm px-5 py-3 rounded-full
+            shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50
+            transition-all duration-200 active:scale-95
+          "
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16">
+            <path d="M14 8c0 3.314-2.686 6-6 6a5.97 5.97 0 01-3.2-.928L2 14l.928-2.8A5.97 5.97 0 012 8c0-3.314 2.686-6 6-6s6 2.686 6 6z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Ask Buddy
+        </button>
       </div>
-    </>
-  );
+
+    </div>
+  )
 }
