@@ -20,7 +20,7 @@ export default function Home() {
           router.push('/dashboard');
         } else {
           // Try to exchange the token
-          supabase.auth.onAuthStateChange((event, session) => {
+          supabase.auth.onAuthStateChange((event: string, session: import('@supabase/supabase-js').Session | null) => {
             if (event === 'SIGNED_IN' && session) {
               router.push('/dashboard');
             }
