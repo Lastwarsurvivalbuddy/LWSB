@@ -20,6 +20,7 @@ export interface DailyAction {
   title: string
   detail: string
   buddyPrompt: string
+  points?: number
 }
 
 export interface ActionPlanResult {
@@ -32,7 +33,6 @@ export interface ActionPlanResult {
 
 // ─── Hero EXP Breakpoints ───────────────────────────────────────────────────
 // Source: lastwarhandbook.com/calculators/hero-exp
-// These are the key levels where skill unlocks and power spikes occur
 
 export const HERO_EXP_BREAKPOINTS: Record<number, { expFromL1: number; label: string; hqRequired: number }> = {
   50:  { expFromL1: 2_500_000,   label: 'Early game milestone',         hqRequired: 10 },
@@ -59,7 +59,6 @@ export const HQ_HERO_LEVEL_UNLOCK: Record<number, number> = {
   35: 175,
 }
 
-// Get max hero level for a given HQ level
 export function getMaxHeroLevelForHQ(hqLevel: number): number {
   const keys = Object.keys(HQ_HERO_LEVEL_UNLOCK)
     .map(Number)
@@ -68,7 +67,6 @@ export function getMaxHeroLevelForHQ(hqLevel: number): number {
   return keys.length > 0 ? HQ_HERO_LEVEL_UNLOCK[keys[0]] : 1
 }
 
-// Get next hero level unlock milestone for a given HQ level
 export function getNextHeroMilestone(hqLevel: number): { targetHQ: number; heroLevel: number } | null {
   const entries = Object.entries(HQ_HERO_LEVEL_UNLOCK)
     .map(([hq, lvl]) => ({ hq: Number(hq), heroLevel: lvl }))
@@ -77,7 +75,6 @@ export function getNextHeroMilestone(hqLevel: number): { targetHQ: number; heroL
   return entries.length > 0 ? entries[0] : null
 }
 
-// Get the next EXP breakpoint above a given hero level
 export function getNextExpBreakpoint(currentHeroLevel: number): { level: number; label: string; expNeeded: number } | null {
   const entry = Object.entries(HERO_EXP_BREAKPOINTS)
     .map(([lvl, data]) => ({ level: Number(lvl), ...data }))
@@ -87,9 +84,6 @@ export function getNextExpBreakpoint(currentHeroLevel: number): { level: number;
 }
 
 // ─── Alliance Duel Day Calculation ─────────────────────────────────────────
-// Resets at 8pm CT (1am UTC during DST / 2am UTC during standard time)
-// DST in 2026: March 8 – November 1
-// Day mapping: Sun→1, Mon→2, Tue→3, Wed→4, Thu→5, Fri→6, Sat→7
 
 const DUEL_DAY_LABELS: Record<number, string> = {
   1: 'Drones',
@@ -116,26 +110,21 @@ export function getDuelDay(): { day: number; label: string; points: number } {
   const utcHour = now.getUTCHours()
   const utcMinute = now.getUTCMinutes()
 
-  // Determine if DST is active (approximate: March 8 → November 1)
   const year = now.getUTCFullYear()
-  const dstStart = new Date(Date.UTC(year, 2, 8))  // March 8
-  const dstEnd   = new Date(Date.UTC(year, 10, 1)) // November 1
+  const dstStart = new Date(Date.UTC(year, 2, 8))
+  const dstEnd   = new Date(Date.UTC(year, 10, 1))
   const isDST = now >= dstStart && now < dstEnd
-
-  // Reset hour in UTC: 1am during DST, 2am during standard
   const resetHourUTC = isDST ? 1 : 2
 
-  // If before reset, we're still on the previous day's duel
   const isBeforeReset =
     utcHour < resetHourUTC ||
     (utcHour === resetHourUTC && utcMinute === 0)
 
-  let utcDayOfWeek = now.getUTCDay() // 0=Sun ... 6=Sat
+  let utcDayOfWeek = now.getUTCDay()
   if (isBeforeReset) {
     utcDayOfWeek = (utcDayOfWeek + 6) % 7
   }
 
-  // Map Sun(0)→Day1, Mon(1)→Day2 ... Sat(6)→Day7
   const duelDay = utcDayOfWeek + 1
 
   return {
@@ -150,14 +139,14 @@ export function getDuelDay(): { day: number; label: string; points: number } {
 export interface CommanderProfile {
   hq_level: number
   server_day: number
-  spend_style: string   // f2p | budget | moderate | investor | whale | mega_whale
-  playstyle: string     // pvp | pve | balanced | scout
-  troop_type: string    // aircraft | tank | missile | mixed
-  troop_tier: string    // below_t8 | t8 | t9 | t10_working | t10 | t11 | t12
+  spend_style: string
+  playstyle: string
+  troop_type: string
+  troop_tier: string
   server_rank?: number
   hero_power?: number
   goals?: string[]
-  tier?: string         // subscription tier
+  tier?: string
 }
 
 // ─── Main Action Plan Generator ─────────────────────────────────────────────
@@ -165,10 +154,10 @@ export interface CommanderProfile {
 export function generateActionPlan(profile: CommanderProfile): ActionPlanResult {
   const actions: DailyAction[] = []
   const { day, label, points } = getDuelDay()
-  const isDoubleDay    = day >= 2 && day <= 5
+  const isDoubleDay      = day >= 2 && day <= 5
   const isEnemyBusterDay = day === 6
-  const isDroneDay     = day === 1
-  const isResetDay     = day === 7
+  const isDroneDay       = day === 1
+  const isResetDay       = day === 7
 
   const hq = profile.hq_level || 1
   const isEarlyGame = hq < 16
@@ -179,11 +168,10 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
   const isBelowT10  = ['below_t8', 't8', 't9'].includes(profile.troop_tier)
   const isSpender   = ['investor', 'whale', 'mega_whale'].includes(profile.spend_style)
 
-  const maxHeroLevel    = getMaxHeroLevelForHQ(hq)
+  const maxHeroLevel      = getMaxHeroLevelForHQ(hq)
   const nextHeroMilestone = getNextHeroMilestone(hq)
-  const nextBreakpoint  = getNextExpBreakpoint(maxHeroLevel)
+  const nextBreakpoint    = getNextExpBreakpoint(maxHeroLevel)
 
-  // ── 1. Alliance Duel + Arms Race Double-Dip (Days 2–5) ──────────────────
   if (isDoubleDay) {
     actions.push({
       id: 'double_dip',
@@ -192,10 +180,10 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
       title: `⚡ Double-Dip Day — Duel Day ${day}: ${label} + Arms Race`,
       detail: `Today is Alliance Duel Day ${day} (${label}, ${points} pts). Every action you take for the Duel ALSO scores Arms Race points. This is the highest efficiency play in the game. Focus: ${getDuelFocusDetail(day, profile)}.`,
       buddyPrompt: `Today is Alliance Duel Day ${day} (${label}). Help me maximize both my Duel score AND Arms Race points at the same time. My HQ is ${hq}, troop tier is ${profile.troop_tier}, playstyle is ${profile.playstyle}.`,
+      points,
     })
   }
 
-  // ── 2. Enemy Buster Day ──────────────────────────────────────────────────
   if (isEnemyBusterDay) {
     actions.push({
       id: 'enemy_buster',
@@ -204,10 +192,10 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
       title: '🔥 Enemy Buster Day — 4 Alliance Points (Max Value)',
       detail: 'Day 6 of Alliance Duel is the highest-value day of the week (4 pts). Your alliance is attacking the opponent server. Coordinate with alliance, maximize kills, use march buffs.',
       buddyPrompt: `Today is Alliance Duel Day 6 — Enemy Buster, worth 4 alliance points. Help me maximize my contribution. My HQ is ${hq}, hero power is ${profile.hero_power ? (profile.hero_power / 1_000_000).toFixed(1) + 'M' : 'unknown'}, troop type is ${profile.troop_type}.`,
+      points: 4,
     })
   }
 
-  // ── 3. Drone Day ─────────────────────────────────────────────────────────
   if (isDroneDay) {
     actions.push({
       id: 'drone_day',
@@ -216,16 +204,15 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
       title: '🚁 Drone Day — Alliance Duel Day 1 (1 Point)',
       detail: 'Lowest-value Duel day. Good day to focus on development tasks without sacrificing high-value scoring. Complete drone upgrades if available.',
       buddyPrompt: `Today is Alliance Duel Day 1 (Drones, 1 point — lowest value day). What should I focus on to set up for the rest of the week? HQ ${hq}, ${profile.troop_tier} troops.`,
+      points: 1,
     })
   }
 
-  // ── 4. Hero Level Push ───────────────────────────────────────────────────
   if (!isResetDay) {
     const heroAction = getHeroAction(hq, maxHeroLevel, nextBreakpoint, nextHeroMilestone, profile, day)
     if (heroAction) actions.push(heroAction)
   }
 
-  // ── 5. Troop Training (Day 5 — Training Duel Day) ────────────────────────
   if (day === 5) {
     actions.push({
       id: 'troop_training_duel',
@@ -237,7 +224,6 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
     })
   }
 
-  // ── 6. Research (Day 3 — Research Duel Day) ──────────────────────────────
   if (day === 3) {
     actions.push({
       id: 'research_duel',
@@ -249,7 +235,6 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
     })
   }
 
-  // ── 7. Building (Day 2 — Building Duel Day) ──────────────────────────────
   if (day === 2) {
     actions.push({
       id: 'building_duel',
@@ -261,7 +246,6 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
     })
   }
 
-  // ── 8. T10 Path (early/mid game) ─────────────────────────────────────────
   if (isBelowT10 && !isDoubleDay) {
     actions.push({
       id: 't10_path',
@@ -273,7 +257,6 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
     })
   }
 
-  // ── 9. T11 Armament Research ─────────────────────────────────────────────
   if (isT11 && !isDoubleDay) {
     actions.push({
       id: 't11_armament',
@@ -285,19 +268,17 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
     })
   }
 
-  // ── 10. Spender: Hot Deal check ──────────────────────────────────────────
   if (isSpender) {
     actions.push({
       id: 'hot_deal_check',
       category: 'spend',
       priority: 'medium',
-      title: '💰 Check Today\'s Hot Deals',
+      title: "💰 Check Today's Hot Deals",
       detail: `As an ${profile.spend_style} tier player, check today's Hot Deals for time-limited offers. Best value deals align with your current bottleneck. Screenshot any active deal and ask Buddy if it's worth buying.`,
       buddyPrompt: `I'm an ${profile.spend_style} player at HQ ${hq} with ${profile.troop_tier} troops. I want to evaluate today's Hot Deals. What should I be looking for and what's my current biggest bottleneck that a pack could solve?`,
     })
   }
 
-  // ── 11. Defense check (endgame) ──────────────────────────────────────────
   if (isEndGame && !isDoubleDay) {
     actions.push({
       id: 'defense_review',
@@ -309,10 +290,8 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
     })
   }
 
-  // ── Strategic Insight ─────────────────────────────────────────────────────
   const strategicInsight = getStrategicInsight(day, label, points, profile, maxHeroLevel, isDoubleDay)
 
-  // Sort by priority
   const priorityOrder: Record<ActionPriority, number> = { critical: 0, high: 1, medium: 2, low: 3 }
   actions.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority])
 
@@ -325,7 +304,7 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
   }
 }
 
-// ─── Helper: Hero Action ─────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function getHeroAction(
   hq: number,
@@ -335,9 +314,7 @@ function getHeroAction(
   profile: CommanderProfile,
   duelDay: number
 ): DailyAction | null {
-  const isDuelHeroDay = duelDay === 4
-
-  if (isDuelHeroDay) {
+  if (duelDay === 4) {
     return {
       id: 'hero_exp_duel',
       category: 'heroes',
@@ -345,6 +322,7 @@ function getHeroAction(
       title: '🦸 Heroes Day — Level Up Heroes for Duel + Arms Race',
       detail: `Duel Day 4 is Heroes day. Every hero level you gain scores Alliance Duel AND Arms Race points simultaneously. At HQ ${hq} your heroes can reach level ${maxHeroLevel}. ${nextBreakpoint ? `Next power spike: level ${nextBreakpoint.level} (${nextBreakpoint.label}).` : 'Push to max level.'}`,
       buddyPrompt: `Today is Duel Day 4 — Heroes Day. I want to level up heroes for maximum Duel and Arms Race scoring. My HQ is ${hq}, max hero level I can reach is ${maxHeroLevel}. ${nextBreakpoint ? `Next key breakpoint is level ${nextBreakpoint.level}: ${nextBreakpoint.label}.` : ''} What heroes should I prioritize and how much EXP do I need?`,
+      points: 2,
     }
   }
 
@@ -362,8 +340,6 @@ function getHeroAction(
   return null
 }
 
-// ─── Helper: Duel Focus Detail ───────────────────────────────────────────────
-
 function getDuelFocusDetail(day: number, profile: CommanderProfile): string {
   switch (day) {
     case 2: return 'complete building upgrades — every completion scores both Duel + Arms Race'
@@ -373,8 +349,6 @@ function getDuelFocusDetail(day: number, profile: CommanderProfile): string {
     default: return 'check alliance duel requirements'
   }
 }
-
-// ─── Helper: Strategic Insight ───────────────────────────────────────────────
 
 function getStrategicInsight(
   day: number,
@@ -401,4 +375,5 @@ function getStrategicInsight(
     ? `HQ ${profile.hq_level} unlocks hero level ${maxHeroLevel}. Reach HQ ${nextMilestone.targetHQ} to unlock hero level ${nextMilestone.heroLevel} — the next major capability jump.`
     : `Your heroes are at max unlock level ${maxHeroLevel} for your HQ. Focus on Armament Research and troop tier progression.`
 }
+
 export const generateDailyPlan = generateActionPlan
