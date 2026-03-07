@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token)
     if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { claim, category, scope, server_number } = await req.json()
+    const { claim, category, scope, server_number, screenshot_path } = await req.json()
 
     if (!claim || !category || !scope || !server_number) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
         category,
         claim,
         scope,
+        screenshot_path: screenshot_path || null,
         status: 'pending'
       })
 

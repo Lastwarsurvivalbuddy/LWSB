@@ -11,11 +11,43 @@ const CATEGORIES = [
   { value: 'other', label: '🔍 Other' },
 ]
 
-export default function TeachBuddy({ serverNumber }: { serverNumber: number }) {
+const SCREENSHOT_LIMITS: Record<string, number> = {
+  free: 2,
+  pro: 5,
+  elite: 5,
+  founding: 5,
+  alliance: 5
+}
+
+export default function TeachBuddy({
+  serverNumber,
+  tier = 'free'
+}: {
+  serverNumber: number
+  tier?: string
+}) {
   const [claim, setClaim] = useState('')
   const [category, setCategory] = useState('mechanic')
   const [scope, setScope] = useState<'server_specific' | 'global'>('server_specific')
+  const [screenshot, setScreenshot] = useState<File | null>(null)
+  const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null)
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle')
+  const [screenshotCount, setScreenshotCount] = useState(0)
+
+  const screenshotLimit = SCREENSHOT_LIMITS[tier] ?? 2
+  const screenshotLimitReached = screenshotCount >= screenshotLimit
+
+  function handleScreenshotChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setScreenshot(file)
+    setScreenshotPreview(URL.createObjectURL(file))
+  }
+
+  function removeScreenshot() {
+    setScreenshot(null)
+    setScreenshotPreview(null)
+  }
 
   async function handleSubmit() {
     if (!claim.trim()) return
@@ -25,19 +57,40 @@ export default function TeachBuddy({ serverNumber }: { serverNumber: number }) {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('Not authenticated')
 
+      let screenshot_path = null
+
+      if (screenshot) {
+        const ext = screenshot.name.split('.').pop()
+        const path = `${session.user.id}/${Date.now()}.${ext}`
+        const { error: uploadError } = await supabase.storage
+          .from('submission-screenshots')
+          .upload(path, screenshot)
+        if (uploadError) throw uploadError
+        screenshot_path = path
+        setScreenshotCount(c => c + 1)
+      }
+
       const res = await fetch('/api/submissions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`
         },
-        body: JSON.stringify({ claim, category, scope, server_number: serverNumber })
+        body: JSON.stringify({
+          claim,
+          category,
+          scope,
+          server_number: serverNumber,
+          screenshot_path
+        })
       })
 
       if (!res.ok) throw new Error('Failed to submit')
 
       setStatus('success')
       setClaim('')
+      setScreenshot(null)
+      setScreenshotPreview(null)
       setTimeout(() => setStatus('idle'), 3000)
 
     } catch (err) {
@@ -133,6 +186,67 @@ export default function TeachBuddy({ serverNumber }: { serverNumber: number }) {
         >
           🌐 Game-Wide
         </button>
+      </div>
+
+      <div style={{ marginTop: '12px' }}>
+        {screenshotPreview ? (
+          <div style={{ position: 'relative', display: 'inline-block' }}>
+            <img
+              src={screenshotPreview}
+              alt="Screenshot preview"
+              style={{
+                maxWidth: '100%',
+                maxHeight: '160px',
+                borderRadius: '8px',
+                border: '1px solid #2a2a4a'
+              }}
+            />
+            <button
+              onClick={removeScreenshot}
+              style={{
+                position: 'absolute',
+                top: '6px',
+                right: '6px',
+                background: '#0d0d1a',
+                border: '1px solid #2a2a4a',
+                borderRadius: '50%',
+                width: '24px',
+                height: '24px',
+                color: '#888',
+                cursor: 'pointer',
+                fontSize: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        ) : (
+          <label style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '10px',
+            borderRadius: '8px',
+            border: '1px dashed #2a2a4a',
+            color: screenshotLimitReached ? '#555' : '#888',
+            fontSize: '13px',
+            cursor: screenshotLimitReached ? 'not-allowed' : 'pointer'
+          }}>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleScreenshotChange}
+              disabled={screenshotLimitReached}
+              style={{ display: 'none' }}
+            />
+            📸 {screenshotLimitReached
+              ? `Daily screenshot limit reached (${screenshotLimit}/day)`
+              : `Attach a screenshot (optional) · ${screenshotCount}/${screenshotLimit} today`}
+          </label>
+        )}
       </div>
 
       <button
