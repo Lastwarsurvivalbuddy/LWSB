@@ -8,6 +8,7 @@ import { getResourceNotesSummary } from '@/lib/resourceNotes';
 import { getT10Summary } from '@/lib/t10Data';
 import { getHQRequirementsSummary } from '@/lib/hqRequirementsData';
 import { getHealingSummary } from '@/lib/healingData';
+import { getApprovedSubmissions } from '@/lib/submissionData'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -138,7 +139,7 @@ export async function POST(req: NextRequest) {
     const duel = getCurrentDuelDay();
 
     // ─── Build system prompt ───
-    const systemPrompt = buildSystemPrompt(profile, duel, tier);
+    const systemPrompt = await buildSystemPrompt(profile, duel, tier);
 
     // ─── Build message array for Claude ───
     // History (last 10 exchanges = 20 messages max to keep context tight)
@@ -256,11 +257,11 @@ export async function POST(req: NextRequest) {
 }
 
 // ─── System prompt builder ───
-function buildSystemPrompt(
+async function buildSystemPrompt(
   profile: Record<string, unknown> | null,
   duel: { day: number; label: string },
   tier: string
-): string {
+): Promise<string> {
   if (!profile) {
     return `You are Buddy, the AI coach for Last War: Survival. 
 The player's profile hasn't loaded — give helpful general advice and ask them to check their profile settings.
@@ -338,6 +339,9 @@ ${getResourceNotesSummary()}
 ## HQ Requirements\n${getHQRequirementsSummary()}
 
 ## Healing System\n${getHealingSummary()}
+
+## Community Intelligence
+${await getApprovedSubmissions(Number(profile.server_number))}
 
 ## Style Rules
 - Be direct. Lead with the answer, then explain.
