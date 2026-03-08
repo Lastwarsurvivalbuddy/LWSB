@@ -20,27 +20,29 @@ interface Profile {
   goals?: string[]
   server_number?: number
   server_day?: number
+  computed_server_day?: number
   subscription_tier?: string
   onboarding_complete?: boolean
+  last_profile_update?: string
+  update_reminder_frequency?: string
 }
 
-// Alliance Duel day helper (mirrors actionPlan.ts)
+// Alliance Duel day helper — reset is always 2am UTC
 function getDuelDay(): { day: number; name: string; points: number } {
   const duelDays: Record<number, { name: string; points: number }> = {
-    1: { name: 'Drones', points: 1 },
-    2: { name: 'Building', points: 2 },
-    3: { name: 'Research', points: 2 },
-    4: { name: 'Heroes', points: 2 },
-    5: { name: 'Training', points: 2 },
+    1: { name: 'Drones',       points: 1 },
+    2: { name: 'Building',     points: 2 },
+    3: { name: 'Research',     points: 2 },
+    4: { name: 'Heroes',       points: 2 },
+    5: { name: 'Training',     points: 2 },
     6: { name: 'Enemy Buster', points: 4 },
-    7: { name: 'Reset', points: 0 },
+    7: { name: 'Reset',        points: 0 },
   }
   const now = new Date()
-  const utcHour = now.getUTCHours()
-  const utcDay = now.getUTCDay()
-  const adjustedDay = utcHour < 2 ? (utcDay === 0 ? 6 : utcDay - 1) : utcDay
+  const adjusted = new Date(now.getTime() - 2 * 60 * 60 * 1000)
+  const utcDay = adjusted.getUTCDay() // 0=Sun...6=Sat
   const dayMap: Record<number, number> = { 0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7 }
-  const day = dayMap[adjustedDay] ?? 1
+  const day = dayMap[utcDay] ?? 1
   return { day, ...duelDays[day] }
 }
 
@@ -49,6 +51,24 @@ function formatPower(val?: number): string {
   if (val >= 1_000_000) return `${(val / 1_000_000).toFixed(1)}M`
   if (val >= 1_000) return `${(val / 1_000).toFixed(0)}K`
   return val.toString()
+}
+
+// Returns days since last_profile_update, or null if never set
+function daysSinceUpdate(lastUpdate?: string): number | null {
+  if (!lastUpdate) return null
+  const diff = Date.now() - new Date(lastUpdate).getTime()
+  return Math.floor(diff / (1000 * 60 * 60 * 24))
+}
+
+// Returns true if the staleness banner should show
+function shouldShowStaleBanner(profile: Profile): boolean {
+  const freq = profile.update_reminder_frequency || 'weekly'
+  if (freq === 'off') return false
+  const days = daysSinceUpdate(profile.last_profile_update)
+  if (days === null) return true // never updated — always show
+  if (freq === 'daily') return days >= 1
+  if (freq === 'weekly') return days >= 7
+  return false
 }
 
 export default function Dashboard() {
@@ -125,6 +145,11 @@ export default function Dashboard() {
     )
   }
 
+  const showStaleBanner = shouldShowStaleBanner(profile)
+  const staleDays = daysSinceUpdate(profile.last_profile_update)
+  // Use computed_server_day (auto-calc) if available, else stored server_day
+  const displayServerDay = profile.computed_server_day ?? profile.server_day
+
   // ─── DASHBOARD ───
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
@@ -155,6 +180,18 @@ export default function Dashboard() {
               DAY {duel.day} · {duel.name.toUpperCase()}
             </div>
 
+            {/* Commander Card link */}
+<button
+  onClick={() => router.push('/card')}
+  className="text-zinc-500 hover:text-amber-500 transition-colors"
+  title="Commander Card"
+>
+  <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16">
+    <path d="M2 4a1 1 0 011-1h10a1 1 0 011 1v8a1 1 0 01-1 1H3a1 1 0 01-1-1V4z" stroke="currentColor" strokeWidth="1.4"/>
+    <path d="M4 7h3M4 9.5h5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+  </svg>
+</button>
+
             <button
               onClick={handleSignOut}
               className="text-zinc-500 hover:text-zinc-300 transition-colors"
@@ -169,6 +206,28 @@ export default function Dashboard() {
       </header>
 
       <main className="max-w-2xl mx-auto px-4 pb-24">
+
+        {/* ══════════════════════════════════════════
+            PROFILE STALENESS BANNER
+        ══════════════════════════════════════════ */}
+        {showStaleBanner && (
+          <div className="mt-4 flex items-center justify-between gap-3 bg-amber-950/40 border border-amber-800/60 rounded-xl px-4 py-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="text-amber-400 text-base flex-shrink-0">⚠️</span>
+              <p className="text-amber-200/80 text-xs leading-snug">
+                {staleDays === null
+                  ? 'Update your stats so Buddy stays accurate.'
+                  : `Your profile is ${staleDays} day${staleDays === 1 ? '' : 's'} old — update your stats so Buddy stays accurate.`}
+              </p>
+            </div>
+            <button
+              onClick={() => router.push('/profile/edit')}
+              className="flex-shrink-0 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black transition-colors active:scale-95"
+            >
+              Update
+            </button>
+          </div>
+        )}
 
         {/* ══════════════════════════════════════════
             DAILY ACTION PLAN — TOP OF DASHBOARD
@@ -198,7 +257,7 @@ export default function Dashboard() {
                   {profile.commander_name}
                 </h3>
                 <p className="text-xs text-zinc-500 mt-0.5">
-                  Server {profile.server_number} · Day {profile.server_day}
+                  Server {profile.server_number} · Day {displayServerDay}
                 </p>
               </div>
               <div className="text-right">
@@ -217,12 +276,12 @@ export default function Dashboard() {
             {/* Stats grid */}
             <div className="grid grid-cols-3 gap-3">
               {[
-                { label: 'HQ Level', value: profile.hq_level },
-                { label: 'Troop Tier', value: profile.troop_tier?.replace('working_towards_', 'T').replace('unlocked', '✓') || '—' },
-                { label: 'Troop Type', value: profile.troop_type || '—' },
-                { label: 'Hero Power', value: formatPower(profile.hero_power) },
+                { label: 'HQ Level',    value: profile.hq_level },
+                { label: 'Troop Tier',  value: profile.troop_tier?.replace('working_towards_', 'T').replace('unlocked', '✓') || '—' },
+                { label: 'Troop Type',  value: profile.troop_type || '—' },
+                { label: 'Hero Power',  value: formatPower(profile.hero_power) },
                 { label: 'Server Rank', value: profile.server_rank ? `#${profile.server_rank}` : '—' },
-                { label: 'Playstyle', value: profile.playstyle || '—' },
+                { label: 'Playstyle',   value: profile.playstyle || '—' },
               ].map(({ label, value }) => (
                 <div key={label} className="bg-zinc-950/50 rounded-lg p-2.5">
                   <p className="text-[10px] text-zinc-600 font-mono uppercase tracking-wide mb-1">
@@ -254,18 +313,28 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* Edit profile link */}
-            <div className="pt-1 border-t border-zinc-800">
-              <button
-                onClick={() => router.push('/profile/edit')}
-                className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1"
-              >
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
-                  <path d="M8.5 1.5l2 2-7 7H1.5v-2l7-7z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                Edit profile
-              </button>
-            </div>
+        {/* Edit profile + Commander Card links */}
+<div className="pt-1 border-t border-zinc-800 flex items-center justify-between">
+  <button
+    onClick={() => router.push('/profile/edit')}
+    className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1"
+  >
+    <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
+      <path d="M8.5 1.5l2 2-7 7H1.5v-2l7-7z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+    Edit profile
+  </button>
+  <button
+    onClick={() => router.push('/card')}
+    className="text-xs text-amber-700 hover:text-amber-500 transition-colors flex items-center gap-1"
+  >
+    <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
+      <path d="M1 3a1 1 0 011-1h8a1 1 0 011 1v6a1 1 0 01-1 1H2a1 1 0 01-1-1V3z" stroke="currentColor" strokeWidth="1.2" />
+      <path d="M3 5h2M3 7h4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+    </svg>
+    Commander Card
+  </button>
+</div>
           </div>
         </section>
 

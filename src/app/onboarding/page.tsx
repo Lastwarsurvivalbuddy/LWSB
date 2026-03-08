@@ -25,7 +25,7 @@ const theme = {
   green: '#22c55e',
 };
 
-const TOTAL_STEPS = 12; // Now 12 steps (added Commander Tag)
+const TOTAL_STEPS = 12;
 
 interface ProfileData {
   commander_name: string;
@@ -305,7 +305,6 @@ function Step2_CommanderTag({ data, setData, onNext, onBack, step }: StepProps) 
     }
   }, []);
 
-  // Debounce the availability check
   useEffect(() => {
     if (!data.commander_name || data.commander_name.length < 3) {
       if (data.commander_name && data.commander_name.length > 0) {
@@ -334,7 +333,6 @@ function Step2_CommanderTag({ data, setData, onNext, onBack, step }: StepProps) 
         subtitle="This is your identity in the app — use your in-game name or gaming tag."
       />
 
-      {/* Preview */}
       {data.commander_name && status === 'available' && (
         <div style={{
           textAlign: 'center', padding: '16px', marginBottom: 20,
@@ -350,13 +348,12 @@ function Step2_CommanderTag({ data, setData, onNext, onBack, step }: StepProps) 
         </div>
       )}
 
-      {/* Input */}
       <div style={{ position: 'relative' }}>
         <input
           type="text"
           value={data.commander_name}
           onChange={e => {
-            const val = e.target.value.replace(/\s/g, ''); // no spaces
+            const val = e.target.value.replace(/\s/g, '');
             setData({ ...data, commander_name: val });
           }}
           placeholder="e.g. IronWolf_1032"
@@ -377,7 +374,6 @@ function Step2_CommanderTag({ data, setData, onNext, onBack, step }: StepProps) 
             boxSizing: 'border-box', transition: 'border-color 0.15s',
           }}
         />
-        {/* Character count */}
         <span style={{
           position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)',
           fontSize: 11, color: theme.textMuted,
@@ -386,14 +382,12 @@ function Step2_CommanderTag({ data, setData, onNext, onBack, step }: StepProps) 
         </span>
       </div>
 
-      {/* Status message */}
       {statusMsg && (
         <p style={{ color: statusColor, fontSize: 13, marginTop: 8, minHeight: 20 }}>
           {status === 'checking' ? '⏳ ' : ''}{statusMsg}
         </p>
       )}
 
-      {/* Rules */}
       <div style={{ marginTop: 16, padding: '12px 14px', background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 8 }}>
         {[
           '3–20 characters',
@@ -626,7 +620,6 @@ function Step12_Goals({ data, setData, onNext, onBack, step }: StepProps) {
     { value: 'spend_smarter', label: 'Spend Smarter', icon: '💰' },
   ];
 
-  // Filter goals by troop tier where relevant
   const options = allOptions.filter(o => !o.tiers || o.tiers.includes(data.troop_tier));
 
   const toggle = (val: string) => {
@@ -709,6 +702,16 @@ function StepComplete({ data, onDone }: { data: ProfileData; onDone: () => void 
   );
 }
 
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+
+// Calculate server_start_date from server day entered by user.
+// server_start_date = today - (serverDay - 1) days
+function calcServerStartDate(serverDay: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - (serverDay - 1));
+  return d.toISOString().split('T')[0]; // YYYY-MM-DD
+}
+
 // ─── MAIN ─────────────────────────────────────────────────────────────────────
 
 export default function OnboardingFlow() {
@@ -763,10 +766,16 @@ export default function OnboardingFlow() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not logged in');
+
+      const serverDay = parseInt(String(data.server_day)) || 0;
+
+      // Calculate server_start_date so server day auto-increments forever
+      const serverStartDate = serverDay > 0 ? calcServerStartDate(serverDay) : null;
+
       const { error: upsertError } = await supabase.from('profiles').update({
         commander_name: data.commander_name || null,
         server_number: parseInt(String(data.server_number)) || 0,
-        server_day: parseInt(String(data.server_day)) || 0,
+        server_day: serverDay,
         hq_level: parseInt(String(data.hq_level)) || 1,
         spend_tier: data.spend_tier || 'f2p',
         playstyle: data.playstyle || 'scout',
@@ -778,11 +787,16 @@ export default function OnboardingFlow() {
         goals: data.goals || [],
         onboarding_step: nextStep,
         onboarding_complete: complete,
+        // Profile freshness fields
+        server_start_date: serverStartDate,
+        last_profile_update: new Date().toISOString(),
+        update_reminder_frequency: 'weekly',
         updated_at: new Date().toISOString(),
       }).eq('id', user.id);
+
       if (upsertError) throw upsertError;
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+     setError(err instanceof Error ? err.message : JSON.stringify(err));
     } finally {
       setSaving(false);
     }

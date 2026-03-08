@@ -17,14 +17,15 @@ interface ProfileForm {
   hero_power: string
   total_power: string
   goals: string[]
+  update_reminder_frequency: string
 }
 
 const SPEND_OPTIONS = ['F2P', 'Budget', 'Moderate', 'Investor', 'Whale', 'Mega Whale']
 const PLAYSTYLE_OPTIONS = [
-  { value: 'Fighter', label: '⚔️ Fighter', sub: 'Player vs. Player' },
-  { value: 'Developer', label: '🎯 Developer', sub: 'Player vs. Event' },
-  { value: 'Commander', label: '⚖️ Commander', sub: '50/50 Balanced' },
-  { value: 'Scout', label: '🗺️ Scout', sub: 'Still Figuring It Out' },
+  { value: 'Fighter',   label: '⚔️ Fighter',   sub: 'Player vs. Player'      },
+  { value: 'Developer', label: '🎯 Developer', sub: 'Player vs. Event'       },
+  { value: 'Commander', label: '⚖️ Commander', sub: '50/50 Balanced'         },
+  { value: 'Scout',     label: '🗺️ Scout',     sub: 'Still Figuring It Out'  },
 ]
 const TROOP_TYPES = ['Aircraft', 'Tank', 'Missile Vehicle', 'Mixed']
 const TROOP_TIERS = [
@@ -37,6 +38,12 @@ const TROOP_TIERS = [
   'T12',
 ]
 const HQ_SHORTCUTS = [5, 10, 15, 20, 25, 30, 35]
+
+const REMINDER_OPTIONS = [
+  { value: 'daily',  label: 'Daily',  sub: 'Remind me every day'    },
+  { value: 'weekly', label: 'Weekly', sub: 'Remind me every 7 days' },
+  { value: 'off',    label: 'Off',    sub: 'No reminders'           },
+]
 
 const ALL_GOALS: Record<string, string[]> = {
   early: [
@@ -94,6 +101,13 @@ function parsePowerToNumber(val: string): number | null {
   return isNaN(num) ? null : num
 }
 
+// Recalculate server_start_date from current server day
+function calcServerStartDate(serverDay: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() - (serverDay - 1))
+  return d.toISOString().split('T')[0]
+}
+
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
 export default function ProfileEditPage() {
@@ -111,6 +125,7 @@ export default function ProfileEditPage() {
     hero_power: '',
     total_power: '',
     goals: [],
+    update_reminder_frequency: 'weekly',
   })
   const [originalName, setOriginalName] = useState('')
   const [nameAvailable, setNameAvailable] = useState<boolean | null>(null)
@@ -164,20 +179,21 @@ export default function ProfileEditPage() {
 
       setForm({
         commander_name: data.commander_name || '',
-        server_number: data.server_number?.toString() || '',
-        server_day: data.server_day?.toString() || '',
-        hq_level: data.hq_level?.toString() || '',
-        spend_style: data.spend_style || '',
-        playstyle: data.playstyle || '',
-        troop_type: data.troop_type || '',
-        troop_tier: data.troop_tier || '',
-        server_rank: data.server_rank?.toString() || '',
-        hero_power: hp,
-        total_power: tp,
-        goals: data.goals || [],
+        server_number:  data.server_number?.toString() || '',
+        server_day:     data.server_day?.toString() || '',
+        hq_level:       data.hq_level?.toString() || '',
+        spend_style:    data.spend_style || '',
+        playstyle:      data.playstyle || '',
+        troop_type:     data.troop_type || '',
+        troop_tier:     data.troop_tier || '',
+        server_rank:    data.server_rank?.toString() || '',
+        hero_power:     hp,
+        total_power:    tp,
+        goals:          data.goals || [],
+        update_reminder_frequency: data.update_reminder_frequency || 'weekly',
       })
       setOriginalName(data.commander_name || '')
-    } catch (err) {
+    } catch {
       setErrorMsg('Failed to load profile.')
     } finally {
       setLoading(false)
@@ -202,7 +218,6 @@ export default function ProfileEditPage() {
   async function handleSave() {
     setErrorMsg('')
 
-    // Validate name
     if (!/^[a-zA-Z0-9_]{3,20}$/.test(form.commander_name)) {
       setErrorMsg('Commander tag must be 3–20 characters: letters, numbers, underscores only.')
       return
@@ -217,19 +232,26 @@ export default function ProfileEditPage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/signin'); return }
 
+      const serverDay = form.server_day ? parseInt(form.server_day) : null
+
       const updates: Record<string, unknown> = {
-        commander_name: form.commander_name,
-        server_number: form.server_number ? parseInt(form.server_number) : null,
-        server_day: form.server_day ? parseInt(form.server_day) : null,
-        hq_level: form.hq_level ? parseInt(form.hq_level) : null,
-        spend_style: form.spend_style || null,
-        playstyle: form.playstyle || null,
-        troop_type: form.troop_type || null,
-        troop_tier: form.troop_tier || null,
-        server_rank: form.server_rank ? parseInt(form.server_rank) : null,
-        hero_power: parsePowerToNumber(form.hero_power),
-        total_power: parsePowerToNumber(form.total_power),
-        goals: form.goals,
+        commander_name:  form.commander_name,
+        server_number:   form.server_number ? parseInt(form.server_number) : null,
+        server_day:      serverDay,
+        hq_level:        form.hq_level ? parseInt(form.hq_level) : null,
+        spend_style:     form.spend_style || null,
+        playstyle:       form.playstyle || null,
+        troop_type:      form.troop_type || null,
+        troop_tier:      form.troop_tier || null,
+        server_rank:     form.server_rank ? parseInt(form.server_rank) : null,
+        hero_power:      parsePowerToNumber(form.hero_power),
+        total_power:     parsePowerToNumber(form.total_power),
+        goals:           form.goals,
+        update_reminder_frequency: form.update_reminder_frequency,
+        // Recalculate server_start_date whenever server day is saved
+        server_start_date: serverDay ? calcServerStartDate(serverDay) : null,
+        // Stamp last_profile_update — resets the staleness banner timer
+        last_profile_update: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }
 
@@ -356,13 +378,33 @@ export default function ProfileEditPage() {
               />
             </Field>
           </div>
+
+          {/* Update reminder frequency */}
+          <Field label="Profile update reminders" hint="Keeps Buddy accurate as you level up">
+            <div className="grid grid-cols-3 gap-2">
+              {REMINDER_OPTIONS.map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => set('update_reminder_frequency', opt.value)}
+                  className={`
+                    text-left px-3 py-2.5 rounded-lg border transition-all
+                    ${form.update_reminder_frequency === opt.value
+                      ? 'border-amber-500 bg-amber-950/40'
+                      : 'border-zinc-700 hover:border-zinc-500'}
+                  `}
+                >
+                  <div className="text-sm font-semibold text-zinc-100">{opt.label}</div>
+                  <div className="text-[11px] text-zinc-500 mt-0.5">{opt.sub}</div>
+                </button>
+              ))}
+            </div>
+          </Field>
         </section>
 
         {/* ── SECTION: Base ── */}
         <section className="space-y-4">
           <SectionHeader label="Base" />
 
-          {/* HQ Level */}
           <Field label="HQ Level">
             <input
               type="number"

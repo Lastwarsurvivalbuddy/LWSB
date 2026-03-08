@@ -8,7 +8,7 @@ import { getResourceNotesSummary } from '@/lib/resourceNotes';
 import { getT10Summary } from '@/lib/t10Data';
 import { getHQRequirementsSummary } from '@/lib/hqRequirementsData';
 import { getHealingSummary } from '@/lib/healingData';
-import { getApprovedSubmissions } from '@/lib/submissionData'
+import { getApprovedSubmissions } from '@/lib/submissionData';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -24,37 +24,27 @@ const TIER_LIMITS: Record<string, { questions: number; screenshots: number }> = 
   alliance: { questions: 100, screenshots: 20 },
 };
 
-// ─── Duel day calculation (DST-aware, 8pm CT reset) ───
+// ─── Duel day calculation ───
+// Reset is always 2am UTC (8pm CT standard / 9pm CT DST — same UTC time either way)
+// Mapping: Sun=1(Drones), Mon=2(Building), Tue=3(Research),
+//          Wed=4(Heroes), Thu=5(Training), Fri=6(EnemyBuster), Sat=7(Reset)
 function getCurrentDuelDay(): { day: number; label: string } {
   const now = new Date();
+  // Shift back 2 hours so the day boundary aligns with the 2am UTC reset
+  const adjusted = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+  const utcDay = adjusted.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
 
-  // Determine CT offset (DST: UTC-5, Standard: UTC-6)
-  // DST runs second Sunday March → first Sunday November (approx)
-  const month = now.getUTCMonth(); // 0-indexed
-  const isDST = month >= 2 && month <= 9; // March–October (rough)
-  const ctOffsetHours = isDST ? -5 : -6;
-
-  // Shift to CT
-  const ctTime = new Date(now.getTime() + ctOffsetHours * 60 * 60 * 1000);
-  const ctHour = ctTime.getUTCHours();
-  const ctDow = ctTime.getUTCDay(); // 0=Sun
-
-  // Duel resets at 8pm CT — if before 8pm use today's DOW, if after use tomorrow's
-  const effectiveDow = ctHour >= 20 ? (ctDow + 1) % 7 : ctDow;
-
-  // Mapping: Sun=1(Drones), Mon=2(Building), Tue=3(Research),
-  //          Wed=4(Heroes), Thu=5(Training), Fri=6(EnemyBuster), Sat=7(Reset)
-  const dowToDay: Record<number, { day: number; label: string }> = {
-    0: { day: 1, label: 'Drones (1pt)'       },
-    1: { day: 2, label: 'Building (2pts)'    },
-    2: { day: 3, label: 'Research (2pts)'    },
-    3: { day: 4, label: 'Heroes (2pts)'      },
-    4: { day: 5, label: 'Training (2pts)'    },
-    5: { day: 6, label: 'Enemy Buster (4pts)' },
-    6: { day: 7, label: 'Reset'              },
+  const schedule: Record<number, { day: number; label: string }> = {
+    0: { day: 1, label: 'Drones (1pt)'        },
+    1: { day: 2, label: 'Building (2pts)'      },
+    2: { day: 3, label: 'Research (2pts)'      },
+    3: { day: 4, label: 'Heroes (2pts)'        },
+    4: { day: 5, label: 'Training (2pts)'      },
+    5: { day: 6, label: 'Enemy Buster (4pts)'  },
+    6: { day: 7, label: 'Reset'                },
   };
 
-  return dowToDay[effectiveDow] ?? { day: 1, label: 'Drones (1pt)' };
+  return schedule[utcDay] ?? { day: 1, label: 'Drones (1pt)' };
 }
 
 export async function POST(req: NextRequest) {
@@ -142,7 +132,6 @@ export async function POST(req: NextRequest) {
     const systemPrompt = await buildSystemPrompt(profile, duel, tier);
 
     // ─── Build message array for Claude ───
-    // History (last 10 exchanges = 20 messages max to keep context tight)
     const recentHistory = history.slice(-20);
 
     const claudeMessages: Array<{ role: string; content: unknown }> = [
@@ -202,9 +191,8 @@ export async function POST(req: NextRequest) {
       .join('');
 
     // ─── Save to chat history ───
-    // Upsert session (one per day, keyed by user + date)
     const sessionKey = `${user.id}_${today}`;
-    const { data: session, error: sessionError } = await supabase
+    const { data: session } = await supabase
       .from('chat_sessions')
       .upsert(
         { user_id: user.id, session_date: today, id: sessionKey },
@@ -233,17 +221,14 @@ export async function POST(req: NextRequest) {
     }
 
     // ─── Update daily usage ───
-    const newQuestionCount = questionCount + 1;
-    const newScreenshotCount = isScreenshot ? screenshotCount + 1 : screenshotCount;
-
     await supabase
       .from('daily_usage')
       .upsert(
         {
           user_id: user.id,
           date: today,
-          question_count: newQuestionCount,
-          screenshot_count: newScreenshotCount,
+          question_count: questionCount + 1,
+          screenshot_count: isScreenshot ? screenshotCount + 1 : screenshotCount,
         },
         { onConflict: 'user_id,date' }
       );
@@ -268,6 +253,10 @@ The player's profile hasn't loaded — give helpful general advice and ask them 
 Keep responses concise, specific, and tactical. No fluff.`;
   }
 
+  // Use computed_server_day (auto-calculated from server_start_date) if available,
+  // otherwise fall back to the stored server_day value
+  const serverDay = profile.computed_server_day ?? profile.server_day ?? 'Unknown';
+
   const duelLabels: Record<number, string> = {
     1: "Day 1 — Drones (1pt). Lowest value day. Use it for housekeeping, don't burn big speedups.",
     2: 'Day 2 — Building (2pts). Upgrade buildings. Double-dip: Building upgrades score Arms Race too.',
@@ -283,7 +272,7 @@ Keep responses concise, specific, and tactical. No fluff.`;
 ## This Commander's Profile
 - **Name:** ${profile.commander_name || 'Commander'}
 - **Server:** ${profile.server_number || 'Unknown'}
-- **Server Day:** ${profile.server_day || 'Unknown'}
+- **Server Day:** ${serverDay}
 - **HQ Level:** ${profile.hq_level || 'Unknown'}
 - **Troop Tier:** ${profile.troop_tier || 'Unknown'}
 - **Troop Type:** ${profile.troop_type || 'Unknown'}
@@ -334,11 +323,14 @@ ${getBuildingSummary()}
 ## Resource Notes
 ${getResourceNotesSummary()}
 
-## T10 Research\n${getT10Summary()}
+## T10 Research
+${getT10Summary()}
 
-## HQ Requirements\n${getHQRequirementsSummary()}
+## HQ Requirements
+${getHQRequirementsSummary()}
 
-## Healing System\n${getHealingSummary()}
+## Healing System
+${getHealingSummary()}
 
 ## Community Intelligence
 ${await getApprovedSubmissions(Number(profile.server_number))}

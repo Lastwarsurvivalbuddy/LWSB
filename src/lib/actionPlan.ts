@@ -88,55 +88,33 @@ export function getNextExpBreakpoint(currentHeroLevel: number): { level: number;
   return entry ? { level: entry.level, label: entry.label, expNeeded: entry.expFromL1 } : null
 }
 
-// ─── Alliance Duel Day Calculation ─────────────────────────────────────────
+// ─── Alliance Duel Day Calculation ───────────────────────────────────────────
+// Reset is always 2am UTC (8pm CT standard / 9pm CT during DST — same UTC time)
+// Mapping: Sun=1 (Drones), Mon=2 (Building), Tue=3 (Research),
+//          Wed=4 (Heroes), Thu=5 (Training), Fri=6 (Enemy Buster), Sat=7 (Reset)
 
-const DUEL_DAY_LABELS: Record<number, string> = {
-  1: 'Drones',
-  2: 'Building',
-  3: 'Research',
-  4: 'Heroes',
-  5: 'Training',
-  6: 'Enemy Buster',
-  7: 'Reset',
+interface DuelDayResult {
+  day: number;
+  label: string;
+  points: number;
 }
 
-const DUEL_DAY_POINTS: Record<number, number> = {
-  1: 1,
-  2: 2,
-  3: 2,
-  4: 2,
-  5: 2,
-  6: 4,
-  7: 0,
-}
+export function getDuelDay(now: Date = new Date()): DuelDayResult {
+  // Shift back 2 hours so the day boundary aligns with the 2am UTC reset
+  const adjusted = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+  const utcDay = adjusted.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
 
-export function getDuelDay(): { day: number; label: string; points: number } {
-  const now = new Date()
-  const utcHour = now.getUTCHours()
-  const utcMinute = now.getUTCMinutes()
+  const schedule: Record<number, DuelDayResult> = {
+    0: { day: 1, label: 'Drones',        points: 1 },
+    1: { day: 2, label: 'Building',      points: 2 },
+    2: { day: 3, label: 'Research',      points: 2 },
+    3: { day: 4, label: 'Heroes',        points: 2 },
+    4: { day: 5, label: 'Training',      points: 2 },
+    5: { day: 6, label: 'Enemy Buster',  points: 4 },
+    6: { day: 7, label: 'Reset',         points: 0 },
+  };
 
-  const year = now.getUTCFullYear()
-  const dstStart = new Date(Date.UTC(year, 2, 8))
-  const dstEnd   = new Date(Date.UTC(year, 10, 1))
-  const isDST = now >= dstStart && now < dstEnd
-  const resetHourUTC = isDST ? 1 : 2
-
-  const isBeforeReset =
-    utcHour < resetHourUTC ||
-    (utcHour === resetHourUTC && utcMinute === 0)
-
-  let utcDayOfWeek = now.getUTCDay()
-  if (isBeforeReset) {
-    utcDayOfWeek = (utcDayOfWeek + 6) % 7
-  }
-
-  const duelDay = utcDayOfWeek + 1
-
-  return {
-    day: duelDay,
-    label: DUEL_DAY_LABELS[duelDay] || 'Unknown',
-    points: DUEL_DAY_POINTS[duelDay] || 0,
-  }
+  return schedule[utcDay];
 }
 
 // ─── Profile Types ──────────────────────────────────────────────────────────
