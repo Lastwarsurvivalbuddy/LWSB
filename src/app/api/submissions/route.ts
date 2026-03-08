@@ -55,6 +55,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
+    // --- MODERATOR CHECK ---
+    const { data: modRow } = await supabase
+      .from('moderators')
+      .select('user_id')
+      .eq('user_id', user.id)
+      .single()
+
+    const isModerator = !!modRow
+
     // Get tier
     const { data: sub } = await supabase
       .from('subscriptions')
@@ -66,7 +75,7 @@ export async function POST(req: NextRequest) {
     const limit = SCREENSHOT_LIMITS[tier] ?? 2
     const today = new Date().toISOString().split('T')[0]
 
-    if (screenshot_path) {
+    if (screenshot_path && !isModerator) {
       const { data: usage } = await supabase
         .from('daily_usage')
         .select('submission_screenshot_count')
