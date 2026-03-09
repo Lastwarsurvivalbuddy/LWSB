@@ -39,20 +39,38 @@ const TIER_LIMITS: Record<string, { questions: number; screenshots: number }> = 
 // ─── Duel day calculation ───
 function getCurrentDuelDay(): { day: number; label: string } {
   const now = new Date();
-  const adjusted = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+
+  // Determine if US DST is active (second Sunday in March → first Sunday in November)
+  const year = now.getUTCFullYear();
+
+  const dstStart = new Date(Date.UTC(year, 2, 1)); // March 1
+  dstStart.setUTCDate(1 + ((7 - dstStart.getUTCDay()) % 7) + 7); // second Sunday in March
+
+  const dstEnd = new Date(Date.UTC(year, 10, 1)); // November 1
+  dstEnd.setUTCDate(1 + ((7 - dstEnd.getUTCDay()) % 7)); // first Sunday in November
+
+  const isDST = now >= dstStart && now < dstEnd;
+
+  // CT = UTC-6 standard, UTC-5 DST
+  // Reset is 8pm CT = 2am UTC standard, 1am UTC DST
+  const offsetHours = isDST ? 5 : 6;
+
+  // Shift time back by CT offset, then back 20 more hours so that
+  // the UTC day boundary (midnight) aligns with the 8pm CT reset
+  const adjusted = new Date(now.getTime() - (offsetHours + 20) * 60 * 60 * 1000);
   const utcDay = adjusted.getUTCDay();
 
   const schedule: Record<number, { day: number; label: string }> = {
-    0: { day: 1, label: 'Drones (1pt)'       },
-    1: { day: 2, label: 'Building (2pts)'     },
-    2: { day: 3, label: 'Research (2pts)'     },
-    3: { day: 4, label: 'Heroes (2pts)'       },
-    4: { day: 5, label: 'Training (2pts)'     },
-    5: { day: 6, label: 'Enemy Buster (4pts)' },
-    6: { day: 7, label: 'Reset'               },
+    1: { day: 1, label: 'Radar Training (1pt)'       },
+    2: { day: 2, label: 'Base Expansion (2pts)'       },
+    3: { day: 3, label: 'Age of Science (2pts)'       },
+    4: { day: 4, label: 'Train Heroes (2pts)'         },
+    5: { day: 5, label: 'Total Mobilization (2pts)'   },
+    6: { day: 6, label: 'Enemy Buster (4pts)'         },
+    0: { day: 7, label: 'Reset'                       },
   };
 
-  return schedule[utcDay] ?? { day: 1, label: 'Drones (1pt)' };
+  return schedule[utcDay] ?? { day: 1, label: 'Radar Training (1pt)' };
 }
 
 export async function POST(req: NextRequest) {
@@ -285,11 +303,11 @@ Keep responses concise, specific, and tactical. No fluff.`;
   };
 
   const duelLabels: Record<number, string> = {
-    1: "Day 1 — Drones (1pt). Lowest value day. Use it for housekeeping, don't burn big speedups.",
-    2: 'Day 2 — Building (2pts). Upgrade buildings. Double-dip: Building upgrades score Arms Race too.',
-    3: 'Day 3 — Research (2pts). Run research. Double-dip: Research scores Arms Race too.',
-    4: 'Day 4 — Heroes (2pts). Level up heroes. Double-dip: Hero XP scores Arms Race too.',
-    5: 'Day 5 — Training (2pts). Train troops. Double-dip: Troop training scores Arms Race too.',
+    1: "Day 1 — Radar Training (1pt). Lowest value day. Use it for housekeeping, don't burn big speedups.",
+    2: 'Day 2 — Base Expansion (2pts). Upgrade buildings. Double-dip: Building upgrades score Arms Race too.',
+    3: 'Day 3 — Age of Science (2pts). Run research. Double-dip: Research scores Arms Race too.',
+    4: 'Day 4 — Train Heroes (2pts). Level up heroes. Double-dip: Hero XP scores Arms Race too.',
+    5: 'Day 5 — Total Mobilization (2pts). Train troops. Double-dip: Troop training scores Arms Race too.',
     6: 'Day 6 — Enemy Buster (4pts). HIGHEST VALUE DAY. Fight enemies, hit Infected Zones. Max Arms Race double-dip.',
     7: 'Day 7 — Reset day. Alliance Duel is between cycles. Prepare for Day 1 tomorrow.',
   };
