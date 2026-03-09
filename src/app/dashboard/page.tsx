@@ -42,18 +42,18 @@ interface Profile {
 // Alliance Duel day helper — reset is always 2am UTC
 function getDuelDay(): { day: number; name: string; points: number } {
   const duelDays: Record<number, { name: string; points: number }> = {
-    1: { name: 'Drones',       points: 1 },
-    2: { name: 'Building',     points: 2 },
-    3: { name: 'Research',     points: 2 },
-    4: { name: 'Heroes',       points: 2 },
-    5: { name: 'Training',     points: 2 },
-    6: { name: 'Enemy Buster', points: 4 },
-    7: { name: 'Reset',        points: 0 },
+    1: { name: 'Radar Training',     points: 1 },
+    2: { name: 'Base Expansion',     points: 2 },
+    3: { name: 'Age of Science',     points: 2 },
+    4: { name: 'Train Heroes',       points: 2 },
+    5: { name: 'Total Mobilization', points: 2 },
+    6: { name: 'Enemy Buster',       points: 4 },
+    7: { name: 'Reset',              points: 0 },
   }
   const now = new Date()
   const adjusted = new Date(now.getTime() - 2 * 60 * 60 * 1000)
   const utcDay = adjusted.getUTCDay()
-  const dayMap: Record<number, number> = { 0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7 }
+  const dayMap: Record<number, number> = { 0: 7, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6 }
   const day = dayMap[utcDay] ?? 1
   return { day, ...duelDays[day] }
 }
