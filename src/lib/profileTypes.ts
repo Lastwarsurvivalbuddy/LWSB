@@ -1,6 +1,6 @@
 // src/lib/profileTypes.ts
 // Central type definitions for profile bucket system
-// Last updated: March 8, 2026
+// Last updated: March 9, 2026 — added kill tiers: 15m, 20m, 50m
 
 export type Season = 0 | 1 | 2 | 3 | 4 | 5;
 
@@ -44,25 +44,28 @@ export type KillTier =
   | '3m'
   | '5m'
   | '10m'
+  | '15m'
+  | '20m'
   | '25m'
+  | '50m'
   | '100m_plus';
 
 // Display labels for UI rendering
 export const SQUAD_POWER_TIER_LABELS: Record<SquadPowerTier, string> = {
-  under_10m:  'Under 10M',
-  '10_15m':   '10M – 15M',
-  '15_20m':   '15M – 20M',
-  '20_25m':   '20M – 25M',
-  '25_30m':   '25M – 30M',
-  '30_35m':   '30M – 35M',
-  '35_40m':   '35M – 40M',
-  '40_45m':   '40M – 45M',
-  '45_50m':   '45M – 50M',
-  '60m':      '~60M',
-  '70m':      '~70M',
-  '80m':      '~80M',
-  '90m':      '~90M',
-  '100m_plus':'100M+',
+  under_10m:   'Under 10M',
+  '10_15m':    '10M – 15M',
+  '15_20m':    '15M – 20M',
+  '20_25m':    '20M – 25M',
+  '25_30m':    '25M – 30M',
+  '30_35m':    '30M – 35M',
+  '35_40m':    '35M – 40M',
+  '40_45m':    '40M – 45M',
+  '45_50m':    '45M – 50M',
+  '60m':       '~60M',
+  '70m':       '~70M',
+  '80m':       '~80M',
+  '90m':       '~90M',
+  '100m_plus': '100M+',
 };
 
 export const RANK_BUCKET_LABELS: Record<RankBucket, string> = {
@@ -84,27 +87,33 @@ export const POWER_BUCKET_LABELS: Record<PowerBucket, string> = {
 };
 
 export const KILL_TIER_LABELS: Record<KillTier, string> = {
-  under_500k: 'Recruit — Under 500K kills',
-  '500k':     'Soldier — 500K kills',
-  '1m':       'Punisher — 1M kills',
-  '2m':       'Powerhouse — 2M kills',
-  '3m':       'Warlord — 3M kills',
-  '5m':       'Destroyer — 5M kills',
-  '10m':      'Annihilator — 10M kills',
-  '25m':      'Apex Predator — 25M kills',
-  '100m_plus':'LW Dominator — 100M+ kills',
+  under_500k:  'Recruit — Under 500K kills',
+  '500k':      'Soldier — 500K kills',
+  '1m':        'Punisher — 1M kills',
+  '2m':        'Powerhouse — 2M kills',
+  '3m':        'Warlord — 3M kills',
+  '5m':        'Destroyer — 5M kills',
+  '10m':       'Annihilator — 10M kills',
+  '15m':       'Executioner — 15M kills',
+  '20m':       'Obliterator — 20M kills',
+  '25m':       'Apex Predator — 25M kills',
+  '50m':       'War Machine — 50M kills',
+  '100m_plus': 'LW Dominator — 100M+ kills',
 };
 
 export const KILL_TIER_TITLES: Record<KillTier, string> = {
-  under_500k: 'Recruit',
-  '500k':     'Soldier',
-  '1m':       'Punisher',
-  '2m':       'Powerhouse',
-  '3m':       'Warlord',
-  '5m':       'Destroyer',
-  '10m':      'Annihilator',
-  '25m':      'Apex Predator',
-  '100m_plus':'LW Dominator',
+  under_500k:  'Recruit',
+  '500k':      'Soldier',
+  '1m':        'Punisher',
+  '2m':        'Powerhouse',
+  '3m':        'Warlord',
+  '5m':        'Destroyer',
+  '10m':       'Annihilator',
+  '15m':       'Executioner',
+  '20m':       'Obliterator',
+  '25m':       'Apex Predator',
+  '50m':       'War Machine',
+  '100m_plus': 'LW Dominator',
 };
 
 export const SEASON_LABELS: Record<number, string> = {
