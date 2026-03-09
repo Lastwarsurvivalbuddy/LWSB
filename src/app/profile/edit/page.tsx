@@ -3,103 +3,70 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import {
+  SQUAD_POWER_TIER_LABELS,
+  RANK_BUCKET_LABELS,
+  POWER_BUCKET_LABELS,
+  KILL_TIER_LABELS,
+  SEASON_LABELS,
+  type SquadPowerTier,
+  type RankBucket,
+  type PowerBucket,
+  type KillTier,
+} from '@/lib/profileTypes'
 
 interface ProfileForm {
   commander_name: string
   server_number: string
   server_day: string
+  season: number
   hq_level: string
   spend_style: string
   playstyle: string
   troop_type: string
-  troop_tier: string
-  server_rank: string
-  hero_power: string
-  total_power: string
-  goals: string[]
+  troop_tier: string           // under_t10 | t10 | t11
+  rank_bucket: RankBucket | ''
+  squad_power_tier: SquadPowerTier | ''
+  power_bucket: PowerBucket | ''
+  kill_tier: KillTier | ''
   update_reminder_frequency: string
 }
 
-const SPEND_OPTIONS = ['F2P', 'Budget', 'Moderate', 'Investor', 'Whale', 'Mega Whale']
+const SPEND_OPTIONS = ['f2p', 'budget', 'moderate', 'investor', 'whale', 'mega_whale']
+const SPEND_LABELS: Record<string, string> = {
+  f2p: 'F2P', budget: 'Budget', moderate: 'Moderate',
+  investor: 'Investor', whale: 'Whale', mega_whale: 'Mega Whale',
+}
+
 const PLAYSTYLE_OPTIONS = [
-  { value: 'Fighter',   label: '⚔️ Fighter',   sub: 'Player vs. Player'      },
-  { value: 'Developer', label: '🎯 Developer', sub: 'Player vs. Event'       },
-  { value: 'Commander', label: '⚖️ Commander', sub: '50/50 Balanced'         },
-  { value: 'Scout',     label: '🗺️ Scout',     sub: 'Still Figuring It Out'  },
+  { value: 'fighter',   label: '⚔️ Fighter',   sub: 'Player vs. Player'     },
+  { value: 'developer', label: '🎯 Developer', sub: 'Player vs. Event'      },
+  { value: 'commander', label: '⚖️ Commander', sub: '50/50 Balanced'        },
+  { value: 'scout',     label: '🗺️ Scout',     sub: 'Still Figuring It Out' },
 ]
-const TROOP_TYPES = ['Aircraft', 'Tank', 'Missile Vehicle', 'Mixed']
+
+const TROOP_TYPES = [
+  { value: 'aircraft', label: '✈️ Aircraft' },
+  { value: 'tank',     label: '🛡️ Tank' },
+  { value: 'missile vehicle',  label: '🚀 Missile Vehicle' },
+  { value: 'mixed',    label: '⚖️ Mixed' },
+]
+
 const TROOP_TIERS = [
-  'Below T8 / Just Starting',
-  'T8',
-  'T9',
-  'T10 Working Towards',
-  'T10 Unlocked',
-  'T11',
-  'T12',
+  { value: 'under_t10', label: 'Under T10' },
+  { value: 't10',       label: 'T10' },
+  { value: 't11',       label: 'T11' },
 ]
+
+const SEASONS = [0, 1, 2, 3, 4, 5]
+
 const HQ_SHORTCUTS = [5, 10, 15, 20, 25, 30, 35]
 
 const REMINDER_OPTIONS = [
-  { value: 'daily',  label: 'Daily',  sub: 'Remind me every day'    },
-  { value: 'weekly', label: 'Weekly', sub: 'Remind me every 7 days' },
-  { value: 'off',    label: 'Off',    sub: 'No reminders'           },
+  { value: 'daily',  label: 'Daily',  sub: 'Every day'    },
+  { value: 'weekly', label: 'Weekly', sub: 'Every 7 days' },
+  { value: 'off',    label: 'Off',    sub: 'No reminders' },
 ]
-
-const ALL_GOALS: Record<string, string[]> = {
-  early: [
-    'Reach T8 Troops',
-    'Upgrade HQ to 20',
-    'Join a Strong Alliance',
-    'Complete Daily Missions',
-    'Learn Arms Race Basics',
-  ],
-  mid: [
-    'Reach T10 Troops',
-    'Climb Server Rankings',
-    'Maximize Arms Race Points',
-    'Build Research Queue',
-    'Improve Hero Power',
-  ],
-  late: [
-    'Reach T11 Troops',
-    'Hit Top 10 Server Rank',
-    'Dominate Kill Event',
-    'Complete Armament Research',
-    'Maximize Alliance Duel Score',
-    'Optimize Defense Squads',
-  ],
-}
-
-function getGoalsForTier(tier: string): string[] {
-  if (tier.includes('T10') || tier.includes('T9') || tier === 'T8') {
-    return [...ALL_GOALS.mid, ...ALL_GOALS.early]
-  }
-  if (tier.includes('T11') || tier.includes('T12')) {
-    return [...ALL_GOALS.late, ...ALL_GOALS.mid]
-  }
-  return ALL_GOALS.early
-}
-
-function formatPowerInput(raw: string): string {
-  const num = parseFloat(raw.replace(/[^0-9.]/g, ''))
-  if (isNaN(num)) return raw
-  if (raw.toLowerCase().includes('m') || num >= 1_000_000) {
-    return `${(num / 1_000_000).toFixed(1)}M`
-  }
-  if (raw.toLowerCase().includes('k') || num >= 1_000) {
-    return `${Math.round(num / 1_000)}K`
-  }
-  return raw
-}
-
-function parsePowerToNumber(val: string): number | null {
-  if (!val) return null
-  const clean = val.toLowerCase().replace(/,/g, '')
-  if (clean.includes('m')) return Math.round(parseFloat(clean) * 1_000_000)
-  if (clean.includes('k')) return Math.round(parseFloat(clean) * 1_000)
-  const num = parseFloat(clean)
-  return isNaN(num) ? null : num
-}
 
 // Recalculate server_start_date from current server day
 function calcServerStartDate(serverDay: number): string {
@@ -116,15 +83,16 @@ export default function ProfileEditPage() {
     commander_name: '',
     server_number: '',
     server_day: '',
+    season: 0,
     hq_level: '',
     spend_style: '',
     playstyle: '',
     troop_type: '',
     troop_tier: '',
-    server_rank: '',
-    hero_power: '',
-    total_power: '',
-    goals: [],
+    rank_bucket: '',
+    squad_power_tier: '',
+    power_bucket: '',
+    kill_tier: '',
     update_reminder_frequency: 'weekly',
   })
   const [originalName, setOriginalName] = useState('')
@@ -134,9 +102,7 @@ export default function ProfileEditPage() {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [errorMsg, setErrorMsg] = useState('')
 
-  useEffect(() => {
-    loadProfile()
-  }, [])
+  useEffect(() => { loadProfile() }, [])
 
   // Name availability check
   useEffect(() => {
@@ -174,22 +140,20 @@ export default function ProfileEditPage() {
 
       if (error) throw error
 
-      const hp = data.hero_power ? `${(data.hero_power / 1_000_000).toFixed(1)}M` : ''
-      const tp = data.total_power ? `${(data.total_power / 1_000_000).toFixed(1)}M` : ''
-
       setForm({
-        commander_name: data.commander_name || '',
-        server_number:  data.server_number?.toString() || '',
-        server_day:     data.server_day?.toString() || '',
-        hq_level:       data.hq_level?.toString() || '',
-        spend_style:    data.spend_style || '',
-        playstyle:      data.playstyle || '',
-        troop_type:     data.troop_type || '',
-        troop_tier:     data.troop_tier || '',
-        server_rank:    data.server_rank?.toString() || '',
-        hero_power:     hp,
-        total_power:    tp,
-        goals:          data.goals || [],
+        commander_name:           data.commander_name || '',
+        server_number:            data.server_number?.toString() || '',
+        server_day:               data.server_day?.toString() || '',
+        season:                   data.season ?? 0,
+        hq_level:                 data.hq_level?.toString() || '',
+        spend_style:              data.spend_style || '',
+        playstyle:                data.playstyle || '',
+        troop_type:               data.troop_type || '',
+        troop_tier:               data.troop_tier || '',
+        rank_bucket:              data.rank_bucket || '',
+        squad_power_tier:         data.squad_power_tier || '',
+        power_bucket:             data.power_bucket || '',
+        kill_tier:                data.kill_tier || '',
         update_reminder_frequency: data.update_reminder_frequency || 'weekly',
       })
       setOriginalName(data.commander_name || '')
@@ -200,18 +164,8 @@ export default function ProfileEditPage() {
     }
   }
 
-  function set(field: keyof ProfileForm, value: string | string[]) {
+  function set<K extends keyof ProfileForm>(field: K, value: ProfileForm[K]) {
     setForm(prev => ({ ...prev, [field]: value }))
-    setSaveStatus('idle')
-  }
-
-  function toggleGoal(goal: string) {
-    setForm(prev => ({
-      ...prev,
-      goals: prev.goals.includes(goal)
-        ? prev.goals.filter(g => g !== goal)
-        : [...prev.goals, goal],
-    }))
     setSaveStatus('idle')
   }
 
@@ -235,24 +189,23 @@ export default function ProfileEditPage() {
       const serverDay = form.server_day ? parseInt(form.server_day) : null
 
       const updates: Record<string, unknown> = {
-        commander_name:  form.commander_name,
-        server_number:   form.server_number ? parseInt(form.server_number) : null,
-        server_day:      serverDay,
-        hq_level:        form.hq_level ? parseInt(form.hq_level) : null,
-        spend_style:     form.spend_style || null,
-        playstyle:       form.playstyle || null,
-        troop_type:      form.troop_type || null,
-        troop_tier:      form.troop_tier || null,
-        server_rank:     form.server_rank ? parseInt(form.server_rank) : null,
-        hero_power:      parsePowerToNumber(form.hero_power),
-        total_power:     parsePowerToNumber(form.total_power),
-        goals:           form.goals,
+        commander_name:            form.commander_name,
+        server_number:             form.server_number ? parseInt(form.server_number) : null,
+        server_day:                serverDay,
+        season:                    form.season ?? 0,
+        hq_level:                  form.hq_level ? parseInt(form.hq_level) : null,
+        spend_style:               form.spend_style || null,
+        playstyle:                 form.playstyle || null,
+        troop_type:                form.troop_type || null,
+        troop_tier:                form.troop_tier || null,
+        rank_bucket:               form.rank_bucket || null,
+        squad_power_tier:          form.squad_power_tier || null,
+        power_bucket:              form.power_bucket || null,
+        kill_tier:                 form.kill_tier || null,
         update_reminder_frequency: form.update_reminder_frequency,
-        // Recalculate server_start_date whenever server day is saved
-        server_start_date: serverDay ? calcServerStartDate(serverDay) : null,
-        // Stamp last_profile_update — resets the staleness banner timer
-        last_profile_update: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        server_start_date:         serverDay ? calcServerStartDate(serverDay) : null,
+        last_profile_update:       new Date().toISOString(),
+        updated_at:                new Date().toISOString(),
       }
 
       const { error } = await supabase
@@ -265,15 +218,14 @@ export default function ProfileEditPage() {
       setOriginalName(form.commander_name)
       setSaveStatus('saved')
       setTimeout(() => setSaveStatus('idle'), 2500)
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to save. Try again.')
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to save. Try again.')
       setSaveStatus('error')
     }
   }
 
-  const availableGoals = getGoalsForTier(form.troop_tier)
   const nameChanged = form.commander_name !== originalName
-  const nameValid = /^[a-zA-Z0-9_]{3,20}$/.test(form.commander_name)
+  const nameValid   = /^[a-zA-Z0-9_]{3,20}$/.test(form.commander_name)
 
   if (loading) {
     return (
@@ -321,18 +273,16 @@ export default function ProfileEditPage() {
 
       <main className="max-w-2xl mx-auto px-4 py-8 space-y-8 pb-20">
 
-        {/* Error */}
         {errorMsg && (
           <div className="bg-red-950/50 border border-red-800 rounded-lg px-4 py-3 text-sm text-red-400">
             {errorMsg}
           </div>
         )}
 
-        {/* ── SECTION: Identity ── */}
+        {/* ── Identity ── */}
         <section className="space-y-4">
           <SectionHeader label="Identity" />
 
-          {/* Commander Tag */}
           <Field label="Commander Tag" hint="3–20 chars · letters, numbers, underscores">
             <div className="relative">
               <input
@@ -357,7 +307,6 @@ export default function ProfileEditPage() {
             </div>
           </Field>
 
-          {/* Server + Day */}
           <div className="grid grid-cols-2 gap-3">
             <Field label="Server Number">
               <input
@@ -379,7 +328,6 @@ export default function ProfileEditPage() {
             </Field>
           </div>
 
-          {/* Update reminder frequency */}
           <Field label="Profile update reminders" hint="Keeps Buddy accurate as you level up">
             <div className="grid grid-cols-3 gap-2">
               {REMINDER_OPTIONS.map(opt => (
@@ -401,9 +349,22 @@ export default function ProfileEditPage() {
           </Field>
         </section>
 
-        {/* ── SECTION: Base ── */}
+        {/* ── Base ── */}
         <section className="space-y-4">
           <SectionHeader label="Base" />
+
+          <Field label="Season">
+            <div className="flex flex-wrap gap-2">
+              {SEASONS.map(s => (
+                <Chip
+                  key={s}
+                  label={SEASON_LABELS[s]}
+                  selected={form.season === s}
+                  onClick={() => set('season', s)}
+                />
+              ))}
+            </div>
+          </Field>
 
           <Field label="HQ Level">
             <input
@@ -433,7 +394,7 @@ export default function ProfileEditPage() {
           </Field>
         </section>
 
-        {/* ── SECTION: Playstyle ── */}
+        {/* ── Playstyle ── */}
         <section className="space-y-4">
           <SectionHeader label="Playstyle" />
 
@@ -442,7 +403,7 @@ export default function ProfileEditPage() {
               {SPEND_OPTIONS.map(opt => (
                 <Chip
                   key={opt}
-                  label={opt}
+                  label={SPEND_LABELS[opt]}
                   selected={form.spend_style === opt}
                   onClick={() => set('spend_style', opt)}
                 />
@@ -471,18 +432,18 @@ export default function ProfileEditPage() {
           </Field>
         </section>
 
-        {/* ── SECTION: Troops ── */}
+        {/* ── Troops ── */}
         <section className="space-y-4">
           <SectionHeader label="Troops" />
 
-          <Field label="Troop Type">
+          <Field label="Squad 1 Troop Type" hint="Your highest-power squad">
             <div className="flex flex-wrap gap-2">
               {TROOP_TYPES.map(opt => (
                 <Chip
-                  key={opt}
-                  label={opt}
-                  selected={form.troop_type === opt}
-                  onClick={() => set('troop_type', opt)}
+                  key={opt.value}
+                  label={opt.label}
+                  selected={form.troop_type === opt.value}
+                  onClick={() => set('troop_type', opt.value)}
                 />
               ))}
             </div>
@@ -492,65 +453,67 @@ export default function ProfileEditPage() {
             <div className="flex flex-wrap gap-2">
               {TROOP_TIERS.map(opt => (
                 <Chip
-                  key={opt}
-                  label={opt}
-                  selected={form.troop_tier === opt}
-                  onClick={() => set('troop_tier', opt)}
+                  key={opt.value}
+                  label={opt.label}
+                  selected={form.troop_tier === opt.value}
+                  onClick={() => set('troop_tier', opt.value)}
                 />
               ))}
             </div>
           </Field>
         </section>
 
-        {/* ── SECTION: Power ── */}
+        {/* ── Rank & Power ── */}
         <section className="space-y-4">
-          <SectionHeader label="Power Stats" />
+          <SectionHeader label="Rank & Power" />
 
           <Field label="Server Rank" hint="Rankings → Total Hero Power">
-            <input
-              type="number"
-              value={form.server_rank}
-              onChange={e => set('server_rank', e.target.value)}
-              placeholder="e.g. 16"
-              className="input-base"
-            />
+            <div className="flex flex-wrap gap-2">
+              {(Object.entries(RANK_BUCKET_LABELS) as [RankBucket, string][]).map(([key, label]) => (
+                <Chip
+                  key={key}
+                  label={label}
+                  selected={form.rank_bucket === key}
+                  onClick={() => set('rank_bucket', key)}
+                />
+              ))}
+            </div>
           </Field>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Hero Power" hint="e.g. 178.5M">
-              <input
-                type="text"
-                value={form.hero_power}
-                onChange={e => set('hero_power', e.target.value)}
-                onBlur={e => set('hero_power', formatPowerInput(e.target.value))}
-                placeholder="e.g. 178.5M"
-                className="input-base"
-              />
-            </Field>
-            <Field label="Total Power" hint="Optional">
-              <input
-                type="text"
-                value={form.total_power}
-                onChange={e => set('total_power', e.target.value)}
-                onBlur={e => set('total_power', formatPowerInput(e.target.value))}
-                placeholder="e.g. 220M"
-                className="input-base"
-              />
-            </Field>
-          </div>
-        </section>
-
-        {/* ── SECTION: Goals ── */}
-        <section className="space-y-4">
-          <SectionHeader label="Goals" />
-          <Field label="Select all that apply">
+          <Field label="Squad 1 Power" hint="Tap Squad 1 in Battle screen">
             <div className="flex flex-wrap gap-2">
-              {availableGoals.map(goal => (
+              {(Object.entries(SQUAD_POWER_TIER_LABELS) as [SquadPowerTier, string][]).map(([key, label]) => (
                 <Chip
-                  key={goal}
-                  label={goal}
-                  selected={form.goals.includes(goal)}
-                  onClick={() => toggleGoal(goal)}
+                  key={key}
+                  label={label}
+                  selected={form.squad_power_tier === key}
+                  onClick={() => set('squad_power_tier', key)}
+                />
+              ))}
+            </div>
+          </Field>
+
+          <Field label="Total Individual Power" hint="Your profile page">
+            <div className="flex flex-wrap gap-2">
+              {(Object.entries(POWER_BUCKET_LABELS) as [PowerBucket, string][]).map(([key, label]) => (
+                <Chip
+                  key={key}
+                  label={label}
+                  selected={form.power_bucket === key}
+                  onClick={() => set('power_bucket', key)}
+                />
+              ))}
+            </div>
+          </Field>
+
+          <Field label="Kill Tier" hint="Profile → Combat Stats">
+            <div className="flex flex-wrap gap-2">
+              {(Object.entries(KILL_TIER_LABELS) as [KillTier, string][]).map(([key, label]) => (
+                <Chip
+                  key={key}
+                  label={label}
+                  selected={form.kill_tier === key}
+                  onClick={() => set('kill_tier', key)}
                 />
               ))}
             </div>
@@ -593,22 +556,16 @@ export default function ProfileEditPage() {
           transition: border-color 0.15s;
           font-family: inherit;
         }
-        .input-base:focus {
-          border-color: #f59e0b;
-        }
-        .input-base::placeholder {
-          color: #52525b;
-        }
+        .input-base:focus { border-color: #f59e0b; }
+        .input-base::placeholder { color: #52525b; }
         .input-base[type=number]::-webkit-inner-spin-button,
-        .input-base[type=number]::-webkit-outer-spin-button {
-          opacity: 0.3;
-        }
+        .input-base[type=number]::-webkit-outer-spin-button { opacity: 0.3; }
       `}</style>
     </div>
   )
 }
 
-// ── Sub-components ──
+// ── Sub-components ──────────────────────────────────────────────────────────
 
 function SectionHeader({ label }: { label: string }) {
   return (
