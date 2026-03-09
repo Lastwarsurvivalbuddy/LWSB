@@ -25,6 +25,9 @@
     --muted:   #606878;
     --muted2:  #8090a0;
     --green:   #30b870;
+    --purple:  #a064e8;
+    --purple2: #c090f0;
+    --blue:    #60a0e8;
   }
 
   html { scroll-behavior: smooth; }
@@ -175,7 +178,7 @@
     animation: fadeUp 0.8s 0.1s ease both;
   }
 
-  .hero-title .gold { 
+  .hero-title .gold {
     color: var(--gold);
     text-shadow: 0 0 40px rgba(232,160,32,0.4);
   }
@@ -328,9 +331,7 @@
     animation: fadeUp 0.8s 0.6s ease both;
   }
 
-  .stat {
-    text-align: center;
-  }
+  .stat { text-align: center; }
 
   .stat-number {
     font-family: 'Oswald', sans-serif;
@@ -429,6 +430,104 @@
     line-height: 1.7; font-weight: 300;
   }
 
+  /* ── PRICING ── */
+  .pricing {
+    position: relative; z-index: 1;
+    padding: 100px 5%;
+    background: linear-gradient(180deg, transparent, rgba(14,16,20,0.6), transparent);
+    border-top: 1px solid var(--border);
+  }
+
+  .pricing-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-top: 56px;
+  }
+
+  .price-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+
+  .price-card:hover { transform: translateY(-2px); }
+
+  .price-card.gold-card {
+    background: linear-gradient(160deg, #1a1200, var(--card));
+    border-color: rgba(232,160,32,0.35);
+  }
+
+  .price-card.gold-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+
+  .price-card.purple-card {
+    background: linear-gradient(160deg, #0e0a1a, var(--card));
+    border-color: rgba(160,100,232,0.35);
+  }
+
+  .price-card.purple-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--purple), transparent);
+  }
+
+  .price-tier-name {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase;
+  }
+
+  .price-amount {
+    font-family: 'Oswald', sans-serif;
+    font-size: 38px; font-weight: 700;
+    line-height: 1;
+  }
+
+  .price-amount span {
+    font-size: 14px; font-weight: 400; color: var(--muted);
+  }
+
+  .price-cadence {
+    font-size: 12px; color: var(--muted); line-height: 1.4;
+  }
+
+  .price-divider {
+    height: 1px; background: var(--border); margin: 4px 0;
+  }
+
+  .price-feature {
+    font-size: 13px; color: var(--muted2); line-height: 1.5;
+  }
+
+  .price-feature strong { color: var(--text); font-weight: 600; }
+
+  .price-badge {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 9px; font-weight: 700;
+    letter-spacing: 0.15em; text-transform: uppercase;
+    border-radius: 4px; padding: 2px 8px;
+  }
+
+  .price-header {
+    display: flex; align-items: center; justify-content: space-between;
+  }
+
   /* ── LEARNING SECTION ── */
   .learning {
     position: relative; z-index: 1;
@@ -443,8 +542,6 @@
     display: grid; grid-template-columns: 1fr 1fr;
     gap: 60px; align-items: center;
   }
-
-  .learning-text {}
 
   .learning-title {
     font-family: 'Oswald', sans-serif;
@@ -605,27 +702,21 @@
   @media (max-width: 768px) {
     nav { padding: 0 4%; }
     .nav-login input { display: none; }
-    
     .hero { padding: 100px 4% 60px; }
-
     .stats-row { gap: 20px; }
     .stat-divider { display: none; }
-
-    .learning-inner {
-      grid-template-columns: 1fr;
-      gap: 40px;
-    }
-
+    .learning-inner { grid-template-columns: 1fr; gap: 40px; }
     .bottom-signup { flex-direction: column; }
     .bottom-signup input { width: 100%; }
     .bottom-signup-btn { width: 100%; }
-
     footer { justify-content: center; text-align: center; }
+    .pricing-grid { grid-template-columns: 1fr 1fr; }
   }
 
   @media (max-width: 480px) {
     .nav-login { gap: 8px; }
     .hero-title .block { letter-spacing: 0.08em; }
+    .pricing-grid { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -676,7 +767,6 @@
       </p>
       <form action="https://lastwarsurvivalbuddy.us5.list-manage.com/subscribe/post?u=18c493eb1ee556997ddefe218&amp;id=8c7ab30157&amp;f_id=003021ebf0" method="post" id="mc-embedded-subscribe-form" name="mc-embedded-subscribe-form" target="_blank" novalidate>
         <input class="cta-input" type="email" name="EMAIL" placeholder="Your email address" required style="font-size:15px;padding:15px 16px;"/>
-        <!-- Mailchimp bot protection -->
         <div style="position:absolute;left:-5000px;" aria-hidden="true">
           <input type="text" name="b_18c493eb1ee556997ddefe218_8c7ab30157" tabindex="-1" value=""/>
         </div>
@@ -687,7 +777,7 @@
         <button type="submit" class="cta-btn" style="font-size:17px;padding:17px;">Reserve My Spot — It's Free →</button>
         <div class="cta-terms">
           No account needed. No credit card. No spam — ever.<br/>
-          Founding Member spots ($99 · lifetime Elite access) will be offered to the waitlist first.<br/>
+          Founding Member spots ($99 · lifetime access) will be offered to the waitlist first.<br/>
           By signing up you agree to our <a>Terms</a> and <a>Privacy Policy</a>.
         </div>
       </form>
@@ -704,7 +794,7 @@
   <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap;justify-content:center;">
     <div style="text-align:center;">
       <div style="font-family:'Oswald',sans-serif;font-size:30px;font-weight:700;color:#e8a020;line-height:1;">$99</div>
-      <div style="font-size:10px;color:#606878;letter-spacing:0.1em;text-transform:uppercase;">One Time · Lifetime Elite</div>
+      <div style="font-size:10px;color:#606878;letter-spacing:0.1em;text-transform:uppercase;">One Time · Lifetime Access</div>
     </div>
     <div style="width:1px;height:40px;background:#222830;"></div>
     <div style="text-align:center;">
@@ -768,7 +858,6 @@
         Know exactly what to do every day. Arms Race, Alliance Duel double-dips, event prep — all timed to your server day and your goals. No guesswork.
       </div>
     </div>
-
     <div class="feature-card">
       <div class="feature-icon">⚡</div>
       <div class="feature-title">Power Gap Analysis</div>
@@ -776,7 +865,6 @@
         See exactly how far you are from the next rank. Track your growth week over week and get the single highest-impact investment to close the gap.
       </div>
     </div>
-
     <div class="feature-card">
       <div class="feature-icon">💰</div>
       <div class="feature-title">Spend Smarter</div>
@@ -784,7 +872,6 @@
         Know which packs are worth it and when to buy them. Spend advice matched to your tier, your goals, and what events are coming — not just what's on sale.
       </div>
     </div>
-
     <div class="feature-card">
       <div class="feature-icon">📸</div>
       <div class="feature-title">Screenshot Intelligence</div>
@@ -792,7 +879,6 @@
         Upload any in-game screenshot. AI reads your squad power, research progress, defense lineup, and hero stats — then tells you what to fix first.
       </div>
     </div>
-
     <div class="feature-card">
       <div class="feature-icon">🏆</div>
       <div class="feature-title">Server Benchmarks</div>
@@ -800,13 +886,88 @@
         See how you stack up against players at your stage across hundreds of servers. Know if you're ahead, behind, or right on pace for your goals.
       </div>
     </div>
-
     <div class="feature-card">
       <div class="feature-icon">🔔</div>
       <div class="feature-title">Event Alerts</div>
       <div class="feature-desc">
         Never miss a Hot Deal, Kill Event, or Marshal's Guard again. Alerts timed to your server — not a generic schedule that's always slightly off.
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="pricing">
+  <div class="pricing-inner">
+    <div style="text-align:center;">
+      <div class="section-label">Simple Pricing</div>
+      <h2 class="section-title">Pick Your Tier.<br/>Start Winning.</h2>
+      <p class="section-sub">Start free. Upgrade when you're ready. Founding Member spots are limited to 500 — once they're gone, they're gone forever.</p>
+    </div>
+
+    <div class="pricing-grid">
+
+      <!-- Free -->
+      <div class="price-card">
+        <div class="price-tier-name" style="color:var(--muted2);">Free</div>
+        <div class="price-amount" style="color:var(--text);">$0</div>
+        <div class="price-cadence">Forever free</div>
+        <div class="price-divider"></div>
+        <div class="price-feature">✦ <strong>5 questions</strong> / day</div>
+        <div class="price-feature">✦ No screenshots</div>
+        <div class="price-feature">✦ Daily action plan</div>
+        <div class="price-feature">✦ Commander Card</div>
+      </div>
+
+      <!-- Pro -->
+      <div class="price-card">
+        <div class="price-tier-name" style="color:var(--blue);">Buddy Pro</div>
+        <div class="price-amount" style="color:var(--text);">$9.99<span>/mo</span></div>
+        <div class="price-cadence">Cancel anytime</div>
+        <div class="price-divider"></div>
+        <div class="price-feature">✦ <strong>30 questions</strong> / day</div>
+        <div class="price-feature">✦ <strong>10 screenshots</strong> / day</div>
+        <div class="price-feature">✦ Daily action plan</div>
+        <div class="price-feature">✦ Commander Card</div>
+      </div>
+
+      <!-- Elite -->
+      <div class="price-card gold-card">
+        <div class="price-header">
+          <div class="price-tier-name" style="color:var(--gold);">Buddy Elite</div>
+          <div class="price-badge" style="background:var(--gold);color:#0a0c10;">Most Popular</div>
+        </div>
+        <div class="price-amount" style="color:var(--gold);">$19.99<span>/mo</span></div>
+        <div class="price-cadence">Cancel anytime</div>
+        <div class="price-divider" style="background:rgba(232,160,32,0.2);"></div>
+        <div class="price-feature">✦ <strong>100 questions</strong> / day</div>
+        <div class="price-feature">✦ <strong>20 screenshots</strong> / day</div>
+        <div class="price-feature">✦ Daily action plan</div>
+        <div class="price-feature">✦ Commander Card</div>
+      </div>
+
+      <!-- Founding Member -->
+      <div class="price-card purple-card">
+        <div class="price-header">
+          <div class="price-tier-name" style="color:var(--purple2);">Founding Member</div>
+          <div class="price-badge" style="background:var(--purple);color:#fff;">500 Only</div>
+        </div>
+        <div class="price-amount" style="color:var(--purple2);">$99<span> once</span></div>
+        <div class="price-cadence">Pay once. Never again.</div>
+        <div class="price-divider" style="background:rgba(160,100,232,0.2);"></div>
+        <div class="price-feature">✦ <strong>20 questions</strong> / day</div>
+        <div class="price-feature">✦ <strong>5 screenshots</strong> / day</div>
+        <div class="price-feature">✦ Daily action plan</div>
+        <div class="price-feature">✦ Commander Card</div>
+        <div class="price-feature" style="color:var(--purple2);">✦ Founding Member badge</div>
+      </div>
+
+    </div>
+
+    <!-- Comparison note -->
+    <div style="margin-top:32px;text-align:center;font-size:12px;color:var(--muted);line-height:1.8;">
+      All tiers include the Daily Action Plan and Commander Card. Screenshots require Pro or higher.<br/>
+      Founding Member is a limited lifetime tier — not a subscription. 500 spots total, offered to the waitlist first.
     </div>
   </div>
 </section>
@@ -870,159 +1031,129 @@
       </p>
     </div>
 
-    <!-- Two-col: silhouette + chat -->
     <div style="display:flex;align-items:center;gap:48px;flex-wrap:wrap;">
-    <div style="width:100%;text-align:center;margin-bottom:-32px;">
-      <span style="font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.2em;color:#606878;text-transform:uppercase;background:#0e1014;border:1px solid #222830;border-radius:100px;padding:4px 14px;">— Example Conversation —</span>
-    </div>
-
-    <!-- Soldier silhouette -->
-    <div style="flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:0;position:relative;user-select:none;">
-      <svg width="160" height="380" viewBox="0 0 160 380" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter:drop-shadow(0 0 32px rgba(232,160,32,0.18)) drop-shadow(0 0 8px rgba(232,160,32,0.1));">
-        <!-- Helmet -->
-        <ellipse cx="80" cy="42" rx="34" ry="12" fill="#1a1e26"/>
-        <ellipse cx="80" cy="36" rx="28" ry="22" fill="#1a1e26"/>
-        <rect x="52" y="52" width="56" height="6" rx="3" fill="#141720"/>
-        <!-- Visor / face shield -->
-        <ellipse cx="80" cy="57" rx="22" ry="10" fill="#0e1014"/>
-        <ellipse cx="80" cy="57" rx="18" ry="7" fill="#0a1520" opacity="0.9"/>
-        <!-- Neck -->
-        <rect x="72" y="64" width="16" height="12" rx="4" fill="#161a22"/>
-        <!-- Torso / body armor -->
-        <path d="M44 76 Q44 70 80 70 Q116 70 116 76 L120 160 Q120 168 80 168 Q40 168 40 160 Z" fill="#161a22"/>
-        <!-- Chest plate detail -->
-        <rect x="58" y="82" width="44" height="32" rx="4" fill="#1e2430"/>
-        <rect x="63" y="87" width="14" height="18" rx="2" fill="#232b38"/>
-        <rect x="83" y="87" width="14" height="18" rx="2" fill="#232b38"/>
-        <!-- Shoulder pads -->
-        <ellipse cx="40" cy="84" rx="16" ry="10" fill="#1a1e28" transform="rotate(-10 40 84)"/>
-        <ellipse cx="120" cy="84" rx="16" ry="10" fill="#1a1e28" transform="rotate(10 120 84)"/>
-        <!-- Left arm + hand holding rifle -->
-        <path d="M40 90 Q28 110 24 150 Q22 158 28 162 Q34 166 38 154 L46 110 Z" fill="#161a22"/>
-        <!-- Right arm up holding rifle grip -->
-        <path d="M120 90 Q132 108 136 148 Q138 158 132 162 Q126 166 122 154 L116 110 Z" fill="#161a22"/>
-        <!-- Rifle (across front, held at angle) -->
-        <g transform="rotate(-15 80 130)">
-          <rect x="20" y="130" width="120" height="8" rx="3" fill="#0e1218"/>
-          <rect x="20" y="130" width="30" height="8" rx="2" fill="#141820"/>
-          <rect x="120" y="126" width="24" height="6" rx="2" fill="#0a0e14"/>
-          <rect x="66" y="118" width="8" height="14" rx="2" fill="#141820"/>
-        </g>
-        <!-- Belt / waist gear -->
-        <rect x="46" y="162" width="68" height="10" rx="3" fill="#131720"/>
-        <rect x="68" y="162" width="24" height="10" rx="2" fill="#1a2030"/>
-        <!-- Left leg -->
-        <path d="M50 172 L46 260 Q45 270 54 272 Q63 274 65 264 L70 172 Z" fill="#141820"/>
-        <!-- Right leg -->
-        <path d="M110 172 L114 260 Q115 270 106 272 Q97 274 95 264 L90 172 Z" fill="#141820"/>
-        <!-- Left boot -->
-        <path d="M46 264 Q44 278 42 285 Q38 292 48 294 Q60 296 64 286 Q67 278 65 264 Z" fill="#0e1014"/>
-        <!-- Right boot -->
-        <path d="M114 264 Q116 278 118 285 Q122 292 112 294 Q100 296 96 286 Q93 278 95 264 Z" fill="#0e1014"/>
-        <!-- Knee pads -->
-        <ellipse cx="56" cy="224" rx="10" ry="8" fill="#1a2030"/>
-        <ellipse cx="104" cy="224" rx="10" ry="8" fill="#1a2030"/>
-        <!-- Accent glow lines on chest (orange) -->
-        <rect x="60" y="122" width="40" height="2" rx="1" fill="#e8a020" opacity="0.5"/>
-        <rect x="60" y="128" width="28" height="1" rx="1" fill="#e8a020" opacity="0.3"/>
-        <!-- Helmet glow line -->
-        <rect x="54" y="52" width="52" height="2" rx="1" fill="#e8a020" opacity="0.4"/>
-      </svg>
-
-      <!-- Ground shadow / glow -->
-      <div style="width:120px;height:14px;background:radial-gradient(ellipse,rgba(232,160,32,0.18),transparent 70%);margin-top:-10px;border-radius:50%;"></div>
-
-      <!-- Rank badge -->
-      <div style="margin-top:16px;background:rgba(232,160,32,0.08);border:1px solid rgba(232,160,32,0.25);border-radius:8px;padding:7px 16px;text-align:center;">
-        <div style="font-family:'Rajdhani',sans-serif;font-size:9px;letter-spacing:0.2em;color:#e8a020;text-transform:uppercase;margin-bottom:3px;">Commander</div>
-        <div style="font-family:'Oswald',sans-serif;font-size:13px;color:#e8e8e8;font-weight:600;letter-spacing:0.06em;">Your Server</div>
-        <div style="font-size:10px;color:#606878;margin-top:2px;">Day 500 · HQ 35</div>
-      </div>
-    </div>
-
-    <!-- Chat window mockup -->
-    <div style="flex:1;min-width:280px;background:#0e1014;border:1px solid #2a3040;border-radius:16px;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,0.6);">
-      <!-- Chat header -->
-      <div style="background:#13161c;border-bottom:1px solid #222830;padding:14px 20px;display:flex;align-items:center;gap:12px;">
-        <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#c06010,#e8a020);display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 16px rgba(232,160,32,0.3);">🪖</div>
-        <div>
-          <div style="font-family:'Oswald',sans-serif;font-size:14px;font-weight:600;color:#e8e8e8;letter-spacing:0.06em;">BUDDY AI</div>
-          <div style="font-size:10px;color:#30b870;letter-spacing:0.1em;display:flex;align-items:center;gap:5px;">
-            <span style="width:5px;height:5px;border-radius:50%;background:#30b870;display:inline-block;"></span>
-            Online · Knows your full profile
-          </div>
-        </div>
-        <div style="margin-left:auto;font-family:'Rajdhani',sans-serif;font-size:10px;color:#606878;letter-spacing:0.1em;text-transform:uppercase;">Your Server · Day 500 · HQ 35</div>
+      <div style="width:100%;text-align:center;margin-bottom:-32px;">
+        <span style="font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.2em;color:#606878;text-transform:uppercase;background:#0e1014;border:1px solid #222830;border-radius:100px;padding:4px 14px;">— Example Conversation —</span>
       </div>
 
-      <!-- Chat messages -->
-      <div style="padding:24px 20px;display:flex;flex-direction:column;gap:16px;">
-
-        <!-- User message -->
-        <div style="display:flex;justify-content:flex-end;">
-          <div style="background:#1a2030;border:1px solid #2a3040;border-radius:12px 12px 2px 12px;padding:12px 16px;max-width:75%;">
-            <div style="font-size:14px;color:#e8e8e8;line-height:1.55;">Should I buy this pack right now?</div>
-            <div style="font-size:10px;color:#606878;margin-top:6px;text-align:right;">+ screenshot attached</div>
-          </div>
+      <!-- Soldier silhouette -->
+      <div style="flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:0;position:relative;user-select:none;">
+        <svg width="160" height="380" viewBox="0 0 160 380" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter:drop-shadow(0 0 32px rgba(232,160,32,0.18)) drop-shadow(0 0 8px rgba(232,160,32,0.1));">
+          <ellipse cx="80" cy="42" rx="34" ry="12" fill="#1a1e26"/>
+          <ellipse cx="80" cy="36" rx="28" ry="22" fill="#1a1e26"/>
+          <rect x="52" y="52" width="56" height="6" rx="3" fill="#141720"/>
+          <ellipse cx="80" cy="57" rx="22" ry="10" fill="#0e1014"/>
+          <ellipse cx="80" cy="57" rx="18" ry="7" fill="#0a1520" opacity="0.9"/>
+          <rect x="72" y="64" width="16" height="12" rx="4" fill="#161a22"/>
+          <path d="M44 76 Q44 70 80 70 Q116 70 116 76 L120 160 Q120 168 80 168 Q40 168 40 160 Z" fill="#161a22"/>
+          <rect x="58" y="82" width="44" height="32" rx="4" fill="#1e2430"/>
+          <rect x="63" y="87" width="14" height="18" rx="2" fill="#232b38"/>
+          <rect x="83" y="87" width="14" height="18" rx="2" fill="#232b38"/>
+          <ellipse cx="40" cy="84" rx="16" ry="10" fill="#1a1e28" transform="rotate(-10 40 84)"/>
+          <ellipse cx="120" cy="84" rx="16" ry="10" fill="#1a1e28" transform="rotate(10 120 84)"/>
+          <path d="M40 90 Q28 110 24 150 Q22 158 28 162 Q34 166 38 154 L46 110 Z" fill="#161a22"/>
+          <path d="M120 90 Q132 108 136 148 Q138 158 132 162 Q126 166 122 154 L116 110 Z" fill="#161a22"/>
+          <g transform="rotate(-15 80 130)">
+            <rect x="20" y="130" width="120" height="8" rx="3" fill="#0e1218"/>
+            <rect x="20" y="130" width="30" height="8" rx="2" fill="#141820"/>
+            <rect x="120" y="126" width="24" height="6" rx="2" fill="#0a0e14"/>
+            <rect x="66" y="118" width="8" height="14" rx="2" fill="#141820"/>
+          </g>
+          <rect x="46" y="162" width="68" height="10" rx="3" fill="#131720"/>
+          <rect x="68" y="162" width="24" height="10" rx="2" fill="#1a2030"/>
+          <path d="M50 172 L46 260 Q45 270 54 272 Q63 274 65 264 L70 172 Z" fill="#141820"/>
+          <path d="M110 172 L114 260 Q115 270 106 272 Q97 274 95 264 L90 172 Z" fill="#141820"/>
+          <path d="M46 264 Q44 278 42 285 Q38 292 48 294 Q60 296 64 286 Q67 278 65 264 Z" fill="#0e1014"/>
+          <path d="M114 264 Q116 278 118 285 Q122 292 112 294 Q100 296 96 286 Q93 278 95 264 Z" fill="#0e1014"/>
+          <ellipse cx="56" cy="224" rx="10" ry="8" fill="#1a2030"/>
+          <ellipse cx="104" cy="224" rx="10" ry="8" fill="#1a2030"/>
+          <rect x="60" y="122" width="40" height="2" rx="1" fill="#e8a020" opacity="0.5"/>
+          <rect x="60" y="128" width="28" height="1" rx="1" fill="#e8a020" opacity="0.3"/>
+          <rect x="54" y="52" width="52" height="2" rx="1" fill="#e8a020" opacity="0.4"/>
+        </svg>
+        <div style="width:120px;height:14px;background:radial-gradient(ellipse,rgba(232,160,32,0.18),transparent 70%);margin-top:-10px;border-radius:50%;"></div>
+        <div style="margin-top:16px;background:rgba(232,160,32,0.08);border:1px solid rgba(232,160,32,0.25);border-radius:8px;padding:7px 16px;text-align:center;">
+          <div style="font-family:'Rajdhani',sans-serif;font-size:9px;letter-spacing:0.2em;color:#e8a020;text-transform:uppercase;margin-bottom:3px;">Commander</div>
+          <div style="font-family:'Oswald',sans-serif;font-size:13px;color:#e8e8e8;font-weight:600;letter-spacing:0.06em;">Your Server</div>
+          <div style="font-size:10px;color:#606878;margin-top:2px;">Day 500 · HQ 35</div>
         </div>
+      </div>
 
-        <!-- AI response -->
-        <div style="display:flex;gap:12px;align-items:flex-start;">
-          <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#c06010,#e8a020);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">🪖</div>
-          <div style="background:#13161c;border:1px solid #222830;border-radius:2px 12px 12px 12px;padding:14px 16px;max-width:80%;">
-            <div style="font-size:13px;color:#e8e8e8;line-height:1.7;">
-              <span style="color:#e8a020;font-weight:700;font-family:'Rajdhani',sans-serif;letter-spacing:0.05em;">YES — strong timing.</span> That pack contains 180 Armament Cores. At your current T11 Weapon branch pace you'll need them in approximately <span style="color:#e8e8e8;font-weight:600;">6–8 days.</span>
-              <br/><br/>
-              More importantly: <span style="color:#30b870;font-weight:600;">Kill Event is in 3 days</span> on your server. The troop training speedups in this pack are better used after Day 5 of Alliance Duel for the <span style="color:#e8e8e8;font-weight:600;">4× multiplier</span> — hold those. Use the Cores now.
-              <br/><br/>
-              <span style="color:#8090a0;font-size:12px;">Gap to Rank 15: 1.27M · This pack closes ~0.3M of that.</span>
+      <!-- Chat window mockup -->
+      <div style="flex:1;min-width:280px;background:#0e1014;border:1px solid #2a3040;border-radius:16px;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,0.6);">
+        <div style="background:#13161c;border-bottom:1px solid #222830;padding:14px 20px;display:flex;align-items:center;gap:12px;">
+          <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#c06010,#e8a020);display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 16px rgba(232,160,32,0.3);">🪖</div>
+          <div>
+            <div style="font-family:'Oswald',sans-serif;font-size:14px;font-weight:600;color:#e8e8e8;letter-spacing:0.06em;">BUDDY AI</div>
+            <div style="font-size:10px;color:#30b870;letter-spacing:0.1em;display:flex;align-items:center;gap:5px;">
+              <span style="width:5px;height:5px;border-radius:50%;background:#30b870;display:inline-block;"></span>
+              Online · Knows your full profile
             </div>
-            <div style="font-size:10px;color:#606878;margin-top:8px;">Buddy · just now</div>
           </div>
+          <div style="margin-left:auto;font-family:'Rajdhani',sans-serif;font-size:10px;color:#606878;letter-spacing:0.1em;text-transform:uppercase;">Your Server · Day 500 · HQ 35</div>
         </div>
 
-        <!-- Second user message -->
-        <div style="display:flex;justify-content:flex-end;">
-          <div style="background:#1a2030;border:1px solid #2a3040;border-radius:12px 12px 2px 12px;padding:12px 16px;max-width:75%;">
-            <div style="font-size:14px;color:#e8e8e8;line-height:1.55;">What's the single best thing I can do today to close the gap to Rank 15?</div>
-          </div>
-        </div>
-
-        <!-- AI second response -->
-        <div style="display:flex;gap:12px;align-items:flex-start;">
-          <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#c06010,#e8a020);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">🪖</div>
-          <div style="background:#13161c;border:1px solid #222830;border-radius:2px 12px 12px 12px;padding:14px 16px;max-width:80%;">
-            <div style="font-size:13px;color:#e8e8e8;line-height:1.7;">
-              Run <span style="color:#e8a020;font-weight:700;">Restricted Area Training</span> twice today — it's available now and resets in 4 hours. That's your highest hero power gain per minute of anything you can do right now.
-              <br/><br/>
-              Rank 15 is at <span style="color:#e8e8e8;font-weight:600;">179,843,524</span>. You're <span style="color:#e8a020;font-weight:600;">1,274,985 away.</span> At your current weekly growth rate you close this in <span style="color:#30b870;font-weight:600;">~18 days</span> without extra spend.
+        <div style="padding:24px 20px;display:flex;flex-direction:column;gap:16px;">
+          <div style="display:flex;justify-content:flex-end;">
+            <div style="background:#1a2030;border:1px solid #2a3040;border-radius:12px 12px 2px 12px;padding:12px 16px;max-width:75%;">
+              <div style="font-size:14px;color:#e8e8e8;line-height:1.55;">Should I buy this pack right now?</div>
+              <div style="font-size:10px;color:#606878;margin-top:6px;text-align:right;">+ screenshot attached</div>
             </div>
-            <div style="font-size:10px;color:#606878;margin-top:8px;">Buddy · just now</div>
           </div>
-        </div>
 
-        <!-- Prompt bar -->
-        <div style="display:flex;gap:10px;align-items:center;margin-top:8px;padding-top:16px;border-top:1px solid #222830;">
-          <div style="flex:1;background:#07080a;border:1px solid #2a3040;border-radius:8px;padding:12px 16px;font-size:13px;color:#606878;font-family:'Open Sans',sans-serif;">
-            Ask your Buddy anything about Last War: Survival...
+          <div style="display:flex;gap:12px;align-items:flex-start;">
+            <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#c06010,#e8a020);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">🪖</div>
+            <div style="background:#13161c;border:1px solid #222830;border-radius:2px 12px 12px 12px;padding:14px 16px;max-width:80%;">
+              <div style="font-size:13px;color:#e8e8e8;line-height:1.7;">
+                <span style="color:#e8a020;font-weight:700;font-family:'Rajdhani',sans-serif;letter-spacing:0.05em;">YES — strong timing.</span> That pack contains 180 Armament Cores. At your current T11 Weapon branch pace you'll need them in approximately <span style="color:#e8e8e8;font-weight:600;">6–8 days.</span>
+                <br/><br/>
+                More importantly: <span style="color:#30b870;font-weight:600;">Kill Event is in 3 days</span> on your server. The troop training speedups in this pack are better used after Day 5 of Alliance Duel for the <span style="color:#e8e8e8;font-weight:600;">4× multiplier</span> — hold those. Use the Cores now.
+                <br/><br/>
+                <span style="color:#8090a0;font-size:12px;">Gap to Rank 15: 1.27M · This pack closes ~0.3M of that.</span>
+              </div>
+              <div style="font-size:10px;color:#606878;margin-top:8px;">Buddy · just now</div>
+            </div>
           </div>
-          <button style="background:linear-gradient(135deg,#c0281a,#e8a020);border:none;border-radius:8px;padding:12px 18px;color:#fff;font-family:'Oswald',sans-serif;font-size:13px;font-weight:600;letter-spacing:0.08em;cursor:pointer;">ASK →</button>
-        </div>
 
-        <!-- Free tier note -->
-        <div style="text-align:center;font-size:11px;color:#606878;">
-          ✦ Free accounts get <span style="color:#e8a020;">5 questions per day</span> · 30/day with Pro · 100/day with Elite
+          <div style="display:flex;justify-content:flex-end;">
+            <div style="background:#1a2030;border:1px solid #2a3040;border-radius:12px 12px 2px 12px;padding:12px 16px;max-width:75%;">
+              <div style="font-size:14px;color:#e8e8e8;line-height:1.55;">What's the single best thing I can do today to close the gap to Rank 15?</div>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:12px;align-items:flex-start;">
+            <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#c06010,#e8a020);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">🪖</div>
+            <div style="background:#13161c;border:1px solid #222830;border-radius:2px 12px 12px 12px;padding:14px 16px;max-width:80%;">
+              <div style="font-size:13px;color:#e8e8e8;line-height:1.7;">
+                Run <span style="color:#e8a020;font-weight:700;">Restricted Area Training</span> twice today — it's available now and resets in 4 hours. That's your highest hero power gain per minute of anything you can do right now.
+                <br/><br/>
+                Rank 15 is at <span style="color:#e8e8e8;font-weight:600;">179,843,524</span>. You're <span style="color:#e8a020;font-weight:600;">1,274,985 away.</span> At your current weekly growth rate you close this in <span style="color:#30b870;font-weight:600;">~18 days</span> without extra spend.
+              </div>
+              <div style="font-size:10px;color:#606878;margin-top:8px;">Buddy · just now</div>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:10px;align-items:center;margin-top:8px;padding-top:16px;border-top:1px solid #222830;">
+            <div style="flex:1;background:#07080a;border:1px solid #2a3040;border-radius:8px;padding:12px 16px;font-size:13px;color:#606878;font-family:'Open Sans',sans-serif;">
+              Ask your Buddy anything about Last War: Survival...
+            </div>
+            <button style="background:linear-gradient(135deg,#c0281a,#e8a020);border:none;border-radius:8px;padding:12px 18px;color:#fff;font-family:'Oswald',sans-serif;font-size:13px;font-weight:600;letter-spacing:0.08em;cursor:pointer;">ASK →</button>
+          </div>
+
+          <div style="text-align:center;font-size:11px;color:#606878;">
+            ✦ Free accounts get <span style="color:#e8a020;">5 questions per day</span> · 30/day with Pro · 100/day with Elite
+          </div>
         </div>
       </div>
-    </div><!-- end chat window -->
-    </div><!-- end two-col flex -->
+    </div>
   </div>
 </section>
 
+<!-- BOTTOM CTA -->
 <section class="bottom-cta">
   <div class="section-label">Be First In Line</div>
   <h2 class="bottom-cta-title">Don't Miss<br/><span>Launch Day.</span></h2>
-  <p class="bottom-cta-sub">Join the waitlist free. Founding Member spots go to the list first — 500 total, $99 lifetime Elite access.</p>
+  <p class="bottom-cta-sub">Join the waitlist free. Founding Member spots go to the list first — 500 total, $99 lifetime access.</p>
   <div class="bottom-signup">
     <form action="https://lastwarsurvivalbuddy.us5.list-manage.com/subscribe/post?u=18c493eb1ee556997ddefe218&amp;id=8c7ab30157&amp;f_id=003021ebf0" method="post" id="mc-embedded-subscribe-form-2" name="mc-embedded-subscribe-form-2" target="_blank" novalidate style="display:flex;gap:10px;flex-wrap:wrap;width:100%;justify-content:center;">
       <input type="email" name="EMAIL" placeholder="Your email address" required/>
