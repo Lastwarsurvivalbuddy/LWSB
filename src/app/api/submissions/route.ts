@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { incrementStreak } from '@/lib/streak'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -7,11 +8,11 @@ const supabase = createClient(
 )
 
 const SCREENSHOT_LIMITS: Record<string, number> = {
-  free: 2,
-  pro: 5,
-  elite: 5,
+  free:     2,
+  pro:      5,
+  elite:    5,
   founding: 5,
-  alliance: 5
+  alliance: 5,
 }
 
 export async function GET(req: NextRequest) {
@@ -55,7 +56,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // --- MODERATOR CHECK ---
+    // ─── Moderator check ───
     const { data: modRow } = await supabase
       .from('moderators')
       .select('user_id')
@@ -64,7 +65,7 @@ export async function POST(req: NextRequest) {
 
     const isModerator = !!modRow
 
-    // Get tier
+    // ─── Get tier ───
     const { data: sub } = await supabase
       .from('subscriptions')
       .select('tier')
@@ -75,6 +76,7 @@ export async function POST(req: NextRequest) {
     const limit = SCREENSHOT_LIMITS[tier] ?? 2
     const today = new Date().toISOString().split('T')[0]
 
+    // ─── Screenshot limit check ───
     if (screenshot_path && !isModerator) {
       const { data: usage } = await supabase
         .from('daily_usage')
@@ -93,10 +95,11 @@ export async function POST(req: NextRequest) {
         .upsert({
           user_id: user.id,
           date: today,
-          submission_screenshot_count: currentCount + 1
+          submission_screenshot_count: currentCount + 1,
         }, { onConflict: 'user_id,date' })
     }
 
+    // ─── Insert submission ───
     const { error } = await supabase
       .from('community_submissions')
       .insert({
@@ -106,10 +109,13 @@ export async function POST(req: NextRequest) {
         claim,
         scope,
         screenshot_path: screenshot_path || null,
-        status: 'pending'
+        status: 'pending',
       })
 
     if (error) throw error
+
+    // ─── Increment streak ───
+    await incrementStreak(supabase, user.id)
 
     return NextResponse.json({ success: true })
 

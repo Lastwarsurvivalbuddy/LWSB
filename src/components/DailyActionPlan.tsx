@@ -2,22 +2,10 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { generateDailyPlan, DailyAction, ActionPriority } from '@/lib/actionPlan'
+import { generateDailyPlan, DailyAction, ActionPriority, CommanderProfile } from '@/lib/actionPlan'
 
 interface Props {
-  profile: {
-    commander_name: string
-    hq_level: number
-    troop_tier: string
-    troop_type: string
-    playstyle: string
-    spend_style: string
-    server_rank?: number
-    hero_power?: number
-    goals?: string[]
-    server_number?: number
-    server_day?: number
-  }
+  profile: CommanderProfile & { commander_name?: string }
 }
 
 const priorityConfig: Record<ActionPriority, { label: string; color: string; bar: string }> = {
@@ -118,7 +106,6 @@ function ActionCard({ action, index }: { action: DailyAction; index: number }) {
             {action.buddyPrompt && (
               <button
                 onClick={() => {
-                  // Store prompt in sessionStorage then navigate
                   if (typeof window !== 'undefined') {
                     sessionStorage.setItem('buddy_prefill', action.buddyPrompt!)
                   }
@@ -143,10 +130,7 @@ function ActionCard({ action, index }: { action: DailyAction; index: number }) {
 
 export default function DailyActionPlan({ profile }: Props) {
   const plan = generateDailyPlan(profile)
-  const [allExpanded, setAllExpanded] = useState(false)
-
   const criticalCount = plan.actions.filter(a => a.priority === 'critical').length
-  const completedCount = 0 // Could track via state if needed
 
   return (
     <div className="w-full">

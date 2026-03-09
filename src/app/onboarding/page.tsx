@@ -2,6 +2,17 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import {
+  SQUAD_POWER_TIER_LABELS,
+  RANK_BUCKET_LABELS,
+  POWER_BUCKET_LABELS,
+  KILL_TIER_LABELS,
+  SEASON_LABELS,
+  type SquadPowerTier,
+  type RankBucket,
+  type PowerBucket,
+  type KillTier,
+} from '@/lib/profileTypes';
 
 const supabase =
   typeof window !== 'undefined'
@@ -25,21 +36,23 @@ const theme = {
   green: '#22c55e',
 };
 
-const TOTAL_STEPS = 12;
+// 13 real steps (Welcome is step 1 but not counted in progress bar)
+const TOTAL_STEPS = 13;
 
 interface ProfileData {
   commander_name: string;
   server_number: string | number;
   server_day: string | number;
+  season: number;
   hq_level: string | number;
   spend_tier: string;
   playstyle: string;
   troop_type: string;
-  troop_tier: string;
-  server_rank: string;
-  hero_power: string | number;
-  total_power: string | number;
-  goals: string[];
+  troop_tier: string; // new values: under_t10 | t10 | t11
+  rank_bucket: RankBucket | '';
+  squad_power_tier: SquadPowerTier | '';
+  power_bucket: PowerBucket | '';
+  kill_tier: KillTier | '';
 }
 
 // ─── SHARED COMPONENTS ────────────────────────────────────────────────────────
@@ -102,7 +115,7 @@ function HintBox({ text }: { text: string }) {
 }
 
 function NavButtons({
-  onBack, onNext, nextLabel = 'Continue', nextDisabled = false, step
+  onBack, onNext, nextLabel = 'Continue', nextDisabled = false, step,
 }: {
   onBack: () => void;
   onNext: () => void;
@@ -172,31 +185,38 @@ function OptionCard({ label, sublabel, icon, selected, onClick }: {
   );
 }
 
-function MultiCard({ label, icon, selected, onClick }: {
-  label: string; icon?: string; selected: boolean; onClick: () => void;
+function ChipGrid<T extends string>({
+  options, value, onChange,
+}: {
+  options: Record<T, string>;
+  value: T | '';
+  onChange: (v: T) => void;
 }) {
   return (
-    <button onClick={onClick} style={{
-      display: 'flex', alignItems: 'center', gap: 14, width: '100%',
-      padding: '14px 16px',
-      background: selected ? `${theme.gold}12` : theme.surface,
-      border: `1px solid ${selected ? theme.gold : theme.border}`,
-      borderRadius: 8, cursor: 'pointer', textAlign: 'left',
-      transition: 'all 0.15s', marginBottom: 8,
-    }}>
-      {icon && <span style={{ fontSize: 22, minWidth: 28 }}>{icon}</span>}
-      <div style={{ color: selected ? theme.gold : theme.text, fontWeight: 600, fontSize: 15, fontFamily: '"Rajdhani", "Oswald", sans-serif', letterSpacing: '0.03em' }}>
-        {label}
-      </div>
-      <div style={{
-        marginLeft: 'auto', width: 18, height: 18, borderRadius: 4,
-        border: `2px solid ${selected ? theme.gold : theme.border}`,
-        background: selected ? theme.gold : 'transparent',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-      }}>
-        {selected && <span style={{ color: '#0a0c10', fontSize: 11, fontWeight: 900 }}>✓</span>}
-      </div>
-    </button>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+      {(Object.entries(options) as [T, string][]).map(([key, label]) => {
+        const selected = value === key;
+        return (
+          <button
+            key={key}
+            onClick={() => onChange(key)}
+            style={{
+              padding: '10px 14px',
+              background: selected ? `${theme.gold}18` : theme.surface,
+              border: `1px solid ${selected ? theme.gold : theme.border}`,
+              borderRadius: 8, cursor: 'pointer',
+              color: selected ? theme.gold : theme.textDim,
+              fontSize: 13, fontWeight: 600,
+              fontFamily: '"Rajdhani", "Oswald", sans-serif',
+              letterSpacing: '0.03em',
+              transition: 'all 0.15s',
+            }}
+          >
+            {label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -261,7 +281,7 @@ function Step1_Welcome({ onNext }: { onNext: () => void }) {
   );
 }
 
-// ─── COMMANDER TAG STEP ───────────────────────────────────────────────────────
+// ─── COMMANDER TAG ────────────────────────────────────────────────────────────
 
 type TagStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid';
 
@@ -272,37 +292,25 @@ function Step2_CommanderTag({ data, setData, onNext, onBack, step }: StepProps) 
   const validate = (val: string): string | null => {
     if (val.length < 3) return 'Too short — minimum 3 characters';
     if (val.length > 20) return 'Too long — maximum 20 characters';
-    if (!/^[a-zA-Z0-9_]+$/.test(val)) return 'Letters, numbers, and underscores only — no spaces';
+    if (!/^[a-zA-Z0-9_ ]+$/.test(val)) return 'Letters, numbers, underscores, and spaces only';
     return null;
   };
 
   const checkAvailability = useCallback(async (val: string) => {
     const err = validate(val);
-    if (err) {
-      setStatus('invalid');
-      setStatusMsg(err);
-      return;
-    }
+    if (err) { setStatus('invalid'); setStatusMsg(err); return; }
     if (!supabase) return;
     setStatus('checking');
     setStatusMsg('Checking availability...');
     try {
       const { data: existing } = await supabase
-        .from('profiles')
-        .select('id')
-        .ilike('commander_name', val)
-        .limit(1);
+        .from('profiles').select('id').ilike('commander_name', val).limit(1);
       if (existing && existing.length > 0) {
-        setStatus('taken');
-        setStatusMsg('That tag is already taken — try another');
+        setStatus('taken'); setStatusMsg('That tag is already taken — try another');
       } else {
-        setStatus('available');
-        setStatusMsg('✓ Available!');
+        setStatus('available'); setStatusMsg('✓ Available!');
       }
-    } catch {
-      setStatus('idle');
-      setStatusMsg('');
-    }
+    } catch { setStatus('idle'); setStatusMsg(''); }
   }, []);
 
   useEffect(() => {
@@ -310,9 +318,7 @@ function Step2_CommanderTag({ data, setData, onNext, onBack, step }: StepProps) 
       if (data.commander_name && data.commander_name.length > 0) {
         const err = validate(data.commander_name);
         if (err) { setStatus('invalid'); setStatusMsg(err); }
-      } else {
-        setStatus('idle'); setStatusMsg('');
-      }
+      } else { setStatus('idle'); setStatusMsg(''); }
       return;
     }
     const timer = setTimeout(() => checkAvailability(data.commander_name), 500);
@@ -321,88 +327,54 @@ function Step2_CommanderTag({ data, setData, onNext, onBack, step }: StepProps) 
 
   const statusColor =
     status === 'available' ? theme.green :
-    status === 'taken' || status === 'invalid' ? theme.red :
-    theme.textMuted;
-
-  const canContinue = status === 'available';
+    status === 'taken' || status === 'invalid' ? theme.red : theme.textMuted;
 
   return (
     <div>
-      <StepTitle
-        title="Choose your Commander Tag"
-        subtitle="This is your identity in the app — use your in-game name or gaming tag."
-      />
-
+      <StepTitle title="Choose your Commander Tag" subtitle="This is your identity in the app — use your in-game name or gaming tag." />
       {data.commander_name && status === 'available' && (
-        <div style={{
-          textAlign: 'center', padding: '16px', marginBottom: 20,
-          background: `${theme.gold}10`, border: `1px solid ${theme.goldDim}`,
-          borderRadius: 10,
-        }}>
-          <p style={{ color: theme.textMuted, fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 4 }}>
-            You'll appear as
-          </p>
+        <div style={{ textAlign: 'center', padding: '16px', marginBottom: 20, background: `${theme.gold}10`, border: `1px solid ${theme.goldDim}`, borderRadius: 10 }}>
+          <p style={{ color: theme.textMuted, fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 4 }}>You'll appear as</p>
           <p style={{ fontFamily: '"Rajdhani", "Oswald", sans-serif', fontSize: 22, fontWeight: 700, color: theme.gold, letterSpacing: '0.04em' }}>
             Commander {data.commander_name}
           </p>
         </div>
       )}
-
       <div style={{ position: 'relative' }}>
         <input
           type="text"
           value={data.commander_name}
-          onChange={e => {
-            const val = e.target.value.replace(/\s/g, '');
-            setData({ ...data, commander_name: val });
-          }}
-          placeholder="e.g. IronWolf_1032"
+          onChange={e => setData({ ...data, commander_name: e.target.value })}
+          placeholder="e.g. Iron Wolf 1032"
           maxLength={20}
-          autoCapitalize="off"
-          autoCorrect="off"
-          spellCheck={false}
+          autoCapitalize="off" autoCorrect="off" spellCheck={false}
           style={{
             width: '100%', padding: '14px 16px', background: theme.surface,
-            border: `1px solid ${
-              status === 'available' ? theme.green :
-              status === 'taken' || status === 'invalid' ? theme.red :
-              theme.border
-            }`,
-            borderRadius: 8, color: theme.text,
-            fontSize: 18, fontFamily: '"Rajdhani", "Oswald", sans-serif',
+            border: `1px solid ${status === 'available' ? theme.green : status === 'taken' || status === 'invalid' ? theme.red : theme.border}`,
+            borderRadius: 8, color: theme.text, fontSize: 18,
+            fontFamily: '"Rajdhani", "Oswald", sans-serif',
             fontWeight: 600, letterSpacing: '0.05em', outline: 'none',
             boxSizing: 'border-box', transition: 'border-color 0.15s',
           }}
         />
-        <span style={{
-          position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)',
-          fontSize: 11, color: theme.textMuted,
-        }}>
+        <span style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: theme.textMuted }}>
           {(data.commander_name || '').length}/20
         </span>
       </div>
-
       {statusMsg && (
         <p style={{ color: statusColor, fontSize: 13, marginTop: 8, minHeight: 20 }}>
           {status === 'checking' ? '⏳ ' : ''}{statusMsg}
         </p>
       )}
-
       <div style={{ marginTop: 16, padding: '12px 14px', background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 8 }}>
-        {[
-          '3–20 characters',
-          'Letters, numbers, and underscores only',
-          'No spaces — use underscores instead',
-          'Must be unique across all commanders',
-        ].map(rule => (
+        {['3–20 characters', 'Letters, numbers, underscores, and spaces', 'Must be unique across all commanders'].map(rule => (
           <div key={rule} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
             <span style={{ color: theme.goldDim, fontSize: 12 }}>—</span>
             <span style={{ color: theme.textMuted, fontSize: 12 }}>{rule}</span>
           </div>
         ))}
       </div>
-
-      <NavButtons step={step} onBack={onBack} onNext={onNext} nextDisabled={!canContinue} />
+      <NavButtons step={step} onBack={onBack} onNext={onNext} nextDisabled={status !== 'available'} />
     </div>
   );
 }
@@ -443,7 +415,31 @@ function Step4_ServerDay({ data, setData, onNext, onBack, step }: StepProps) {
   );
 }
 
-function Step5_HQ({ data, setData, onNext, onBack, step }: StepProps) {
+function Step5_Season({ data, setData, onNext, onBack, step }: StepProps) {
+  const seasons = [0, 1, 2, 3, 4, 5];
+  return (
+    <div>
+      <StepTitle
+        title="What season is your server on?"
+        subtitle="Check your Season Progress tab or alliance announcements."
+      />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {seasons.map(s => (
+          <OptionCard
+            key={s}
+            label={SEASON_LABELS[s]}
+            selected={data.season === s}
+            onClick={() => setData({ ...data, season: s })}
+            icon={s === 5 ? '🤠' : s === 4 ? '⚙️' : s === 0 ? '🌱' : '📅'}
+          />
+        ))}
+      </div>
+      <NavButtons step={step} onBack={onBack} onNext={onNext} nextDisabled={data.season === undefined || data.season === null} />
+    </div>
+  );
+}
+
+function Step6_HQ({ data, setData, onNext, onBack, step }: StepProps) {
   const valid = data.hq_level && parseInt(String(data.hq_level)) >= 1 && parseInt(String(data.hq_level)) <= 40;
   return (
     <div>
@@ -453,9 +449,9 @@ function Step5_HQ({ data, setData, onNext, onBack, step }: StepProps) {
         {[10, 15, 20, 25, 30, 32, 35].map(lvl => (
           <button key={lvl} onClick={() => setData({ ...data, hq_level: lvl })} style={{
             padding: '8px 14px', borderRadius: 6,
-            border: `1px solid ${String(data.hq_level) == String(lvl) ? theme.gold : theme.border}`,
-            background: String(data.hq_level) == String(lvl) ? `${theme.gold}18` : theme.surface,
-            color: String(data.hq_level) == String(lvl) ? theme.gold : theme.textMuted,
+            border: `1px solid ${String(data.hq_level) === String(lvl) ? theme.gold : theme.border}`,
+            background: String(data.hq_level) === String(lvl) ? `${theme.gold}18` : theme.surface,
+            color: String(data.hq_level) === String(lvl) ? theme.gold : theme.textMuted,
             fontSize: 13, fontWeight: 600, cursor: 'pointer',
             fontFamily: '"Rajdhani", "Oswald", sans-serif',
           }}>
@@ -468,7 +464,7 @@ function Step5_HQ({ data, setData, onNext, onBack, step }: StepProps) {
   );
 }
 
-function Step6_SpendTier({ data, setData, onNext, onBack, step }: StepProps) {
+function Step7_SpendTier({ data, setData, onNext, onBack, step }: StepProps) {
   const options = [
     { value: 'f2p', label: 'Free to Play', sublabel: 'No real money spent', icon: '🆓' },
     { value: 'budget', label: 'Budget', sublabel: 'Occasional small packs (<$20/mo)', icon: '💵' },
@@ -488,7 +484,7 @@ function Step6_SpendTier({ data, setData, onNext, onBack, step }: StepProps) {
   );
 }
 
-function Step7_Playstyle({ data, setData, onNext, onBack, step }: StepProps) {
+function Step8_Playstyle({ data, setData, onNext, onBack, step }: StepProps) {
   const options = [
     { value: 'fighter', label: 'Player vs. Player', sublabel: 'Kill events, rallies, war — you live for combat', icon: '⚔️' },
     { value: 'developer', label: 'Player vs. Event', sublabel: 'Alliance Duel, Arms Race, Zombie Siege — max efficiency', icon: '🎯' },
@@ -506,37 +502,55 @@ function Step7_Playstyle({ data, setData, onNext, onBack, step }: StepProps) {
   );
 }
 
-function Step8_TroopType({ data, setData, onNext, onBack, step }: StepProps) {
+function Step9_TroopType({ data, setData, onNext, onBack, step }: StepProps) {
   const options = [
-    { value: 'aircraft', label: 'Aircraft', icon: '✈️' },
-    { value: 'tank', label: 'Tank', icon: '🛡️' },
-    { value: 'missile', label: 'Missile Vehicle', icon: '🚀' },
-    { value: 'mixed', label: 'Mixed', sublabel: "Haven't specialized yet", icon: '⚖️' },
+    { value: 'aircraft', label: 'Aircraft', sublabel: 'Beats Infantry — fast strike force', icon: '✈️' },
+    { value: 'tank', label: 'Tank', sublabel: 'Beats Aircraft — armored wall', icon: '🛡️' },
+    { value: 'missile', label: 'Missile Vehicle', sublabel: 'Counters all types — lower sustained power', icon: '🚀' },
+    { value: 'mixed', label: 'Mixed / Not Sure', sublabel: "Haven't specialized Squad 1 yet", icon: '⚖️' },
   ];
   return (
     <div>
-      <StepTitle title="What's your primary troop type?" subtitle="Specialization matters more than raw numbers after Day 70." />
+      <StepTitle
+        title="What's your Squad 1 troop type?"
+        subtitle="Check your Squad 1 — your strongest, highest-power squad."
+      />
       {options.map(o => (
         <OptionCard key={o.value} {...o} selected={data.troop_type === o.value} onClick={() => setData({ ...data, troop_type: o.value })} />
       ))}
+      <HintBox text="Squad 1 is the squad with your highest combined hero + troop power. Check your Squad lineup in the Battle menu." />
       <NavButtons step={step} onBack={onBack} onNext={onNext} nextDisabled={!data.troop_type} />
     </div>
   );
 }
 
-function Step9_TroopTier({ data, setData, onNext, onBack, step }: StepProps) {
+function Step10_TroopTier({ data, setData, onNext, onBack, step }: StepProps) {
   const options = [
-    { value: 'below_t8', label: 'Below T8 / Just Starting', sublabel: 'Still building up early troops' },
-    { value: 't8', label: 'T8' },
-    { value: 't9', label: 'T9' },
-    { value: 't10_working', label: 'T10 — Working Towards It', sublabel: 'Not yet unlocked' },
-    { value: 't10_unlocked', label: 'T10 — Unlocked', sublabel: 'Training T10 troops now' },
-    { value: 't11', label: 'T11' },
-    { value: 't12', label: 'T12' },
+    {
+      value: 'under_t10',
+      label: 'Under T10',
+      sublabel: 'Still working toward T10 unlock',
+      icon: '🔨',
+    },
+    {
+      value: 't10',
+      label: 'T10',
+      sublabel: 'T10 unlocked and training',
+      icon: '⚙️',
+    },
+    {
+      value: 't11',
+      label: 'T11',
+      sublabel: 'Armament Research system — Season 4+',
+      icon: '🔱',
+    },
   ];
   return (
     <div>
-      <StepTitle title="What's your highest troop tier?" subtitle="Check your Barracks or Military Research tree." />
+      <StepTitle
+        title="What's your highest troop tier?"
+        subtitle="Check your Barracks or Military Research tree."
+      />
       {options.map(o => (
         <OptionCard key={o.value} {...o} selected={data.troop_tier === o.value} onClick={() => setData({ ...data, troop_tier: o.value })} />
       ))}
@@ -545,100 +559,88 @@ function Step9_TroopTier({ data, setData, onNext, onBack, step }: StepProps) {
   );
 }
 
-function Step10_Rank({ data, setData, onNext, onBack, step }: StepProps) {
-  const options = [
-    { value: 'top_5', label: 'Top 5', sublabel: 'Elite — server anchor', icon: '🥇' },
-    { value: 'top_10', label: 'Top 6–10', sublabel: 'Dominant force', icon: '🥈' },
-    { value: 'top_20', label: 'Top 11–20', sublabel: 'Serious competitor', icon: '🥉' },
-    { value: 'top_50', label: 'Top 21–50', sublabel: 'Strong mid-tier', icon: '🎖️' },
-    { value: 'top_100', label: 'Top 51–100', sublabel: 'Established player', icon: '🏅' },
-    { value: 'still_building', label: 'Still Building', sublabel: 'Outside top 100', icon: '🔨' },
-  ];
+function Step11_RankAndPower({ data, setData, onNext, onBack, step }: StepProps) {
+  const rankValid = !!data.rank_bucket;
+  const squadValid = !!data.squad_power_tier;
+  const powerValid = !!data.power_bucket;
+  const canContinue = rankValid && squadValid && powerValid;
+
   return (
     <div>
       <StepTitle
-        title="What is your total hero power rank on your server?"
-        subtitle="Find this in Rankings → Total Hero Power."
+        title="Your rank and power"
+        subtitle="Pick the buckets that best describe you right now."
       />
-      {options.map(o => (
-        <OptionCard key={o.value} {...o} selected={data.server_rank === o.value} onClick={() => setData({ ...data, server_rank: o.value })} />
-      ))}
-      <NavButtons step={step} onBack={onBack} onNext={onNext} nextDisabled={!data.server_rank} />
+
+      {/* Rank Bucket */}
+      <div style={{ marginBottom: 28 }}>
+        <label style={{ display: 'block', color: theme.textDim, fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>
+          Server Rank — Total Hero Power
+        </label>
+        <p style={{ color: theme.textMuted, fontSize: 12, marginBottom: 10 }}>
+          Find this in Rankings → Total Hero Power.
+        </p>
+        <ChipGrid<RankBucket>
+          options={RANK_BUCKET_LABELS}
+          value={data.rank_bucket}
+          onChange={v => setData({ ...data, rank_bucket: v })}
+        />
+      </div>
+
+      {/* Squad Power Tier */}
+      <div style={{ marginBottom: 28 }}>
+        <label style={{ display: 'block', color: theme.textDim, fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>
+          Squad 1 Power
+        </label>
+        <p style={{ color: theme.textMuted, fontSize: 12, marginBottom: 10 }}>
+          Tap Squad 1 in your Battle screen — the total power shown at the top.
+        </p>
+        <ChipGrid<SquadPowerTier>
+          options={SQUAD_POWER_TIER_LABELS}
+          value={data.squad_power_tier}
+          onChange={v => setData({ ...data, squad_power_tier: v })}
+        />
+      </div>
+
+      {/* Total Power Bucket */}
+      <div style={{ marginBottom: 8 }}>
+        <label style={{ display: 'block', color: theme.textDim, fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>
+          Total Individual Power
+        </label>
+        <p style={{ color: theme.textMuted, fontSize: 12, marginBottom: 10 }}>
+          Your total power shown on your profile page.
+        </p>
+        <ChipGrid<PowerBucket>
+          options={POWER_BUCKET_LABELS}
+          value={data.power_bucket}
+          onChange={v => setData({ ...data, power_bucket: v })}
+        />
+      </div>
+
+      <NavButtons step={step} onBack={onBack} onNext={onNext} nextDisabled={!canContinue} />
     </div>
   );
 }
 
-function Step11_Power({ data, setData, onNext, onBack, step }: StepProps) {
-  const formatPower = (val: string | number) => {
-    if (!val) return '';
-    const n = parseInt(String(val).replace(/,/g, ''));
-    if (isNaN(n)) return '';
-    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-    if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
-    return String(n);
-  };
+function Step12_KillTier({ data, setData, onNext, onBack, step }: StepProps) {
   return (
     <div>
-      <StepTitle title="What's your power?" subtitle="Open your profile in-game to check. Enter raw numbers — no commas needed." />
-      {[
-        { key: 'hero_power' as keyof ProfileData, label: 'Hero Power', placeholder: 'e.g. 178500000' },
-        { key: 'total_power' as keyof ProfileData, label: 'Total Individual Power', placeholder: 'e.g. 450000000' },
-      ].map(f => (
-        <div key={f.key} style={{ marginBottom: 16 }}>
-          <label style={{ display: 'block', color: theme.textDim, fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>
-            {f.label}
-            {data[f.key] && (
-              <span style={{ marginLeft: 8, color: theme.gold, textTransform: 'none', letterSpacing: 0 }}>
-                = {formatPower(data[f.key] as string | number)}
-              </span>
-            )}
-          </label>
-          <NumberInput
-            value={data[f.key] as string | number}
-            onChange={v => setData({ ...data, [f.key]: v })}
-            placeholder={f.placeholder}
+      <StepTitle
+        title="What's your kill count?"
+        subtitle="Check your profile — total kills earned across all events."
+      />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {(Object.entries(KILL_TIER_LABELS) as [KillTier, string][]).map(([key, label]) => (
+          <OptionCard
+            key={key}
+            label={label}
+            selected={data.kill_tier === key}
+            onClick={() => setData({ ...data, kill_tier: key })}
           />
-        </div>
-      ))}
-      <p style={{ color: theme.textMuted, fontSize: 12, marginTop: 4 }}>
-        You can skip this and add it later from your profile.
-      </p>
-      <NavButtons step={step} onBack={onBack} onNext={onNext} />
-    </div>
-  );
-}
-
-function Step12_Goals({ data, setData, onNext, onBack, step }: StepProps) {
-  const allOptions = [
-    { value: 'crack_top10', label: 'Crack Top 10', icon: '🏆' },
-    { value: 'unlock_t10', label: 'Unlock T10', icon: '🔓', tiers: ['below_t8', 't8', 't9'] },
-    { value: 'unlock_t11', label: 'Unlock T11', icon: '⚙️', tiers: ['t10_working', 't10_unlocked'] },
-    { value: 'finish_t11', label: 'Finish T11', icon: '✅', tiers: ['t11'] },
-    { value: 'max_hero_power', label: 'Max Hero Power', icon: '💪' },
-    { value: 'prep_season5', label: 'Prep for Season 5', icon: '🗺️' },
-    { value: 'dominate_alliance_war', label: 'Dominate Alliance War', icon: '⚔️' },
-    { value: 'spend_smarter', label: 'Spend Smarter', icon: '💰' },
-  ];
-
-  const options = allOptions.filter(o => !o.tiers || o.tiers.includes(data.troop_tier));
-
-  const toggle = (val: string) => {
-    const current = data.goals || [];
-    const updated = current.includes(val) ? current.filter(g => g !== val) : [...current, val];
-    setData({ ...data, goals: updated });
-  };
-
-  return (
-    <div>
-      <StepTitle title="What are your goals?" subtitle="Pick everything that applies — Buddy will prioritize around these." />
-      {options.map(o => (
-        <MultiCard key={o.value} label={o.label} icon={o.icon}
-          selected={(data.goals || []).includes(o.value)}
-          onClick={() => toggle(o.value)} />
-      ))}
-      <NavButtons step={step} onBack={onBack} onNext={onNext}
-        nextLabel="Build My Action Plan →"
-        nextDisabled={(data.goals || []).length === 0} />
+        ))}
+      </div>
+      <HintBox text="Find your kill count on your profile page under Combat Stats." />
+      <NavButtons step={step} onBack={onBack} onNext={onNext} nextDisabled={!data.kill_tier} />
     </div>
   );
 }
@@ -655,15 +657,25 @@ function StepComplete({ data, onDone }: { data: ProfileData; onDone: () => void 
   const troopLabels: Record<string, string> = {
     aircraft: '✈️ Aircraft', tank: '🛡️ Tank', missile: '🚀 Missile', mixed: '⚖️ Mixed',
   };
+  const troopTierLabels: Record<string, string> = {
+    under_t10: 'Under T10', t10: 'T10', t11: 'T11',
+  };
+
   const stats: [string, string][] = [
     ['Commander', data.commander_name],
     ['Server', `#${data.server_number} · Day ${data.server_day}`],
+    ['Season', SEASON_LABELS[data.season] ?? String(data.season)],
     ['HQ Level', String(data.hq_level)],
-    ['Spend Tier', tierLabels[data.spend_tier]],
-    ['Playstyle', playstyleLabels[data.playstyle]],
-    ['Troop Type', troopLabels[data.troop_type]],
-    ['Rank', data.server_rank?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())],
+    ['Spend Style', tierLabels[data.spend_tier] ?? data.spend_tier],
+    ['Playstyle', playstyleLabels[data.playstyle] ?? data.playstyle],
+    ['Squad 1 Type', troopLabels[data.troop_type] ?? data.troop_type],
+    ['Troop Tier', troopTierLabels[data.troop_tier] ?? data.troop_tier],
+    ['Server Rank', data.rank_bucket ? RANK_BUCKET_LABELS[data.rank_bucket] : ''],
+    ['Squad 1 Power', data.squad_power_tier ? SQUAD_POWER_TIER_LABELS[data.squad_power_tier] : ''],
+    ['Total Power', data.power_bucket ? POWER_BUCKET_LABELS[data.power_bucket] : ''],
+    ['Kill Tier', data.kill_tier ? KILL_TIER_LABELS[data.kill_tier] : ''],
   ];
+
   return (
     <div>
       <div style={{ textAlign: 'center', marginBottom: 28 }}>
@@ -679,21 +691,11 @@ function StepComplete({ data, onDone }: { data: ProfileData; onDone: () => void 
         {stats.map(([label, val]) => val && (
           <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: `1px solid ${theme.border}` }}>
             <span style={{ color: theme.textMuted, fontSize: 13 }}>{label}</span>
-            <span style={{ color: label === 'Commander' ? theme.gold : theme.text, fontWeight: 600, fontSize: 14, fontFamily: '"Rajdhani", "Oswald", sans-serif' }}>{val}</span>
+            <span style={{ color: label === 'Commander' ? theme.gold : theme.text, fontWeight: 600, fontSize: 14, fontFamily: '"Rajdhani", "Oswald", sans-serif' }}>
+              {val}
+            </span>
           </div>
         ))}
-        {(data.goals || []).length > 0 && (
-          <div style={{ paddingTop: 12 }}>
-            <span style={{ color: theme.textMuted, fontSize: 13, display: 'block', marginBottom: 8 }}>Goals</span>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {(data.goals || []).map(g => (
-                <span key={g} style={{ padding: '4px 10px', background: `${theme.gold}15`, border: `1px solid ${theme.goldDim}`, borderRadius: 20, fontSize: 12, color: theme.gold }}>
-                  {g.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
       <button onClick={onDone} style={{ ...btnStyle('gold'), width: '100%', fontSize: 16, padding: '16px 24px' }}>
         Show My Daily Action Plan →
@@ -704,12 +706,10 @@ function StepComplete({ data, onDone }: { data: ProfileData; onDone: () => void 
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 
-// Calculate server_start_date from server day entered by user.
-// server_start_date = today - (serverDay - 1) days
 function calcServerStartDate(serverDay: number): string {
   const d = new Date();
   d.setDate(d.getDate() - (serverDay - 1));
-  return d.toISOString().split('T')[0]; // YYYY-MM-DD
+  return d.toISOString().split('T')[0];
 }
 
 // ─── MAIN ─────────────────────────────────────────────────────────────────────
@@ -720,38 +720,43 @@ export default function OnboardingFlow() {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<ProfileData>({
     commander_name: '',
-    server_number: '', server_day: '', hq_level: '',
-    spend_tier: '', playstyle: '', troop_type: '',
-    troop_tier: '', server_rank: '', hero_power: '',
-    total_power: '', goals: [],
+    server_number: '',
+    server_day: '',
+    season: 0,
+    hq_level: '',
+    spend_tier: '',
+    playstyle: '',
+    troop_type: '',
+    troop_tier: '',
+    rank_bucket: '',
+    squad_power_tier: '',
+    power_bucket: '',
+    kill_tier: '',
   });
 
-  // Load existing profile on mount and resume from last step
+  // Load existing profile on mount
   useEffect(() => {
     async function loadProfile() {
       if (!supabase) return;
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
+      const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
       if (profile && !profile.onboarding_complete) {
         setData(prev => ({
           ...prev,
           commander_name: profile.commander_name || '',
           server_number: profile.server_number || '',
           server_day: profile.server_day || '',
+          season: profile.season ?? 0,
           hq_level: profile.hq_level || '',
           spend_tier: profile.spend_tier || '',
           playstyle: profile.playstyle || '',
           troop_type: profile.troop_type || '',
           troop_tier: profile.troop_tier || '',
-          server_rank: profile.server_rank || '',
-          hero_power: profile.hero_power || '',
-          total_power: profile.total_power || '',
-          goals: profile.goals || [],
+          rank_bucket: profile.rank_bucket || '',
+          squad_power_tier: profile.squad_power_tier || '',
+          power_bucket: profile.power_bucket || '',
+          kill_tier: profile.kill_tier || '',
         }));
         if (profile.onboarding_step > 1) setStep(profile.onboarding_step);
       }
@@ -766,28 +771,25 @@ export default function OnboardingFlow() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not logged in');
-
       const serverDay = parseInt(String(data.server_day)) || 0;
-
-      // Calculate server_start_date so server day auto-increments forever
       const serverStartDate = serverDay > 0 ? calcServerStartDate(serverDay) : null;
 
       const { error: upsertError } = await supabase.from('profiles').update({
         commander_name: data.commander_name || null,
         server_number: parseInt(String(data.server_number)) || 0,
         server_day: serverDay,
+        season: data.season ?? 0,
         hq_level: parseInt(String(data.hq_level)) || 1,
         spend_tier: data.spend_tier || 'f2p',
         playstyle: data.playstyle || 'scout',
         troop_type: data.troop_type || 'mixed',
-        troop_tier: data.troop_tier || 'below_t8',
-        server_rank: data.server_rank || 'still_building',
-        hero_power: data.hero_power ? parseInt(String(data.hero_power)) : null,
-        total_power: data.total_power ? parseInt(String(data.total_power)) : null,
-        goals: data.goals || [],
+        troop_tier: data.troop_tier || 'under_t10',
+        rank_bucket: data.rank_bucket || null,
+        squad_power_tier: data.squad_power_tier || null,
+        power_bucket: data.power_bucket || null,
+        kill_tier: data.kill_tier || null,
         onboarding_step: nextStep,
         onboarding_complete: complete,
-        // Profile freshness fields
         server_start_date: serverStartDate,
         last_profile_update: new Date().toISOString(),
         update_reminder_frequency: 'weekly',
@@ -796,7 +798,7 @@ export default function OnboardingFlow() {
 
       if (upsertError) throw upsertError;
     } catch (err: unknown) {
-     setError(err instanceof Error ? err.message : JSON.stringify(err));
+      setError(err instanceof Error ? err.message : JSON.stringify(err));
     } finally {
       setSaving(false);
     }
@@ -854,14 +856,14 @@ export default function OnboardingFlow() {
           {step === 2  && <Step2_CommanderTag {...stepProps} />}
           {step === 3  && <Step3_Server {...stepProps} />}
           {step === 4  && <Step4_ServerDay {...stepProps} />}
-          {step === 5  && <Step5_HQ {...stepProps} />}
-          {step === 6  && <Step6_SpendTier {...stepProps} />}
-          {step === 7  && <Step7_Playstyle {...stepProps} />}
-          {step === 8  && <Step8_TroopType {...stepProps} />}
-          {step === 9  && <Step9_TroopTier {...stepProps} />}
-          {step === 10 && <Step10_Rank {...stepProps} />}
-          {step === 11 && <Step11_Power {...stepProps} />}
-          {step === 12 && <Step12_Goals {...stepProps} />}
+          {step === 5  && <Step5_Season {...stepProps} />}
+          {step === 6  && <Step6_HQ {...stepProps} />}
+          {step === 7  && <Step7_SpendTier {...stepProps} />}
+          {step === 8  && <Step8_Playstyle {...stepProps} />}
+          {step === 9  && <Step9_TroopType {...stepProps} />}
+          {step === 10 && <Step10_TroopTier {...stepProps} />}
+          {step === 11 && <Step11_RankAndPower {...stepProps} />}
+          {step === 12 && <Step12_KillTier {...stepProps} />}
           {step === 13 && <StepComplete data={data} onDone={complete} />}
 
         </div>

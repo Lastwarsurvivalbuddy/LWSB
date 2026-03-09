@@ -9,6 +9,18 @@ import { getT10Summary } from '@/lib/t10Data';
 import { getHQRequirementsSummary } from '@/lib/hqRequirementsData';
 import { getHealingSummary } from '@/lib/healingData';
 import { getApprovedSubmissions } from '@/lib/submissionData';
+import { incrementStreak } from '@/lib/streak';
+import {
+  SQUAD_POWER_TIER_LABELS,
+  RANK_BUCKET_LABELS,
+  POWER_BUCKET_LABELS,
+  KILL_TIER_LABELS,
+  SEASON_LABELS,
+  type SquadPowerTier,
+  type RankBucket,
+  type PowerBucket,
+  type KillTier,
+} from '@/lib/profileTypes';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -25,23 +37,19 @@ const TIER_LIMITS: Record<string, { questions: number; screenshots: number }> = 
 };
 
 // ─── Duel day calculation ───
-// Reset is always 2am UTC (8pm CT standard / 9pm CT DST — same UTC time either way)
-// Mapping: Sun=1(Drones), Mon=2(Building), Tue=3(Research),
-//          Wed=4(Heroes), Thu=5(Training), Fri=6(EnemyBuster), Sat=7(Reset)
 function getCurrentDuelDay(): { day: number; label: string } {
   const now = new Date();
-  // Shift back 2 hours so the day boundary aligns with the 2am UTC reset
   const adjusted = new Date(now.getTime() - 2 * 60 * 60 * 1000);
-  const utcDay = adjusted.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+  const utcDay = adjusted.getUTCDay();
 
   const schedule: Record<number, { day: number; label: string }> = {
-    0: { day: 1, label: 'Drones (1pt)'        },
-    1: { day: 2, label: 'Building (2pts)'      },
-    2: { day: 3, label: 'Research (2pts)'      },
-    3: { day: 4, label: 'Heroes (2pts)'        },
-    4: { day: 5, label: 'Training (2pts)'      },
-    5: { day: 6, label: 'Enemy Buster (4pts)'  },
-    6: { day: 7, label: 'Reset'                },
+    0: { day: 1, label: 'Drones (1pt)'       },
+    1: { day: 2, label: 'Building (2pts)'     },
+    2: { day: 3, label: 'Research (2pts)'     },
+    3: { day: 4, label: 'Heroes (2pts)'       },
+    4: { day: 5, label: 'Training (2pts)'     },
+    5: { day: 6, label: 'Enemy Buster (4pts)' },
+    6: { day: 7, label: 'Reset'               },
   };
 
   return schedule[utcDay] ?? { day: 1, label: 'Drones (1pt)' };
@@ -86,7 +94,7 @@ export async function POST(req: NextRequest) {
     if (isScreenshot && limits.screenshots === 0) {
       return NextResponse.json({
         error: 'Screenshot analysis requires Pro or above.',
-        upgradeMessage: "Screenshot analysis is a Pro feature. Upgrade to Buddy Pro ($9.99/mo) or go Founding Member for $99 lifetime.",
+        upgradeMessage: 'Screenshot analysis is a Pro feature. Upgrade to Buddy Pro ($9.99/mo) or go Founding Member for $99 lifetime.',
       }, { status: 403 });
     }
 
@@ -100,7 +108,7 @@ export async function POST(req: NextRequest) {
       .eq('date', today)
       .single();
 
-    const questionCount = usage?.question_count || 0;
+    const questionCount   = usage?.question_count   || 0;
     const screenshotCount = usage?.screenshot_count || 0;
 
     if (questionCount >= limits.questions) {
@@ -127,8 +135,6 @@ export async function POST(req: NextRequest) {
       .single();
 
     const duel = getCurrentDuelDay();
-
-    // ─── Build system prompt ───
     const systemPrompt = await buildSystemPrompt(profile, duel, tier);
 
     // ─── Build message array for Claude ───
@@ -141,7 +147,6 @@ export async function POST(req: NextRequest) {
       })),
     ];
 
-    // Current user message — may include image
     if (isScreenshot && imageData) {
       const userContent: Array<Record<string, unknown>> = [
         {
@@ -153,16 +158,10 @@ export async function POST(req: NextRequest) {
           },
         },
       ];
-
-      if (userMessage) {
-        userContent.push({ type: 'text', text: userMessage });
-      } else {
-        userContent.push({
-          type: 'text',
-          text: 'Please analyze this screenshot. Is this a good purchase for my situation? What does it contain and what is your recommendation?',
-        });
-      }
-
+      userContent.push({
+        type: 'text',
+        text: userMessage || 'Please analyze this screenshot. Is this a good purchase for my situation? What does it contain and what is your recommendation?',
+      });
       claudeMessages.push({ role: 'user', content: userContent });
     } else {
       claudeMessages.push({ role: 'user', content: userMessage });
@@ -233,6 +232,9 @@ export async function POST(req: NextRequest) {
         { onConflict: 'user_id,date' }
       );
 
+    // ─── Increment streak ───
+    await incrementStreak(supabase, user.id);
+
     return NextResponse.json({ reply });
 
   } catch (err) {
@@ -241,21 +243,46 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// ─── System prompt builder ───
+// ─── System prompt builder ────────────────────────────────────────────────────
+
 async function buildSystemPrompt(
   profile: Record<string, unknown> | null,
   duel: { day: number; label: string },
   tier: string
 ): Promise<string> {
   if (!profile) {
-    return `You are Buddy, the AI coach for Last War: Survival. 
+    return `You are Buddy, the AI coach for Last War: Survival.
 The player's profile hasn't loaded — give helpful general advice and ask them to check their profile settings.
 Keep responses concise, specific, and tactical. No fluff.`;
   }
 
-  // Use computed_server_day (auto-calculated from server_start_date) if available,
-  // otherwise fall back to the stored server_day value
   const serverDay = profile.computed_server_day ?? profile.server_day ?? 'Unknown';
+
+  const squadPower = profile.squad_power_tier
+    ? SQUAD_POWER_TIER_LABELS[profile.squad_power_tier as SquadPowerTier] ?? profile.squad_power_tier
+    : 'Not set';
+
+  const rankDisplay = profile.rank_bucket
+    ? RANK_BUCKET_LABELS[profile.rank_bucket as RankBucket] ?? profile.rank_bucket
+    : 'Not set';
+
+  const powerDisplay = profile.power_bucket
+    ? POWER_BUCKET_LABELS[profile.power_bucket as PowerBucket] ?? profile.power_bucket
+    : 'Not set';
+
+  const killDisplay = profile.kill_tier
+    ? KILL_TIER_LABELS[profile.kill_tier as KillTier] ?? profile.kill_tier
+    : 'Not set';
+
+  const seasonDisplay = profile.season !== undefined && profile.season !== null
+    ? SEASON_LABELS[profile.season as number] ?? `Season ${profile.season}`
+    : 'Not set';
+
+  const troopTierDisplay: Record<string, string> = {
+    under_t10: 'Under T10 — working toward T10 unlock',
+    t10:       'T10 — unlocked and training',
+    t11:       'T11 — Armament Research system active',
+  };
 
   const duelLabels: Record<number, string> = {
     1: "Day 1 — Drones (1pt). Lowest value day. Use it for housekeeping, don't burn big speedups.",
@@ -273,15 +300,16 @@ Keep responses concise, specific, and tactical. No fluff.`;
 - **Name:** ${profile.commander_name || 'Commander'}
 - **Server:** ${profile.server_number || 'Unknown'}
 - **Server Day:** ${serverDay}
+- **Season:** ${seasonDisplay}
 - **HQ Level:** ${profile.hq_level || 'Unknown'}
-- **Troop Tier:** ${profile.troop_tier || 'Unknown'}
-- **Troop Type:** ${profile.troop_type || 'Unknown'}
+- **Troop Tier:** ${troopTierDisplay[profile.troop_tier as string] ?? profile.troop_tier ?? 'Unknown'}
+- **Squad 1 Troop Type:** ${profile.troop_type || 'Unknown'}
 - **Spend Style:** ${profile.spend_style || 'Unknown'}
 - **Playstyle:** ${profile.playstyle || 'Unknown'}
-- **Server Rank:** ${profile.server_rank || 'Unknown'}
-- **Hero Power:** ${profile.hero_power ? profile.hero_power + 'M' : 'Not set'}
-- **Total Power:** ${profile.total_power ? profile.total_power + 'M' : 'Not set'}
-- **Goals:** ${Array.isArray(profile.goals) ? (profile.goals as string[]).join(', ') : profile.goals || 'Not set'}
+- **Server Rank:** ${rankDisplay}
+- **Squad 1 Power:** ${squadPower}
+- **Total Power:** ${powerDisplay}
+- **Kill Tier:** ${killDisplay}
 - **Subscription Tier:** ${tier}
 
 ## Today's Duel Status
@@ -289,7 +317,8 @@ Alliance Duel — ${duelLabels[duel.day] || duel.label}
 
 ## Your Mission
 Give this Commander specific, actionable advice. Always reference their actual profile data.
-Never give generic advice that ignores their server, tier, spend style, or goals.
+Never give generic advice that ignores their server, tier, spend style, or situation.
+Use buckets naturally in conversation — say "your Squad 1 is in the 40–45M range" not "your squad_power_tier is 40_45m".
 
 ## Screenshot Analysis (when image provided)
 When the Commander uploads a screenshot of a Hot Deal / pack offer:
@@ -338,6 +367,7 @@ ${await getApprovedSubmissions(Number(profile.server_number))}
 ## Style Rules
 - Be direct. Lead with the answer, then explain.
 - Use their name: "Commander ${profile.commander_name || 'Commander'}"
+- Translate bucket values into plain English naturally (e.g. "your Squad 1 power is around 40–45M")
 - Max 3–5 action items unless they ask for more
 - No unnecessary preamble. No "Great question!" filler.
 - Tactical tone — like an advisor briefing a field commander.`;

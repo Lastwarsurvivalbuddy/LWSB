@@ -273,6 +273,14 @@ function CommanderCard({
           }}>
             {profile.commander_name || 'COMMANDER'}
           </div>
+          {profile.alliance_name && (
+            <div style={{ fontSize: 11, fontWeight: 600, color: '#7a6030', letterSpacing: '0.2em', textTransform: 'uppercase', marginTop: 6 }}>
+              {profile.alliance_tag && (
+                <span style={{ color: '#c9a84c', marginRight: 6 }}>{profile.alliance_tag}</span>
+              )}
+              {profile.alliance_name}
+            </div>
+          )}
         </div>
 
         {/* Stats grid */}

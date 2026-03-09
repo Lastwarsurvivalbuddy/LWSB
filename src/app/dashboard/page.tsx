@@ -12,6 +12,7 @@ import {
   SEASON_LABELS,
   type RankBucket,
   type SquadPowerTier,
+  type PowerBucket,
   type KillTier,
 } from '@/lib/profileTypes'
 
@@ -26,7 +27,7 @@ interface Profile {
   season?: number
   rank_bucket?: RankBucket
   squad_power_tier?: SquadPowerTier
-  power_bucket?: string
+  power_bucket?: PowerBucket
   kill_tier?: KillTier
   server_number?: number
   server_day?: number
@@ -37,6 +38,8 @@ interface Profile {
   update_reminder_frequency?: string
   streak_count?: number
   last_checkin_date?: string
+  alliance_name?: string
+  alliance_tag?: string
 }
 
 // Alliance Duel day helper — reset is always 2am UTC
@@ -321,6 +324,14 @@ export default function Dashboard() {
                     <span className="ml-1 text-zinc-600">· {SEASON_LABELS[profile.season] ?? `S${profile.season}`}</span>
                   )}
                 </p>
+                {profile.alliance_name && (
+                  <p className="text-xs text-zinc-500 mt-0.5">
+                    {profile.alliance_tag && (
+                      <span className="text-amber-500 font-semibold">{profile.alliance_tag} </span>
+                    )}
+                    {profile.alliance_name}
+                  </p>
+                )}
               </div>
               <div className="flex flex-col items-end gap-1.5">
                 <span className={`

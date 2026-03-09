@@ -30,6 +30,8 @@ interface ProfileForm {
   power_bucket: PowerBucket | ''
   kill_tier: KillTier | ''
   update_reminder_frequency: string
+  alliance_name: string
+  alliance_tag: string
 }
 
 const SPEND_OPTIONS = ['f2p', 'budget', 'moderate', 'investor', 'whale', 'mega_whale']
@@ -75,6 +77,8 @@ function calcServerStartDate(serverDay: number): string {
   return d.toISOString().split('T')[0]
 }
 
+const NAME_REGEX = /^[a-zA-Z0-9_ ]{3,20}$/
+
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
 export default function ProfileEditPage() {
@@ -94,6 +98,8 @@ export default function ProfileEditPage() {
     power_bucket: '',
     kill_tier: '',
     update_reminder_frequency: 'weekly',
+    alliance_name: '',
+    alliance_tag: '',
   })
   const [originalName, setOriginalName] = useState('')
   const [nameAvailable, setNameAvailable] = useState<boolean | null>(null)
@@ -110,7 +116,7 @@ export default function ProfileEditPage() {
       setNameAvailable(null)
       return
     }
-    if (!/^[a-zA-Z0-9_]{3,20}$/.test(form.commander_name)) {
+    if (!NAME_REGEX.test(form.commander_name)) {
       setNameAvailable(null)
       return
     }
@@ -155,6 +161,8 @@ export default function ProfileEditPage() {
         power_bucket:             data.power_bucket || '',
         kill_tier:                data.kill_tier || '',
         update_reminder_frequency: data.update_reminder_frequency || 'weekly',
+        alliance_name: data.alliance_name || '',
+        alliance_tag: data.alliance_tag || '',
       })
       setOriginalName(data.commander_name || '')
     } catch {
@@ -172,8 +180,8 @@ export default function ProfileEditPage() {
   async function handleSave() {
     setErrorMsg('')
 
-    if (!/^[a-zA-Z0-9_]{3,20}$/.test(form.commander_name)) {
-      setErrorMsg('Commander tag must be 3–20 characters: letters, numbers, underscores only.')
+    if (!NAME_REGEX.test(form.commander_name)) {
+      setErrorMsg('Commander tag must be 3–20 characters: letters, numbers, underscores, spaces only.')
       return
     }
     if (form.commander_name !== originalName && nameAvailable === false) {
@@ -204,6 +212,8 @@ export default function ProfileEditPage() {
         kill_tier:                 form.kill_tier || null,
         update_reminder_frequency: form.update_reminder_frequency,
         server_start_date:         serverDay ? calcServerStartDate(serverDay) : null,
+        alliance_name:             form.alliance_name || null,
+        alliance_tag:              form.alliance_tag || null,
         last_profile_update:       new Date().toISOString(),
         updated_at:                new Date().toISOString(),
       }
@@ -225,7 +235,7 @@ export default function ProfileEditPage() {
   }
 
   const nameChanged = form.commander_name !== originalName
-  const nameValid   = /^[a-zA-Z0-9_]{3,20}$/.test(form.commander_name)
+  const nameValid   = NAME_REGEX.test(form.commander_name)
 
   if (loading) {
     return (
@@ -283,14 +293,14 @@ export default function ProfileEditPage() {
         <section className="space-y-4">
           <SectionHeader label="Identity" />
 
-          <Field label="Commander Tag" hint="3–20 chars · letters, numbers, underscores">
+          <Field label="Commander Tag" hint="3–20 chars · letters, numbers, underscores, spaces">
             <div className="relative">
               <input
                 type="text"
                 value={form.commander_name}
                 onChange={e => set('commander_name', e.target.value)}
                 maxLength={20}
-                placeholder="YourTag"
+                placeholder="Your Tag"
                 className="input-base pr-8"
               />
               {nameChanged && nameValid && (
@@ -347,6 +357,38 @@ export default function ProfileEditPage() {
               ))}
             </div>
           </Field>
+        </section>
+
+        {/* ── Alliance ── */}
+        <section className="space-y-4">
+          <SectionHeader label="Alliance" />
+
+          <div className="grid grid-cols-3 gap-3">
+            <div className="col-span-2">
+              <Field label="Alliance Name">
+                <input
+                  type="text"
+                  value={form.alliance_name}
+                  onChange={e => set('alliance_name', e.target.value)}
+                  maxLength={32}
+                  placeholder="e.g. Iron Wolves"
+                  className="input-base"
+                />
+              </Field>
+            </div>
+            <div>
+              <Field label="Tag">
+                <input
+                  type="text"
+                  value={form.alliance_tag}
+                  onChange={e => set('alliance_tag', e.target.value)}
+                  maxLength={8}
+                  placeholder="[IW]"
+                  className="input-base"
+                />
+              </Field>
+            </div>
+          </div>
         </section>
 
         {/* ── Base ── */}
