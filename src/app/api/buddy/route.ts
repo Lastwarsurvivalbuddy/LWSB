@@ -37,33 +37,16 @@ const TIER_LIMITS: Record<string, { questions: number; screenshots: number }> = 
 };
 
 // ─── Duel day calculation ───
-// Reset is 8pm CT daily.
-// CT = UTC-6 standard, UTC-5 DST (second Sunday March → first Sunday November)
+// Reset is always 2am UTC (= 8pm CT standard / 9pm CT DST)
+// No DST logic needed — work entirely in UTC
 // Mon=Day1 Radar Training, Tue=Day2 Base Expansion, Wed=Day3 Age of Science,
 // Thu=Day4 Train Heroes, Fri=Day5 Total Mobilization, Sat=Day6 Enemy Buster, Sun=Day7 Reset
 function getCurrentDuelDay(): { day: number; label: string } {
   const now = new Date();
 
-  // Determine DST — second Sunday in March to first Sunday in November
-  const year = now.getUTCFullYear();
-
-  const dstStart = new Date(Date.UTC(year, 2, 1)); // March 1
-  dstStart.setUTCDate(1 + ((7 - dstStart.getUTCDay()) % 7) + 7); // second Sunday in March
-
-  const dstEnd = new Date(Date.UTC(year, 10, 1)); // November 1
-  dstEnd.setUTCDate(1 + ((7 - dstEnd.getUTCDay()) % 7)); // first Sunday in November
-
-  const isDST = now >= dstStart && now < dstEnd;
-
-  // Convert now to CT
-  const ctOffsetMs = (isDST ? 5 : 6) * 60 * 60 * 1000;
-  const ctNow = new Date(now.getTime() - ctOffsetMs);
-
-  // If CT time is 8pm (20:00) or later, the duel has already reset — advance to next day
-  const ctHour = ctNow.getUTCHours();
-  const ctDay = ctHour >= 20
-    ? (ctNow.getUTCDay() + 1) % 7  // post-reset: next weekday
-    : ctNow.getUTCDay();            // pre-reset: current CT weekday
+  // Subtract 2 hours so the day rolls over at 2am UTC
+  const adjusted = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+  const utcDay = adjusted.getUTCDay();
 
   // 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat, 0=Sun
   const schedule: Record<number, { day: number; label: string }> = {
@@ -76,7 +59,7 @@ function getCurrentDuelDay(): { day: number; label: string } {
     0: { day: 7, label: 'Reset'                      },
   };
 
-  return schedule[ctDay] ?? { day: 1, label: 'Radar Training (1pt)' };
+  return schedule[utcDay] ?? { day: 1, label: 'Radar Training (1pt)' };
 }
 
 export async function POST(req: NextRequest) {
@@ -280,7 +263,7 @@ Last War: Survival Buddy (LastWarSurvivalBuddy.com) is a personalized AI coachin
 Buddy gives players a daily action plan and answers questions tailored to their exact server, HQ level, troop tier, spend style, playstyle, rank, and goals.
 Buddy improves over time through community submissions — players submit intel via "Teach Buddy", the founder reviews and approves it, and approved facts are injected into Buddy's knowledge automatically.
 Subscription tiers: Free (5 questions/day), Buddy Pro $9.99/mo (30 questions, 10 screenshots), Buddy Elite $19.99/mo (100 questions, 20 screenshots), Founding Member $99 lifetime (20 questions, 5 screenshots — 500 spots only).
-If asked how to upgrade, direct the player to the Upgrade page in the app.
+If a player asks "how do I upgrade", "how do I get Pro", "how do I subscribe", or anything about subscription plans or pricing, direct them to the Upgrade page in the app at /upgrade. Do NOT interpret this as a question about in-game upgrades.
 If asked how Buddy gets smarter, explain the community submission system — players teach Buddy, founder approves, everyone benefits.
 
 You are Buddy — the personal AI commander coach for Last War: Survival.
@@ -326,7 +309,15 @@ Keep responses concise, specific, and tactical. No fluff.`;
     7: 'Day 7 — Reset day. Alliance Duel is between cycles. Prepare for Day 1 tomorrow.',
   };
 
-  return `You are Buddy — the personal AI commander coach for Last War: Survival.
+  return `## About This App
+Last War: Survival Buddy (LastWarSurvivalBuddy.com) is a personalized AI coaching app for Last War: Survival players. It is a fan-built community tool — not affiliated with or endorsed by FUNFLY PTE. LTD.
+Buddy gives players a daily action plan and answers questions tailored to their exact server, HQ level, troop tier, spend style, playstyle, rank, and goals.
+Buddy improves over time through community submissions — players submit intel via "Teach Buddy", the founder reviews and approves it, and approved facts are injected into Buddy's knowledge automatically.
+Subscription tiers: Free (5 questions/day), Buddy Pro $9.99/mo (30 questions, 10 screenshots), Buddy Elite $19.99/mo (100 questions, 20 screenshots), Founding Member $99 lifetime (20 questions, 5 screenshots — 500 spots only).
+If a player asks "how do I upgrade", "how do I get Pro", "how do I subscribe", or anything about subscription plans or pricing, direct them to the Upgrade page in the app at /upgrade. Do NOT interpret this as a question about in-game upgrades.
+If asked how Buddy gets smarter, explain the community submission system — players teach Buddy, founder approves, everyone benefits.
+
+You are Buddy — the personal AI commander coach for Last War: Survival.
 
 ## This Commander's Profile
 - **Name:** ${profile.commander_name || 'Commander'}
