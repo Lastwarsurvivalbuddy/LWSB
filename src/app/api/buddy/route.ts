@@ -294,10 +294,10 @@ Keep responses concise, specific, and tactical. No fluff.`;
     : 'Not set';
 
   const troopTierDisplay: Record<string, string> = {
-    under_t10: 'Under T10 — working toward T10 unlock',
-    t10:       'T10 — unlocked and training',
-    t11:       'T11 — Armament Research system active',
-  };
+  under_t10: 'Under T10 — working toward T10 unlock',
+  t10:       'T10 — unlocked and training. Do NOT recommend T10 research nodes as a goal — assume T10 research is complete.',
+  t11:       'T11 — Armament Research system active. T10 research tree is fully complete. Do NOT recommend T10 research nodes.',
+};
 
   const duelLabels: Record<number, string> = {
     1: "Day 1 — Radar Training (1pt). Lowest value day. Use it for housekeeping, don't burn big speedups.",
