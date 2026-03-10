@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import DailyActionPlan from '@/components/DailyActionPlan'
 import TeachBuddy from '@/components/TeachBuddy'
+import ServerPulse from '@/components/ServerPulse'
 import {
   RANK_BUCKET_LABELS,
   SQUAD_POWER_TIER_LABELS,
@@ -301,6 +302,11 @@ export default function Dashboard() {
         <section className="pt-6 pb-2">
           <DailyActionPlan profile={profile} />
           <TeachBuddy serverNumber={Number(profile.server_number)} />
+        </section>
+
+       {/* ── Server Pulse ── */}
+        <section className="mt-6">
+          <ServerPulse serverNumber={Number(profile.server_number ?? 1032)} />
         </section>
 
         {/* Divider */}
