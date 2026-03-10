@@ -6,18 +6,15 @@ export type Season = 0 | 1 | 2 | 3 | 4 | 5;
 
 export type SquadPowerTier =
   | 'under_10m'
-  | '10_15m'
-  | '15_20m'
-  | '20_25m'
-  | '25_30m'
-  | '30_35m'
-  | '35_40m'
-  | '40_45m'
-  | '45_50m'
-  | '60m'
-  | '70m'
-  | '80m'
-  | '90m'
+  | '10_20m'
+  | '20_30m'
+  | '30_40m'
+  | '40_50m'
+  | '50_60m'
+  | '60_70m'
+  | '70_80m'
+  | '80_90m'
+  | '90_100m'
   | '100m_plus';
 
 export type RankBucket =
@@ -42,6 +39,7 @@ export type KillTier =
   | '1m'
   | '2m'
   | '3m'
+  | '4m'
   | '5m'
   | '10m'
   | '15m'
@@ -53,18 +51,15 @@ export type KillTier =
 // Display labels for UI rendering
 export const SQUAD_POWER_TIER_LABELS: Record<SquadPowerTier, string> = {
   under_10m:   'Under 10M',
-  '10_15m':    '10M – 15M',
-  '15_20m':    '15M – 20M',
-  '20_25m':    '20M – 25M',
-  '25_30m':    '25M – 30M',
-  '30_35m':    '30M – 35M',
-  '35_40m':    '35M – 40M',
-  '40_45m':    '40M – 45M',
-  '45_50m':    '45M – 50M',
-  '60m':       '~60M',
-  '70m':       '~70M',
-  '80m':       '~80M',
-  '90m':       '~90M',
+  '10_20m':    '10–20M',
+  '20_30m':    '20–30M',
+  '30_40m':    '30–40M',
+  '40_50m':    '40–50M',
+  '50_60m':    '50–60M',
+  '60_70m':    '60–70M',
+  '70_80m':    '70–80M',
+  '80_90m':    '80–90M',
+  '90_100m':   '90–100M',
   '100m_plus': '100M+',
 };
 
@@ -92,6 +87,7 @@ export const KILL_TIER_LABELS: Record<KillTier, string> = {
   '1m':        'Punisher — 1M kills',
   '2m':        'Powerhouse — 2M kills',
   '3m':        'Warlord — 3M kills',
+  '4m':        'Slayer - 4M kills',
   '5m':        'Destroyer — 5M kills',
   '10m':       'Annihilator — 10M kills',
   '15m':       'Executioner — 15M kills',
@@ -107,6 +103,7 @@ export const KILL_TIER_TITLES: Record<KillTier, string> = {
   '1m':        'Punisher',
   '2m':        'Powerhouse',
   '3m':        'Warlord',
+  '4m':        'Slayer',
   '5m':        'Destroyer',
   '10m':       'Annihilator',
   '15m':       'Executioner',
