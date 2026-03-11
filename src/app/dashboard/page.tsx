@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import DailyActionPlan from '@/components/DailyActionPlan'
+import DailyBriefing from '@/components/DailyBriefing'
 import TeachBuddy from '@/components/TeachBuddy'
 import ServerPulse from '@/components/ServerPulse'
 import {
@@ -298,13 +299,18 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* ── Daily Briefing ── */}
+        <section className="pt-6">
+          <DailyBriefing />
+        </section>
+
         {/* ── Daily Action Plan ── */}
         <section className="pt-6 pb-2">
           <DailyActionPlan profile={profile} />
           <TeachBuddy serverNumber={Number(profile.server_number)} />
         </section>
 
-       {/* ── Server Pulse ── */}
+        {/* ── Server Pulse ── */}
         <section className="mt-6">
           <ServerPulse serverNumber={Number(profile.server_number ?? 1032)} />
         </section>
