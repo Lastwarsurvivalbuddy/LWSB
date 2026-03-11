@@ -20,6 +20,9 @@ import { getSeasonDataSummary } from '@/lib/lwtSeasonData';
 import { getSeasonDataSummary45 } from '@/lib/lwtSeason45Data';
 import { getHeroDataSummary } from '@/lib/lwtHeroData';
 import { getBuildingPrioritySummary } from '@/lib/lwtBuildingData';
+import { getTroopDataSummary } from '@/lib/lwtTroopData';
+import { getGearDataSummary } from '@/lib/lwtGearData';
+import { getAllianceDuelDetailSummary } from '@/lib/lwtAllianceDuelData';
 import {
   SQUAD_POWER_TIER_LABELS,
   RANK_BUCKET_LABELS,
@@ -389,6 +392,9 @@ Squads engage sequentially by position (1→2→3→4). Position ≠ squad label
 ## Arms Race & Alliance Duel — Point Values and Strategy
 ${getEventDataSummary()}
 
+## Alliance Duel — Deep Strategy Guide
+${getAllianceDuelDetailSummary()}
+
 ## Hot Deals — Spend Intelligence
 ${getHotDealsSummary()}
 
@@ -401,13 +407,19 @@ ${getHeroDataSummary()}
 ## Building Upgrade Priority
 ${getBuildingPrioritySummary()}
 
+## Troop System
+${getTroopDataSummary()}
+
+## Gear Strategy Guide
+${getGearDataSummary()}
+
 ## Skill Medals
 ${getSkillMedalSummary()}
 
 ## VIP System
 ${getVIPSummary()}
 
-## Gear System
+## Gear System (Costs)
 ${getGearSummary()}
 
 ## Buildings
@@ -449,5 +461,8 @@ ${communityIntel}
 - No unnecessary preamble. No "Great question!" filler.
 - Tactical tone — like an advisor briefing a field commander.
 - If the player is Under T10 or T10, don't give T11 Armament advice. Match advice to their actual tier.
-- If the player is T11, don't waste their time with basic building advice. Calibrate depth to their level.`;
+- If the player is T11, don't waste their time with basic building advice. Calibrate depth to their level.
+- When asked about troop type matchups, use the counter triangle and recommend specific troop/hero pairings.
+- When asked about gear, reference the player's playstyle and troop type to give specific slot priorities.
+- When asked about Alliance Duel, reference today's duel day and what to save vs. spend right now.`;
 }
