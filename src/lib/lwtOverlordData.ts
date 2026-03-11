@@ -73,11 +73,18 @@ TOTAL TO DEPLOY:
 
 export const OVERLORD_SKILLS = `
 OVERLORD SKILLS (5 skills, unlocked at deployment):
-1. Riot Shot
+1. Brutal Roar
 2. Overlord's Armor
-3. Brutal Roar
-4. Furious Hunt
+3. Furious Hunt
+4. Riot Shot
 5. Expert Overlord
+
+SKILL PRIORITY ORDER: Brutal Roar → Overlord's Armor → Furious Hunt → Riot Shot → Expert Overlord
+- Brutal Roar first: primary offensive trigger, fires immediately in combat
+- Overlord's Armor second: survivability, keeps Gorilla in the fight longer
+- Furious Hunt third: chase/pursuit damage, strong in rally and open-field
+- Riot Shot fourth: ranged damage, solid but less urgent than the first three
+- Expert Overlord last: passive enhancement, scales with the others being leveled first
 
 - Skills leveled up using: Overlord Skill Badges
 - Further promotions unlock full skill potential
