@@ -29,39 +29,7 @@ function getDuelContext(profile: Record<string, unknown>): string {
 }
 
 function getArmsRaceContext(): string {
-  // Arms Race runs 6 phases of 4 hours each = 24h cycle
-  // Without a real-time clock tied to server UTC we give the phase structure + advice
-  const now = new Date();
-  const utcHour = now.getUTCHours();
-  // Arms Race phases (UTC approximate — varies by server launch day)
-  // Phase 1: 0–4h, Phase 2: 4–8h, Phase 3: 8–12h, Phase 4: 12–16h, Phase 5: 16–20h, Phase 6: 20–24h
-  const phaseIndex = Math.floor(utcHour / 4) + 1;
-  const phaseMinutes = (utcHour % 4) * 60 + now.getUTCMinutes();
-  const minutesLeft = 240 - phaseMinutes;
-  const hoursLeft = Math.floor(minutesLeft / 60);
-  const minsLeft = minutesLeft % 60;
-
-  const phaseNames: Record<number, string> = {
-    1: 'Phase 1 — Building Upgrades',
-    2: 'Phase 2 — Research',
-    3: 'Phase 3 — Troop Training',
-    4: 'Phase 4 — Hero Development',
-    5: 'Phase 5 — Killing (PvP)',
-    6: 'Phase 6 — Gathering & Development',
-  };
-
-  return `Arms Race: Currently in ${phaseNames[phaseIndex] ?? `Phase ${phaseIndex}`} — ${hoursLeft}h ${minsLeft}m remaining in this phase.`;
-}
-
-function getKillEventProximity(serverDay: number): string {
-  // Kill Events in Last War occur roughly every 7 days
-  // Without exact server calendar we flag proximity based on duel day
-  const duelDayOfWeek = ((serverDay - 1) % 7) + 1;
-  if (duelDayOfWeek === 5 || duelDayOfWeek === 6) {
-    return 'Kill Event window: Active or imminent. Troops ready.';
-  }
-  const daysUntil = duelDayOfWeek <= 4 ? 5 - duelDayOfWeek : 7 - duelDayOfWeek + 5;
-  return `Kill Event: ~${daysUntil} day(s) away. ${daysUntil <= 2 ? 'Start healing and prepping troops now.' : 'Monitor troop health.'}`;
+  return 'Arms Race: Active daily. Hammer it. Align your actions with the current Alliance Duel day for double-dip points where possible.';
 }
 
 function getSpendContext(spendTier: string): string {
@@ -110,7 +78,6 @@ export async function buildBriefingPrompt(profile: Record<string, unknown>): Pro
 
   const duelContext = getDuelContext(profile);
   const armsRaceContext = getArmsRaceContext();
-  const killEventContext = getKillEventProximity(serverDay);
   const seasonContext = getSeasonContext(season, serverDay);
   const spendContext = getSpendContext(spendTier);
 
@@ -121,7 +88,7 @@ This is NOT a chat response. It is a formatted card delivered once per day.
 RULES:
 - Be specific and actionable. No filler. No generic advice.
 - Calibrate everything to this player's exact profile.
-- Reference the current event context (Duel day, Arms Race phase, Kill Event proximity).
+- Reference the current event context (Duel day, Arms Race) — do NOT invent phase names, timers, or countdowns you don't have data for.
 - Be direct and confident. Like a coach, not a FAQ.
 - Format EXACTLY as shown. Use the section headers. Keep each section tight.
 - Max 3 bullet points per section. Quality over quantity.
@@ -157,7 +124,6 @@ TODAY'S EVENT CONTEXT:
 - ${seasonContext}
 - ${duelContext}
 - ${armsRaceContext}
-- ${killEventContext}
 
 Generate the briefing card now.`;
 

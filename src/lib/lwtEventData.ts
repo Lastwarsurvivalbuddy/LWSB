@@ -1,7 +1,7 @@
 // lwtEventData.ts
 // Arms Race + Alliance Duel VS data
 // Source: lastwartutorial.com (Cris84) — pending partnership
-// Last updated: March 11, 2026
+// Last updated: March 11, 2026 (session 11 — Arms Race phase order corrected)
 
 // ─────────────────────────────────────────────
 // ARMS RACE
@@ -66,22 +66,23 @@ export const ARMS_RACE_PHASES = [
 
 export const ARMS_RACE_STRATEGY = `
 Arms Race runs every day in six 4-hour phases. Key rules:
-- Each phase has different scoring actions — check the calendar icon in the event to see today's phase schedule
-- The same phase schedule applies to ALL servers — you can plan globally
-- Pre-wrap completed buildings and hold them to open during Base Building phase
+- The 6 phases are: Base Building, Unit Progression, Tech Research, Drone Boost, Hero Advancement, City Building
+- Phase order is RANDOM each day — check the calendar icon in the Arms Race event to see today's schedule
+- Players get 1 swap attempt per day to change to a different phase. Swapping resets your points — emergency use only.
+- Pre-wrap completed buildings and hold them to open during Base Building or City Building phase
 - Start long research before Tech Research phase, click to collect during it
 - Stack radar missions the day before Drone Boost
 - Save Hero EXP and recruit tickets for Hero Advancement phase
-- Stage Swap: 1 swap per day, can only swap to a LATER phase, points reset after swap — use only if badly mismatched
 - Opening 3 phase chests = 6 Arms Race Badges. Total of 18 Badges = Gold Daily Reward Chest
 - HQ level determines your Contest Segment — higher HQ = harder point thresholds but better rewards
 - Actions that do NOT score Arms Race points (can do anytime): Use skill medals, synthesize drone components
+- DOUBLE-DIP: Always time Alliance Duel actions to coincide with the matching Arms Race phase for maximum efficiency
 `;
 
 export const ARMS_RACE_BADGE_SYSTEM = `
 Arms Race Badges unlock Daily Reward Chests:
 - 2 Badges → Blue chest
-- 8 Badges → Purple chest  
+- 8 Badges → Purple chest
 - 18 Badges → Gold chest (target every day)
 Each phase: Chest 1 = 1 Badge, Chest 2 = 2 Badges, Chest 3 = 3 Badges
 Complete 3 full phases = 18 Badges = Gold chest guaranteed
@@ -212,7 +213,7 @@ export const DUEL_DAYS = [
     alliancePoints: 0,
     armsRaceOverlap: [],
     tasks: [],
-    prepDay: 'Claim all rewards. Queue new upgrades. Check next phase schedule. Start prep for Day 1.',
+    prepDay: 'Claim all rewards. Queue new upgrades. Check next Arms Race phase schedule. Start prep for Day 1.',
   },
 ];
 
@@ -224,6 +225,7 @@ CRITICAL RULES:
 - Sync Alliance Duel actions with overlapping Arms Race phases — this is the highest efficiency move in the game
 - Do NOT execute all duel actions immediately at daily reset — wait for the correct Arms Race phase to overlap
 - Wait 5 minutes after reset before starting activities — points don't award during the reset window
+- Arms Race phase order is random daily — check the in-game calendar each morning
 
 WEEKLY PREP HABITS:
 - Monday (Day 1): Stack radar missions Sunday night. Save drone data chip chests.
@@ -248,6 +250,7 @@ REWARD TYPES:
 
 export const DUEL_DOUBLE_DIP_SUMMARY = `
 DOUBLE-DIP CHEAT SHEET — Do these actions during their Arms Race phase:
+(Arms Race phase order is random daily — check in-game calendar each morning)
 
 Day 1 (Radar Training):
   → Use stamina + drone data during DRONE BOOST phase
@@ -272,6 +275,7 @@ Day 6 (Enemy Buster):
   → Construction during CITY BUILDING
   → Research during TECH RESEARCH
   → Training during UNIT PROGRESSION
+  → Healing speedups ONLY score on Day 6 — save them all week
 `;
 
 // ─────────────────────────────────────────────
@@ -283,15 +287,17 @@ export function getEventDataSummary(): string {
 ## Arms Race & Alliance Duel — Exact Point Values
 
 ### Arms Race
-Daily event, six 4-hour phases. Same phase schedule on all servers.
+Daily event, six 4-hour phases. The 6 phases are: Base Building, Unit Progression, Tech Research, Drone Boost, Hero Advancement, City Building.
+Phase order is RANDOM each day — players must check the in-game calendar each morning to see today's schedule.
+Players get 1 swap attempt per day to change phase. Swapping resets your points — emergency use only.
 Key rules:
-- Leave completed buildings GIFT-WRAPPED — open during Base Building phase only
+- Leave completed buildings GIFT-WRAPPED — open during Base Building or City Building phase only
 - Start long research ahead of time — click to collect during Tech Research phase
 - Stack radar missions the day before Drone Boost
 - Save recruit tickets and Hero EXP for Hero Advancement phase
 - 18 Arms Race Badges = Gold Daily Reward Chest (3 badges/phase × 3 phases = 18)
-- Stage Swap: 1/day, only to later phases, points reset — emergency use only
 - Skill medals and drone component synthesis do NOT score Arms Race points
+- ALWAYS double-dip: time Alliance Duel actions to overlap with matching Arms Race phase
 
 ### Alliance Duel VS Schedule (Mon–Sat, reset 2am UTC)
 Day 1 — Radar Training (1 alliance pt): Radar missions ~25K pts. Open Drone Chip Chests ~2K pts each (server Day 85+). Start gathering day before.
@@ -304,6 +310,7 @@ Day 7 — Reset (0 pts): Claim rewards, prep for next week.
 
 ### Double-Dip Rule
 ALWAYS time duel actions to overlap with their matching Arms Race phase.
+Arms Race phase order is random daily — check the in-game calendar each morning.
 Day 5 is the best day — 3 Arms Race phases overlap simultaneously.
 Never rush duel actions at reset — wait for the right Arms Race phase.
 `;
