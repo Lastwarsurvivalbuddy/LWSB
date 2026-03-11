@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import DailyActionPlan from '@/components/DailyActionPlan'
 import DailyBriefing from '@/components/DailyBriefing'
+import PackScanner from '@/components/PackScanner'
 import TeachBuddy from '@/components/TeachBuddy'
 import ServerPulse from '@/components/ServerPulse'
 import {
@@ -80,7 +81,6 @@ function shouldShowStaleBanner(profile: Profile): boolean {
   return false
 }
 
-// Troop tier display for new 3-tier model
 function troopTierDisplay(tier: string): string {
   const map: Record<string, string> = {
     under_t10: 'Under T10',
@@ -169,8 +169,9 @@ export default function Dashboard() {
   const displayServerDay = profile.computed_server_day ?? profile.server_day
   const streak = profile.streak_count ?? 0
   const hasActiveStreak = streak > 0
+  const subscriptionTier = profile.subscription_tier ?? 'free'
 
-  // Stats grid — new bucket fields
+  // Stats grid
   const statsGrid = [
     {
       label: 'HQ Level',
@@ -304,8 +305,13 @@ export default function Dashboard() {
           <DailyBriefing />
         </section>
 
+        {/* ── Pack Scanner ── */}
+        <section className="pt-4">
+          <PackScanner subscriptionTier={subscriptionTier} />
+        </section>
+
         {/* ── Daily Action Plan ── */}
-        <section className="pt-6 pb-2">
+        <section className="pt-4 pb-2">
           <DailyActionPlan profile={profile} />
           <TeachBuddy serverNumber={Number(profile.server_number)} />
         </section>
@@ -348,12 +354,13 @@ export default function Dashboard() {
               <div className="flex flex-col items-end gap-1.5">
                 <span className={`
                   text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded font-mono
-                  ${profile.subscription_tier === 'elite'    ? 'bg-amber-900/60 text-amber-300 border border-amber-800' :
-                    profile.subscription_tier === 'pro'      ? 'bg-sky-900/60 text-sky-300 border border-sky-800' :
-                    profile.subscription_tier === 'founding' ? 'bg-purple-900/60 text-purple-300 border border-purple-800' :
+                  ${subscriptionTier === 'elite'    ? 'bg-amber-900/60 text-amber-300 border border-amber-800' :
+                    subscriptionTier === 'pro'      ? 'bg-sky-900/60 text-sky-300 border border-sky-800' :
+                    subscriptionTier === 'founding' ? 'bg-purple-900/60 text-purple-300 border border-purple-800' :
+                    subscriptionTier === 'alliance' ? 'bg-green-900/60 text-green-300 border border-green-800' :
                     'bg-zinc-800 text-zinc-500 border border-zinc-700'}
                 `}>
-                  {profile.subscription_tier ? profile.subscription_tier.toUpperCase() : 'FREE'}
+                  {subscriptionTier.toUpperCase()}
                 </span>
               </div>
             </div>
