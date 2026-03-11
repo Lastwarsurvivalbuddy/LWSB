@@ -4,13 +4,20 @@ import { getSkillMedalSummary } from '@/lib/skillMedals';
 import { getVIPSummary } from '@/lib/vipData';
 import { getGearSummary } from '@/lib/gearData';
 import { getBuildingSummary } from '@/lib/buildingData';
+import { getBuildingCostSummary } from '@/lib/buildingCostData';
 import { getResourceNotesSummary } from '@/lib/resourceNotes';
 import { getDroneSummary } from '@/lib/droneData';
+import { getDecorationSummary } from '@/lib/decorationData';
+import { getArmamentSummary } from '@/lib/armamentData';
 import { getT10Summary } from '@/lib/t10Data';
 import { getHQSummary } from '@/lib/hqRequirementsData';
 import { getHealingSummary } from '@/lib/healingData';
 import { getApprovedSubmissions } from '@/lib/submissionData';
 import { incrementStreak } from '@/lib/streak';
+import { getEventDataSummary } from '@/lib/lwtEventData';
+import { getHotDealsSummary } from '@/lib/lwtHotDealsData';
+import { getSeasonDataSummary } from '@/lib/lwtSeasonData';
+import { getSeasonDataSummary45 } from '@/lib/lwtSeason45Data';
 import {
   SQUAD_POWER_TIER_LABELS,
   RANK_BUCKET_LABELS,
@@ -28,7 +35,8 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// ─── Daily limits per tier ───
+// ─── Daily limits per tier ───────────────────────────────────────────────────
+
 const TIER_LIMITS: Record<string, { questions: number; screenshots: number }> = {
   free:     { questions: 5,   screenshots: 0  },
   pro:      { questions: 30,  screenshots: 10 },
@@ -37,11 +45,11 @@ const TIER_LIMITS: Record<string, { questions: number; screenshots: number }> = 
   alliance: { questions: 100, screenshots: 20 },
 };
 
-// ─── Duel day calculation ───
-// Reset is always 2am UTC
-// No DST logic needed — work entirely in UTC
+// ─── Duel day calculation ────────────────────────────────────────────────────
+// Reset is always 2am UTC. No DST logic — pure UTC.
 // Mon=Day1 Radar Training, Tue=Day2 Base Expansion, Wed=Day3 Age of Science,
 // Thu=Day4 Train Heroes, Fri=Day5 Total Mobilization, Sat=Day6 Enemy Buster, Sun=Day7 Reset
+
 function getCurrentDuelDay(): { day: number; label: string } {
   const now = new Date();
 
@@ -51,21 +59,23 @@ function getCurrentDuelDay(): { day: number; label: string } {
 
   // 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat, 0=Sun
   const schedule: Record<number, { day: number; label: string }> = {
-    1: { day: 1, label: 'Radar Training (1pt)'      },
-    2: { day: 2, label: 'Base Expansion (2pts)'      },
-    3: { day: 3, label: 'Age of Science (2pts)'      },
-    4: { day: 4, label: 'Train Heroes (2pts)'        },
-    5: { day: 5, label: 'Total Mobilization (2pts)'  },
-    6: { day: 6, label: 'Enemy Buster (4pts)'        },
-    0: { day: 7, label: 'Reset'                      },
+    1: { day: 1, label: 'Radar Training (1pt)'     },
+    2: { day: 2, label: 'Base Expansion (2pts)'     },
+    3: { day: 3, label: 'Age of Science (2pts)'     },
+    4: { day: 4, label: 'Train Heroes (2pts)'       },
+    5: { day: 5, label: 'Total Mobilization (2pts)' },
+    6: { day: 6, label: 'Enemy Buster (4pts)'       },
+    0: { day: 7, label: 'Reset'                     },
   };
 
   return schedule[utcDay] ?? { day: 1, label: 'Radar Training (1pt)' };
 }
 
+// ─── POST handler ────────────────────────────────────────────────────────────
+
 export async function POST(req: NextRequest) {
   try {
-    // ─── Auth ───
+    // ── Auth ──
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -77,7 +87,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // ─── Parse body ───
+    // ── Parse body ──
     const body = await req.json();
     const userMessage: string = body.message || '';
     const history: Array<{ role: 'user' | 'assistant'; content: string }> = body.history || [];
@@ -89,7 +99,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Message or image required' }, { status: 400 });
     }
 
-    // ─── Subscription & limits ───
+    // ── Subscription & limits ──
     const { data: sub } = await supabase
       .from('subscriptions')
       .select('tier')
@@ -106,7 +116,7 @@ export async function POST(req: NextRequest) {
       }, { status: 403 });
     }
 
-    // ─── Daily usage check ───
+    // ── Daily usage check ──
     const today = new Date().toISOString().split('T')[0];
 
     const { data: usage } = await supabase
@@ -135,7 +145,7 @@ export async function POST(req: NextRequest) {
       }, { status: 429 });
     }
 
-    // ─── Load commander profile ───
+    // ── Load commander profile ──
     const { data: profile } = await supabase
       .from('commander_profile')
       .select('*')
@@ -145,7 +155,7 @@ export async function POST(req: NextRequest) {
     const duel = getCurrentDuelDay();
     const systemPrompt = await buildSystemPrompt(profile, duel, tier);
 
-    // ─── Build message array for Claude ───
+    // ── Build message array for Claude ──
     const recentHistory = history.slice(-20);
 
     const claudeMessages: Array<{ role: string; content: unknown }> = [
@@ -175,7 +185,7 @@ export async function POST(req: NextRequest) {
       claudeMessages.push({ role: 'user', content: userMessage });
     }
 
-    // ─── Claude API call ───
+    // ── Claude API call ──
     const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -197,7 +207,7 @@ export async function POST(req: NextRequest) {
       .map(block => block.text || '')
       .join('');
 
-    // ─── Save to chat history ───
+    // ── Save to chat history ──
     const sessionKey = `${user.id}_${today}`;
     const { data: session } = await supabase
       .from('chat_sessions')
@@ -227,7 +237,7 @@ export async function POST(req: NextRequest) {
       ]);
     }
 
-    // ─── Update daily usage ───
+    // ── Update daily usage ──
     await supabase
       .from('daily_usage')
       .upsert(
@@ -240,7 +250,7 @@ export async function POST(req: NextRequest) {
         { onConflict: 'user_id,date' }
       );
 
-    // ─── Increment streak ───
+    // ── Increment streak ──
     await incrementStreak(supabase, user.id);
 
     return NextResponse.json({ reply });
@@ -251,13 +261,15 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// ─── System prompt builder ────────────────────────────────────────────────────
+// ─── System prompt builder ───────────────────────────────────────────────────
 
 async function buildSystemPrompt(
   profile: Record<string, unknown> | null,
   duel: { day: number; label: string },
   tier: string
 ): Promise<string> {
+
+  // ── No profile fallback ──
   if (!profile) {
     return `## About This App
 Last War: Survival Buddy (LastWarSurvivalBuddy.com) is a personalized AI coaching app for Last War: Survival players. It is a fan-built community tool — not affiliated with or endorsed by FUNFLY PTE. LTD.
@@ -272,6 +284,7 @@ The player's profile hasn't loaded — give helpful general advice and ask them 
 Keep responses concise, specific, and tactical. No fluff.`;
   }
 
+  // ── Profile display translations ──
   const serverDay = profile.computed_server_day ?? profile.server_day ?? 'Unknown';
 
   const squadPower = profile.squad_power_tier
@@ -310,6 +323,19 @@ Keep responses concise, specific, and tactical. No fluff.`;
     7: 'Day 7 — Reset day. Alliance Duel is between cycles. Prepare for Day 1 tomorrow.',
   };
 
+  // ── Season guide selection ──
+  // Seasons 0–3: lwtSeasonData.ts
+  // Seasons 4–5: lwtSeason45Data.ts
+  const seasonNumber = typeof profile.season === 'number' ? profile.season : 0;
+
+  const seasonGuide = seasonNumber >= 4
+    ? getSeasonDataSummary45(seasonNumber)
+    : getSeasonDataSummary(seasonNumber);
+
+  // ── Community intel ──
+  const communityIntel = await getApprovedSubmissions(Number(profile.server_number));
+
+  // ── Assemble prompt ──
   return `## About This App
 Last War: Survival Buddy (LastWarSurvivalBuddy.com) is a personalized AI coaching app for Last War: Survival players. It is a fan-built community tool — not affiliated with or endorsed by FUNFLY PTE. LTD.
 Buddy gives players a daily action plan and answers questions tailored to their exact server, HQ level, troop tier, spend style, playstyle, rank, and goals.
@@ -342,7 +368,7 @@ Alliance Duel — ${duelLabels[duel.day] || duel.label}
 ## Your Mission
 Give this Commander specific, actionable advice. Always reference their actual profile data.
 Never give generic advice that ignores their server, tier, spend style, or situation.
-Use buckets naturally in conversation — say "your Squad 1 is in the 40–45M range" not "your squad_power_tier is 40_45m".
+Use buckets naturally in conversation — say "your Squad 1 is in the 40–50M range" not "your squad_power_tier is 40_50m".
 
 ## Screenshot Analysis (when image provided)
 When the Commander uploads a screenshot of a Hot Deal / pack offer:
@@ -353,13 +379,19 @@ When the Commander uploads a screenshot of a Hot Deal / pack offer:
 
 ## Troop Counter Triangle
 Aircraft > Infantry > Tank > Aircraft. Missile Vehicle counters all but lower sustained power.
+Specialization beats raw numbers after Day 70+. Always advise matching counter type in PVP.
 
 ## Defense System
-Squads engage sequentially by position (1→2→3→4). Position ≠ squad label. Analyze by position.
+Squads engage sequentially by position (1→2→3→4). Position ≠ squad label. Always analyze by position, never by squad label.
 
-## Arms Race
-Daily event. Double-dipping with Alliance Duel is the highest efficiency move in the game.
-Most players don't do this — always highlight it when relevant.
+## Arms Race & Alliance Duel — Point Values and Strategy
+${getEventDataSummary()}
+
+## Hot Deals — Spend Intelligence
+${getHotDealsSummary()}
+
+## Season Guide — ${seasonDisplay}
+${seasonGuide}
 
 ## Skill Medals
 ${getSkillMedalSummary()}
@@ -373,11 +405,20 @@ ${getGearSummary()}
 ## Buildings
 ${getBuildingSummary()}
 
+## Building Upgrade Costs
+${getBuildingCostSummary()}
+
 ## Resource Notes
 ${getResourceNotesSummary()}
 
 ## Drone System
 ${getDroneSummary()}
+
+## Decorations
+${getDecorationSummary()}
+
+## M5-A Armament System
+${getArmamentSummary()}
 
 ## T10 Research
 ${getT10Summary()}
@@ -389,13 +430,16 @@ ${getHQSummary()}
 ${getHealingSummary()}
 
 ## Community Intelligence
-${await getApprovedSubmissions(Number(profile.server_number))}
+${communityIntel}
 
 ## Style Rules
 - Be direct. Lead with the answer, then explain.
 - Use their name: "Commander ${profile.commander_name || 'Commander'}"
-- Translate bucket values into plain English naturally (e.g. "your Squad 1 power is around 40–45M")
-- Max 3–5 action items unless they ask for more
+- Translate ALL bucket values into plain English naturally. Never output raw bucket key names.
+  Examples: "your Squad 1 power is around 40–50M" · "you're in the top 10 on your server" · "your kill tier is Warlord"
+- Max 3–5 action items unless they ask for more.
 - No unnecessary preamble. No "Great question!" filler.
-- Tactical tone — like an advisor briefing a field commander.`;
+- Tactical tone — like an advisor briefing a field commander.
+- If the player is Under T10 or T10, don't give T11 Armament advice. Match advice to their actual tier.
+- If the player is T11, don't waste their time with basic building advice. Calibrate depth to their level.`;
 }
