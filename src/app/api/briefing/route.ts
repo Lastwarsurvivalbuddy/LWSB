@@ -1,16 +1,25 @@
 // src/app/api/briefing/route.ts
 // Daily Briefing Card — generates once per day per user, cached in Supabase
-// Built: March 11, 2026 (session 11)
+// Built: March 11, 2026 (session 11) — fixed session 11b: createClient pattern
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 import { buildBriefingPrompt } from '@/lib/briefingPrompt';
 
 export const runtime = 'edge';
 
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
+
 export async function GET(req: NextRequest) {
   try {
-    // ── Auth ────────────────────────────────────────────────────────────────
+    const supabase = getSupabase();
+
+    // ── Auth ─────────────────────────────────────────────────────────────────
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -23,7 +32,7 @@ export async function GET(req: NextRequest) {
 
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
-    // ── Check cache ──────────────────────────────────────────────────────────
+    // ── Check cache ───────────────────────────────────────────────────────────
     const { data: cached } = await supabase
       .from('daily_briefings')
       .select('briefing_text, generated_at')
@@ -39,14 +48,15 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // ── Load profile ─────────────────────────────────────────────────────────
+    // ── Load profile ──────────────────────────────────────────────────────────
     const { data: profile, error: profileError } = await supabase
       .from('commander_profile')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single();
 
     if (profileError || !profile) {
+      console.error('Profile error:', profileError);
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
@@ -104,9 +114,11 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// ── Force refresh endpoint (POST) ────────────────────────────────────────────
+// ── Force refresh (POST) ──────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   try {
+    const supabase = getSupabase();
+
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const token = authHeader.replace('Bearer ', '');
@@ -115,7 +127,6 @@ export async function POST(req: NextRequest) {
 
     const today = new Date().toISOString().split('T')[0];
 
-    // Delete today's cache to allow regeneration
     await supabase
       .from('daily_briefings')
       .delete()
