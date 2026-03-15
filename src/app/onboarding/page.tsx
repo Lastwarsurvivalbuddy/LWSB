@@ -498,9 +498,9 @@ function Step8_Playstyle({ data, setData, onNext, onBack, step }: StepProps) {
 
 function Step9_TroopType({ data, setData, onNext, onBack, step }: StepProps) {
   const options = [
-    { value: 'aircraft', label: 'Aircraft', sublabel: 'Beats Infantry — fast strike force', icon: '✈️' },
-    { value: 'tank', label: 'Tank', sublabel: 'Beats Aircraft — armored wall', icon: '🛡️' },
-    { value: 'missile', label: 'Missile Vehicle', sublabel: 'Counters all types — lower sustained power', icon: '🚀' },
+    { value: 'aircraft', label: 'Aircraft', sublabel: 'Counters Tank', icon: '✈️' },
+    { value: 'tank', label: 'Tank', sublabel: 'Counters Missile', icon: '🛡️' },
+    { value: 'missile', label: 'Missile Vehicle', sublabel: 'Counters Aircraft', icon: '🚀' },
     { value: 'mixed', label: 'Mixed / Not Sure', sublabel: "Haven't specialized Squad 1 yet", icon: '⚖️' },
   ];
   return (
@@ -612,7 +612,6 @@ function Step12_KillTier({ data, setData, onNext, onBack, step }: StepProps) {
 // ─── COMPLETE STEP with beginner mode auto-suggest ────────────────────────────
 
 function StepComplete({ data, setData, onDone }: { data: ProfileData; setData: (d: ProfileData) => void; onDone: () => void }) {
-  // Auto-suggest if scout playstyle OR under_t10
   const shouldSuggest = data.playstyle === 'scout' || data.troop_tier === 'under_t10';
 
   const tierLabels: Record<string, string> = {
@@ -668,7 +667,6 @@ function StepComplete({ data, setData, onDone }: { data: ProfileData; setData: (
         ))}
       </div>
 
-      {/* Beginner Mode suggestion */}
       {shouldSuggest && (
         <div style={{ marginBottom: 24 }}>
           <div style={{ fontSize: 11, color: theme.goldDim, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 10 }}>
@@ -684,7 +682,6 @@ function StepComplete({ data, setData, onDone }: { data: ProfileData; setData: (
               transition: 'all 0.15s',
             }}
           >
-            {/* Toggle pill */}
             <div style={{
               position: 'relative', marginTop: 2, flexShrink: 0,
               width: 40, height: 20, borderRadius: 10,
