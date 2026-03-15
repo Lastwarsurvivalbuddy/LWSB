@@ -9,6 +9,7 @@ import {
   POWER_BUCKET_LABELS,
   KILL_TIER_LABELS,
   SEASON_LABELS,
+  BEGINNER_MODE_DESCRIPTION,
   type SquadPowerTier,
   type RankBucket,
   type PowerBucket,
@@ -24,7 +25,7 @@ interface ProfileForm {
   spend_style: string
   playstyle: string
   troop_type: string
-  troop_tier: string           // under_t10 | t10 | t11
+  troop_tier: string
   rank_bucket: RankBucket | ''
   squad_power_tier: SquadPowerTier | ''
   power_bucket: PowerBucket | ''
@@ -32,6 +33,7 @@ interface ProfileForm {
   update_reminder_frequency: string
   alliance_name: string
   alliance_tag: string
+  beginner_mode: boolean
 }
 
 const SPEND_OPTIONS = ['f2p', 'budget', 'moderate', 'investor', 'whale', 'mega_whale']
@@ -48,10 +50,10 @@ const PLAYSTYLE_OPTIONS = [
 ]
 
 const TROOP_TYPES = [
-  { value: 'aircraft', label: '✈️ Aircraft' },
-  { value: 'tank',     label: '🛡️ Tank' },
-  { value: 'missile vehicle',  label: '🚀 Missile Vehicle' },
-  { value: 'mixed',    label: '⚖️ Mixed' },
+  { value: 'aircraft',        label: '✈️ Aircraft' },
+  { value: 'tank',            label: '🛡️ Tank' },
+  { value: 'missile vehicle', label: '🚀 Missile Vehicle' },
+  { value: 'mixed',           label: '⚖️ Mixed' },
 ]
 
 const TROOP_TIERS = [
@@ -70,7 +72,6 @@ const REMINDER_OPTIONS = [
   { value: 'off',    label: 'Off',    sub: 'No reminders' },
 ]
 
-// Recalculate server_start_date from current server day
 function calcServerStartDate(serverDay: number): string {
   const d = new Date()
   d.setDate(d.getDate() - (serverDay - 1))
@@ -100,6 +101,7 @@ export default function ProfileEditPage() {
     update_reminder_frequency: 'weekly',
     alliance_name: '',
     alliance_tag: '',
+    beginner_mode: false,
   })
   const [originalName, setOriginalName] = useState('')
   const [nameAvailable, setNameAvailable] = useState<boolean | null>(null)
@@ -110,7 +112,6 @@ export default function ProfileEditPage() {
 
   useEffect(() => { loadProfile() }, [])
 
-  // Name availability check
   useEffect(() => {
     if (!form.commander_name || form.commander_name === originalName) {
       setNameAvailable(null)
@@ -147,22 +148,23 @@ export default function ProfileEditPage() {
       if (error) throw error
 
       setForm({
-        commander_name:           data.commander_name || '',
-        server_number:            data.server_number?.toString() || '',
-        server_day:               data.server_day?.toString() || '',
-        season:                   data.season ?? 0,
-        hq_level:                 data.hq_level?.toString() || '',
-        spend_style:              data.spend_style || '',
-        playstyle:                data.playstyle || '',
-        troop_type:               data.troop_type || '',
-        troop_tier:               data.troop_tier || '',
-        rank_bucket:              data.rank_bucket || '',
-        squad_power_tier:         data.squad_power_tier || '',
-        power_bucket:             data.power_bucket || '',
-        kill_tier:                data.kill_tier || '',
+        commander_name:            data.commander_name || '',
+        server_number:             data.server_number?.toString() || '',
+        server_day:                data.server_day?.toString() || '',
+        season:                    data.season ?? 0,
+        hq_level:                  data.hq_level?.toString() || '',
+        spend_style:               data.spend_style || '',
+        playstyle:                 data.playstyle || '',
+        troop_type:                data.troop_type || '',
+        troop_tier:                data.troop_tier || '',
+        rank_bucket:               data.rank_bucket || '',
+        squad_power_tier:          data.squad_power_tier || '',
+        power_bucket:              data.power_bucket || '',
+        kill_tier:                 data.kill_tier || '',
         update_reminder_frequency: data.update_reminder_frequency || 'weekly',
-        alliance_name: data.alliance_name || '',
-        alliance_tag: data.alliance_tag || '',
+        alliance_name:             data.alliance_name || '',
+        alliance_tag:              data.alliance_tag || '',
+        beginner_mode:             data.beginner_mode ?? false,
       })
       setOriginalName(data.commander_name || '')
     } catch {
@@ -214,6 +216,7 @@ export default function ProfileEditPage() {
         server_start_date:         serverDay ? calcServerStartDate(serverDay) : null,
         alliance_name:             form.alliance_name || null,
         alliance_tag:              form.alliance_tag || null,
+        beginner_mode:             form.beginner_mode,
         last_profile_update:       new Date().toISOString(),
         updated_at:                new Date().toISOString(),
       }
@@ -472,6 +475,33 @@ export default function ProfileEditPage() {
               ))}
             </div>
           </Field>
+
+          {/* ── Beginner Mode ── */}
+          <div
+            onClick={() => set('beginner_mode', !form.beginner_mode)}
+            className={`
+              flex items-start gap-4 px-4 py-4 rounded-xl border cursor-pointer transition-all
+              ${form.beginner_mode
+                ? 'border-amber-500 bg-amber-950/30'
+                : 'border-zinc-700 hover:border-zinc-500 bg-zinc-900/40'}
+            `}
+          >
+            {/* Toggle pill */}
+            <div className={`
+              relative mt-0.5 flex-shrink-0 w-10 h-5 rounded-full transition-colors duration-200
+              ${form.beginner_mode ? 'bg-amber-500' : 'bg-zinc-600'}
+            `}>
+              <div className={`
+                absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200
+                ${form.beginner_mode ? 'translate-x-5' : 'translate-x-0.5'}
+              `} />
+            </div>
+            {/* Text */}
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold text-zinc-100">Beginner Mode</div>
+              <div className="text-[11px] text-zinc-500 mt-1 leading-relaxed">{BEGINNER_MODE_DESCRIPTION}</div>
+            </div>
+          </div>
         </section>
 
         {/* ── Troops ── */}

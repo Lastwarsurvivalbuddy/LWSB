@@ -1,6 +1,6 @@
 // src/lib/profileTypes.ts
 // Central type definitions for profile bucket system
-// Last updated: March 9, 2026 — added kill tiers: 15m, 20m, 50m
+// Last updated: March 15, 2026 — added beginner_mode
 
 export type Season = 0 | 1 | 2 | 3 | 4 | 5;
 
@@ -121,3 +121,8 @@ export const SEASON_LABELS: Record<number, string> = {
   4: 'Season 4',
   5: 'Season 5 — Wild West',
 };
+
+// Beginner Mode — plain English toggle
+// Stored as boolean on profiles table, surfaced via commander_profile view
+export const BEGINNER_MODE_DESCRIPTION =
+  "New to Last War? Buddy will use simpler language, explain the \"why\" behind recommendations, and skip endgame content that doesn't apply to you yet.";

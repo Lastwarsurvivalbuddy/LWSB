@@ -8,6 +8,7 @@ import {
   POWER_BUCKET_LABELS,
   KILL_TIER_LABELS,
   SEASON_LABELS,
+  BEGINNER_MODE_DESCRIPTION,
   type SquadPowerTier,
   type RankBucket,
   type PowerBucket,
@@ -36,7 +37,6 @@ const theme = {
   green: '#22c55e',
 };
 
-// 13 real steps (Welcome is step 1 but not counted in progress bar)
 const TOTAL_STEPS = 13;
 
 interface ProfileData {
@@ -48,11 +48,12 @@ interface ProfileData {
   spend_tier: string;
   playstyle: string;
   troop_type: string;
-  troop_tier: string; // new values: under_t10 | t10 | t11
+  troop_tier: string;
   rank_bucket: RankBucket | '';
   squad_power_tier: SquadPowerTier | '';
   power_bucket: PowerBucket | '';
   kill_tier: KillTier | '';
+  beginner_mode: boolean;
 }
 
 // ─── SHARED COMPONENTS ────────────────────────────────────────────────────────
@@ -281,8 +282,6 @@ function Step1_Welcome({ onNext }: { onNext: () => void }) {
   );
 }
 
-// ─── COMMANDER TAG ────────────────────────────────────────────────────────────
-
 type TagStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid';
 
 function Step2_CommanderTag({ data, setData, onNext, onBack, step }: StepProps) {
@@ -379,8 +378,6 @@ function Step2_CommanderTag({ data, setData, onNext, onBack, step }: StepProps) 
   );
 }
 
-// ─── REMAINING STEPS ──────────────────────────────────────────────────────────
-
 interface StepProps {
   data: ProfileData;
   setData: (d: ProfileData) => void;
@@ -419,10 +416,7 @@ function Step5_Season({ data, setData, onNext, onBack, step }: StepProps) {
   const seasons = [0, 1, 2, 3, 4, 5];
   return (
     <div>
-      <StepTitle
-        title="What season is your server on?"
-        subtitle="Check your Season Progress tab or alliance announcements."
-      />
+      <StepTitle title="What season is your server on?" subtitle="Check your Season Progress tab or alliance announcements." />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {seasons.map(s => (
           <OptionCard
@@ -511,10 +505,7 @@ function Step9_TroopType({ data, setData, onNext, onBack, step }: StepProps) {
   ];
   return (
     <div>
-      <StepTitle
-        title="What's your Squad 1 troop type?"
-        subtitle="Check your Squad 1 — your strongest, highest-power squad."
-      />
+      <StepTitle title="What's your Squad 1 troop type?" subtitle="Check your Squad 1 — your strongest, highest-power squad." />
       {options.map(o => (
         <OptionCard key={o.value} {...o} selected={data.troop_type === o.value} onClick={() => setData({ ...data, troop_type: o.value })} />
       ))}
@@ -526,31 +517,13 @@ function Step9_TroopType({ data, setData, onNext, onBack, step }: StepProps) {
 
 function Step10_TroopTier({ data, setData, onNext, onBack, step }: StepProps) {
   const options = [
-    {
-      value: 'under_t10',
-      label: 'Under T10',
-      sublabel: 'Still working toward T10 unlock',
-      icon: '🔨',
-    },
-    {
-      value: 't10',
-      label: 'T10',
-      sublabel: 'T10 unlocked and training',
-      icon: '⚙️',
-    },
-    {
-      value: 't11',
-      label: 'T11',
-      sublabel: 'Armament Research system — Season 4+',
-      icon: '🔱',
-    },
+    { value: 'under_t10', label: 'Under T10', sublabel: 'Still working toward T10 unlock', icon: '🔨' },
+    { value: 't10',       label: 'T10',        sublabel: 'T10 unlocked and training',         icon: '⚙️' },
+    { value: 't11',       label: 'T11',        sublabel: 'Armament Research system — Season 4+', icon: '🔱' },
   ];
   return (
     <div>
-      <StepTitle
-        title="What's your highest troop tier?"
-        subtitle="Check your Barracks or Military Research tree."
-      />
+      <StepTitle title="What's your highest troop tier?" subtitle="Check your Barracks or Military Research tree." />
       {options.map(o => (
         <OptionCard key={o.value} {...o} selected={data.troop_tier === o.value} onClick={() => setData({ ...data, troop_tier: o.value })} />
       ))}
@@ -567,12 +540,8 @@ function Step11_RankAndPower({ data, setData, onNext, onBack, step }: StepProps)
 
   return (
     <div>
-      <StepTitle
-        title="Your rank and power"
-        subtitle="Pick the buckets that best describe you right now."
-      />
+      <StepTitle title="Your rank and power" subtitle="Pick the buckets that best describe you right now." />
 
-      {/* Rank Bucket */}
       <div style={{ marginBottom: 28 }}>
         <label style={{ display: 'block', color: theme.textDim, fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>
           Server Rank — Total Hero Power
@@ -587,7 +556,6 @@ function Step11_RankAndPower({ data, setData, onNext, onBack, step }: StepProps)
         />
       </div>
 
-      {/* Squad Power Tier */}
       <div style={{ marginBottom: 28 }}>
         <label style={{ display: 'block', color: theme.textDim, fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>
           Squad 1 Power
@@ -602,7 +570,6 @@ function Step11_RankAndPower({ data, setData, onNext, onBack, step }: StepProps)
         />
       </div>
 
-      {/* Total Power Bucket */}
       <div style={{ marginBottom: 8 }}>
         <label style={{ display: 'block', color: theme.textDim, fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>
           Total Individual Power
@@ -625,10 +592,7 @@ function Step11_RankAndPower({ data, setData, onNext, onBack, step }: StepProps)
 function Step12_KillTier({ data, setData, onNext, onBack, step }: StepProps) {
   return (
     <div>
-      <StepTitle
-        title="What's your kill count?"
-        subtitle="Check your profile — total kills earned across all events."
-      />
+      <StepTitle title="What's your kill count?" subtitle="Check your profile — total kills earned across all events." />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {(Object.entries(KILL_TIER_LABELS) as [KillTier, string][]).map(([key, label]) => (
           <OptionCard
@@ -645,7 +609,12 @@ function Step12_KillTier({ data, setData, onNext, onBack, step }: StepProps) {
   );
 }
 
-function StepComplete({ data, onDone }: { data: ProfileData; onDone: () => void }) {
+// ─── COMPLETE STEP with beginner mode auto-suggest ────────────────────────────
+
+function StepComplete({ data, setData, onDone }: { data: ProfileData; setData: (d: ProfileData) => void; onDone: () => void }) {
+  // Auto-suggest if scout playstyle OR under_t10
+  const shouldSuggest = data.playstyle === 'scout' || data.troop_tier === 'under_t10';
+
   const tierLabels: Record<string, string> = {
     f2p: 'Free to Play', budget: 'Budget', moderate: 'Moderate',
     investor: 'Investor', whale: 'Whale', mega_whale: 'Mega Whale',
@@ -687,6 +656,7 @@ function StepComplete({ data, onDone }: { data: ProfileData; onDone: () => void 
           Welcome, Commander {data.commander_name}. Buddy is ready.
         </p>
       </div>
+
       <div style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: 20, marginBottom: 24 }}>
         {stats.map(([label, val]) => val && (
           <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: `1px solid ${theme.border}` }}>
@@ -697,6 +667,55 @@ function StepComplete({ data, onDone }: { data: ProfileData; onDone: () => void 
           </div>
         ))}
       </div>
+
+      {/* Beginner Mode suggestion */}
+      {shouldSuggest && (
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ fontSize: 11, color: theme.goldDim, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 10 }}>
+            💡 Recommended for you
+          </div>
+          <div
+            onClick={() => setData({ ...data, beginner_mode: !data.beginner_mode })}
+            style={{
+              display: 'flex', alignItems: 'flex-start', gap: 16,
+              padding: '16px', borderRadius: 10, cursor: 'pointer',
+              border: `1px solid ${data.beginner_mode ? theme.gold : theme.border}`,
+              background: data.beginner_mode ? `${theme.gold}12` : theme.surface,
+              transition: 'all 0.15s',
+            }}
+          >
+            {/* Toggle pill */}
+            <div style={{
+              position: 'relative', marginTop: 2, flexShrink: 0,
+              width: 40, height: 20, borderRadius: 10,
+              background: data.beginner_mode ? theme.gold : '#374151',
+              transition: 'background 0.2s',
+            }}>
+              <div style={{
+                position: 'absolute', top: 2,
+                width: 16, height: 16, borderRadius: '50%',
+                background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
+                transition: 'transform 0.2s',
+                transform: data.beginner_mode ? 'translateX(22px)' : 'translateX(2px)',
+              }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ color: data.beginner_mode ? theme.gold : theme.text, fontWeight: 700, fontSize: 15, fontFamily: '"Rajdhani", "Oswald", sans-serif', letterSpacing: '0.03em', marginBottom: 4 }}>
+                Beginner Mode
+              </div>
+              <div style={{ color: theme.textMuted, fontSize: 12, lineHeight: 1.5 }}>
+                {BEGINNER_MODE_DESCRIPTION}
+              </div>
+              {data.beginner_mode && (
+                <div style={{ marginTop: 8, color: theme.gold, fontSize: 12, fontWeight: 600 }}>
+                  ✓ Turned on — you can change this anytime in your profile.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <button onClick={onDone} style={{ ...btnStyle('gold'), width: '100%', fontSize: 16, padding: '16px 24px' }}>
         Show My Daily Action Plan →
       </button>
@@ -732,9 +751,9 @@ export default function OnboardingFlow() {
     squad_power_tier: '',
     power_bucket: '',
     kill_tier: '',
+    beginner_mode: false,
   });
 
-  // Load existing profile on mount
   useEffect(() => {
     async function loadProfile() {
       if (!supabase) return;
@@ -744,19 +763,20 @@ export default function OnboardingFlow() {
       if (profile && !profile.onboarding_complete) {
         setData(prev => ({
           ...prev,
-          commander_name: profile.commander_name || '',
-          server_number: profile.server_number || '',
-          server_day: profile.server_day || '',
-          season: profile.season ?? 0,
-          hq_level: profile.hq_level || '',
-          spend_tier: profile.spend_tier || '',
-          playstyle: profile.playstyle || '',
-          troop_type: profile.troop_type || '',
-          troop_tier: profile.troop_tier || '',
-          rank_bucket: profile.rank_bucket || '',
+          commander_name:  profile.commander_name || '',
+          server_number:   profile.server_number || '',
+          server_day:      profile.server_day || '',
+          season:          profile.season ?? 0,
+          hq_level:        profile.hq_level || '',
+          spend_tier:      profile.spend_tier || '',
+          playstyle:       profile.playstyle || '',
+          troop_type:      profile.troop_type || '',
+          troop_tier:      profile.troop_tier || '',
+          rank_bucket:     profile.rank_bucket || '',
           squad_power_tier: profile.squad_power_tier || '',
-          power_bucket: profile.power_bucket || '',
-          kill_tier: profile.kill_tier || '',
+          power_bucket:    profile.power_bucket || '',
+          kill_tier:       profile.kill_tier || '',
+          beginner_mode:   profile.beginner_mode ?? false,
         }));
         if (profile.onboarding_step > 1) setStep(profile.onboarding_step);
       }
@@ -775,25 +795,26 @@ export default function OnboardingFlow() {
       const serverStartDate = serverDay > 0 ? calcServerStartDate(serverDay) : null;
 
       const { error: upsertError } = await supabase.from('profiles').update({
-        commander_name: data.commander_name || null,
-        server_number: parseInt(String(data.server_number)) || 0,
-        server_day: serverDay,
-        season: data.season ?? 0,
-        hq_level: parseInt(String(data.hq_level)) || 1,
-        spend_tier: data.spend_tier || 'f2p',
-        playstyle: data.playstyle || 'scout',
-        troop_type: data.troop_type || 'mixed',
-        troop_tier: data.troop_tier || 'under_t10',
-        rank_bucket: data.rank_bucket || null,
-        squad_power_tier: data.squad_power_tier || null,
-        power_bucket: data.power_bucket || null,
-        kill_tier: data.kill_tier || null,
-        onboarding_step: nextStep,
+        commander_name:    data.commander_name || null,
+        server_number:     parseInt(String(data.server_number)) || 0,
+        server_day:        serverDay,
+        season:            data.season ?? 0,
+        hq_level:          parseInt(String(data.hq_level)) || 1,
+        spend_tier:        data.spend_tier || 'f2p',
+        playstyle:         data.playstyle || 'scout',
+        troop_type:        data.troop_type || 'mixed',
+        troop_tier:        data.troop_tier || 'under_t10',
+        rank_bucket:       data.rank_bucket || null,
+        squad_power_tier:  data.squad_power_tier || null,
+        power_bucket:      data.power_bucket || null,
+        kill_tier:         data.kill_tier || null,
+        beginner_mode:     data.beginner_mode,
+        onboarding_step:   nextStep,
         onboarding_complete: complete,
         server_start_date: serverStartDate,
         last_profile_update: new Date().toISOString(),
         update_reminder_frequency: 'weekly',
-        updated_at: new Date().toISOString(),
+        updated_at:        new Date().toISOString(),
       }).eq('id', user.id);
 
       if (upsertError) throw upsertError;
@@ -832,7 +853,6 @@ export default function OnboardingFlow() {
       <div style={{ minHeight: '100vh', background: theme.bg, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '24px 16px 60px' }}>
         <div style={{ width: '100%', maxWidth: 480 }}>
 
-          {/* Header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
             <span style={{ fontFamily: '"Rajdhani", "Oswald", sans-serif', fontSize: 13, fontWeight: 700, color: theme.gold, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
               LWSB
@@ -864,7 +884,7 @@ export default function OnboardingFlow() {
           {step === 10 && <Step10_TroopTier {...stepProps} />}
           {step === 11 && <Step11_RankAndPower {...stepProps} />}
           {step === 12 && <Step12_KillTier {...stepProps} />}
-          {step === 13 && <StepComplete data={data} onDone={complete} />}
+          {step === 13 && <StepComplete data={data} setData={setData} onDone={complete} />}
 
         </div>
       </div>

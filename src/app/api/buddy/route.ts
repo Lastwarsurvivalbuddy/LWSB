@@ -70,18 +70,12 @@ const TIER_LIMITS: Record<string, { questions: number; screenshots: number }> = 
 };
 
 // ─── Duel day calculation ────────────────────────────────────────────────────
-// Reset is always 2am UTC. No DST logic — pure UTC.
-// Mon=Day1 Radar Training, Tue=Day2 Base Expansion, Wed=Day3 Age of Science,
-// Thu=Day4 Train Heroes, Fri=Day5 Total Mobilization, Sat=Day6 Enemy Buster, Sun=Day7 Reset
 
 function getCurrentDuelDay(): { day: number; label: string } {
   const now = new Date();
-
-  // Subtract 2 hours so the day rolls over at 2am UTC
   const adjusted = new Date(now.getTime() - 2 * 60 * 60 * 1000);
   const utcDay = adjusted.getUTCDay();
 
-  // 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat, 0=Sun
   const schedule: Record<number, { day: number; label: string }> = {
     1: { day: 1, label: 'Radar Training (1pt)'     },
     2: { day: 2, label: 'Base Expansion (2pts)'     },
@@ -392,9 +386,10 @@ Keep responses concise, specific, and tactical. No fluff.`;
     7: 'Day 7 — Reset day. Alliance Duel is between cycles. Prepare for Day 1 tomorrow.',
   };
 
+  // ── Beginner mode ──
+  const beginnerMode = profile.beginner_mode === true;
+
   // ── Season guide selection ──
-  // Seasons 0–3: lwtSeasonData.ts
-  // Seasons 4–5: lwtSeason45Data.ts
   const seasonNumber = typeof profile.season === 'number' ? profile.season : 0;
 
   const seasonGuide = seasonNumber >= 4
@@ -451,6 +446,18 @@ You are Buddy — the personal AI commander coach for Last War: Survival.
 - **Total Power:** ${powerDisplay}
 - **Kill Tier:** ${killDisplay}
 - **Subscription Tier:** ${tier}
+
+## Buddy Mode
+${beginnerMode
+  ? `**BEGINNER MODE IS ON.**
+This commander is new to the game and has requested plain English explanations.
+- Use simple, clear language. Avoid jargon unless you immediately explain it.
+- Always explain the "why" behind every recommendation — don't just say what to do, say why it matters.
+- Break things into small steps. Don't assume they know game systems.
+- Be encouraging, not overwhelming. Lead with the most important single action, then add 1–2 supporting steps.
+- Skip endgame mechanics (T11, Armament, advanced Capitol math) unless they specifically ask.
+- If a term might be unfamiliar, define it briefly in parentheses. Example: "Arms Race (a daily event where you earn points by doing normal activities like building and training)".`
+  : `**STANDARD MODE.** Deliver tactical, expert-level advice calibrated to this commander's exact profile. No hand-holding. Lead with the answer.`}
 
 ## Today's Duel Status
 Alliance Duel — ${duelLabels[duel.day] || duel.label}
@@ -620,5 +627,6 @@ ${communityIntel}
 - When asked about decorations or which decorations to upgrade, lead with their tier (S/A+/A/B/C), reference the Jan 2026 meta priority (Damage Reduction first, then Skill Damage/March Size, then Crit Damage), and give the upgrade path step they should be on (L3 all S+A first, then push S-Tier to L4+).
 - When asked about which heroes to build or invest in, lead with their troop type formation pairings from the Hero Tier List, then tier, then specific hero notes. Flag Lucius as Daily Sale only if relevant.
 - When asked about professions, factor in their season, spend style, and playstyle. Early season = Engineer to build fast. Mid/late season = War Leader for territorial wars. Hybrid: start Engineer, switch with Battle Pass certificate. War Leader Lv.30 Team Strike is the rally inflection point.
-- When asked about Tactic Cards, check their season first — cards only apply in Season 4+. For Season 4/5 players: lead with Core Card picks (2 slots, permanent), then recommended setup based on their playstyle (Quickstride for attackers, Garrison for defenders, Purgator PvE for early-season grinders). Always mention Hybrid Squad (4+1) for mixed squad formations and Counter Reversal as near-universal picks.`;
+- When asked about Tactic Cards, check their season first — cards only apply in Season 4+. For Season 4/5 players: lead with Core Card picks (2 slots, permanent), then recommended setup based on their playstyle (Quickstride for attackers, Garrison for defenders, Purgator PvE for early-season grinders). Always mention Hybrid Squad (4+1) for mixed squad formations and Counter Reversal as near-universal picks.
+- **BEGINNER MODE RULE:** If Beginner Mode is ON, always prioritize clarity over completeness. One clear action beats five overwhelming options. Use analogies if helpful. Never assume prior knowledge of game systems.`;
 }
