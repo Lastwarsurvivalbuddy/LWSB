@@ -2,9 +2,10 @@
 
 // src/components/PackScanner.tsx
 // Pack Scanner modal — Pro / Elite / Founding / Alliance only
-// Free users see the button but get an upgrade prompt
+// Free users see the button and clicking routes to /upgrade
 
 import { useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
 interface PackScannerProps {
@@ -47,6 +48,7 @@ function parseAnalysis(raw: string) {
 }
 
 export default function PackScanner({ subscriptionTier }: PackScannerProps) {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
@@ -87,7 +89,6 @@ export default function PackScanner({ subscriptionTier }: PackScannerProps) {
     reader.onload = (event) => {
       const result = event.target?.result as string;
       setImagePreview(result);
-      // Strip data URL prefix to get raw base64
       const base64 = result.split(',')[1];
       setImageBase64(base64);
     };
@@ -159,17 +160,17 @@ export default function PackScanner({ subscriptionTier }: PackScannerProps) {
     <>
       {/* Trigger Button */}
       <button
-        onClick={isAllowed ? handleOpen : undefined}
+        onClick={isAllowed ? handleOpen : () => router.push('/upgrade')}
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
           background: isAllowed ? '#1a1a2e' : '#111',
-          border: isAllowed ? '1px solid #333' : '1px solid #222',
+          border: isAllowed ? '1px solid #333' : '1px solid #2a1a00',
           borderRadius: '8px',
           padding: '12px 16px',
           color: isAllowed ? '#ccc' : '#555',
-          cursor: isAllowed ? 'pointer' : 'default',
+          cursor: 'pointer',
           fontSize: '14px',
           fontWeight: 600,
           width: '100%',
@@ -194,8 +195,12 @@ export default function PackScanner({ subscriptionTier }: PackScannerProps) {
             }}>PRO</span>
           )}
         </span>
-        <span style={{ fontSize: '12px', color: '#555' }}>
-          {isAllowed ? 'Upload a screenshot →' : 'Upgrade to unlock'}
+        <span style={{
+          fontSize: '12px',
+          color: isAllowed ? '#555' : '#ffaa00',
+          fontWeight: isAllowed ? 400 : 700,
+        }}>
+          {isAllowed ? 'Upload a screenshot →' : 'Upgrade to unlock →'}
         </span>
       </button>
 

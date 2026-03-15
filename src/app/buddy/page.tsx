@@ -94,6 +94,10 @@ export default function BuddyPage() {
   }
 
   function handleScreenshotClick() {
+    if (tier === 'free') {
+      router.push('/upgrade');
+      return;
+    }
     fileInputRef.current?.click();
   }
 
@@ -204,7 +208,7 @@ export default function BuddyPage() {
 
       setDailyLimit(prev => prev ? { ...prev, used: prev.used + 1 } : prev);
 
-    } catch (err) {
+    } catch {
       setIsTyping(false);
       setMessages(prev => [...prev, {
         id: crypto.randomUUID(),
@@ -310,17 +314,24 @@ export default function BuddyPage() {
 
       {/* Input area */}
       <footer className="input-area">
+
+        {/* ── Limit banner — free tier hits wall ── */}
         {isAtLimit && (
           <div className="limit-banner">
-            <span>
-              {tier === 'free'
-                ? "You've hit your daily limit (5 questions)."
-                : `Daily limit reached (${dailyLimit?.limit} questions).`}
-            </span>
+            <div className="limit-banner-top">
+              <span className="limit-text">
+                {tier === 'free'
+                  ? "Daily limit reached — 5 questions/day on Free."
+                  : `Daily limit reached (${dailyLimit?.limit} questions).`}
+              </span>
+            </div>
             {tier === 'free' && (
-              <a href="/upgrade" className="upgrade-link">
-                Upgrade → Pro $9.99 · Elite $19.99 · Founding Member $99 lifetime
-              </a>
+              <button
+                onClick={() => router.push('/upgrade')}
+                className="upgrade-cta-btn"
+              >
+                Upgrade to Pro — 30/day · $9.99/mo →
+              </button>
             )}
           </div>
         )}
@@ -336,14 +347,17 @@ export default function BuddyPage() {
         )}
 
         <div className="screenshot-row">
+          {/* Screenshot button — free users click → /upgrade */}
           <button
             className="screenshot-btn"
             onClick={handleScreenshotClick}
-            disabled={isAtLimit || (tier === 'free')}
+            disabled={isAtLimit && tier !== 'free'}
             title={tier === 'free' ? 'Screenshot analysis requires Pro or above' : 'Upload a pack screenshot'}
           >
             📸 Upload Screenshot
-            {tier === 'free' && <span className="pro-badge">PRO</span>}
+            {tier === 'free' && (
+              <span className="pro-badge">PRO</span>
+            )}
           </button>
           <input
             ref={fileInputRef}
@@ -583,20 +597,37 @@ export default function BuddyPage() {
           border: 1px solid #5c2222;
           border-radius: 8px;
           padding: 10px 14px;
-          font-size: 12px;
-          color: #c0392b;
           display: flex;
           flex-direction: column;
-          gap: 4px;
-          font-family: 'Courier New', monospace;
+          gap: 8px;
         }
-        .upgrade-link {
-          color: #c9b87a;
-          text-decoration: none;
-          font-size: 11px;
+        .limit-banner-top {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+        .limit-text {
+          font-size: 12px;
+          color: #c0392b;
+          font-family: 'Courier New', monospace;
           letter-spacing: 0.03em;
         }
-        .upgrade-link:hover { text-decoration: underline; }
+        .upgrade-cta-btn {
+          width: 100%;
+          background: #c9b87a;
+          border: none;
+          border-radius: 6px;
+          color: #0a0c10;
+          font-size: 13px;
+          font-weight: 700;
+          font-family: 'Courier New', monospace;
+          letter-spacing: 0.04em;
+          padding: 10px 16px;
+          cursor: pointer;
+          transition: background 0.2s;
+          text-align: center;
+        }
+        .upgrade-cta-btn:hover { background: #d9cc8e; }
         .pending-image-bar {
           display: flex;
           align-items: center;

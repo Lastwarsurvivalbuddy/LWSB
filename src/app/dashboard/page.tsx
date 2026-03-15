@@ -112,7 +112,6 @@ export default function Dashboard() {
         if (error) throw error
         if (!data?.onboarding_complete) { router.push('/onboarding'); return }
 
-        // Fetch streak separately from profiles (not in view yet)
         const { data: streakData } = await supabase
           .from('profiles')
           .select('streak_count, last_checkin_date')
@@ -170,38 +169,24 @@ export default function Dashboard() {
   const streak = profile.streak_count ?? 0
   const hasActiveStreak = streak > 0
   const subscriptionTier = profile.subscription_tier ?? 'free'
+  const isFree = subscriptionTier === 'free'
 
   // Stats grid
   const statsGrid = [
-    {
-      label: 'HQ Level',
-      value: profile.hq_level ?? '—',
-    },
-    {
-      label: 'Troop Tier',
-      value: troopTierDisplay(profile.troop_tier),
-    },
-    {
-      label: 'Squad 1 Type',
-      value: profile.troop_type || '—',
-    },
+    { label: 'HQ Level',      value: profile.hq_level ?? '—' },
+    { label: 'Troop Tier',    value: troopTierDisplay(profile.troop_tier) },
+    { label: 'Squad 1 Type',  value: profile.troop_type || '—' },
     {
       label: 'Squad 1 Power',
-      value: profile.squad_power_tier
-        ? SQUAD_POWER_TIER_LABELS[profile.squad_power_tier]
-        : '—',
+      value: profile.squad_power_tier ? SQUAD_POWER_TIER_LABELS[profile.squad_power_tier] : '—',
     },
     {
       label: 'Server Rank',
-      value: profile.rank_bucket
-        ? RANK_BUCKET_LABELS[profile.rank_bucket]
-        : '—',
+      value: profile.rank_bucket ? RANK_BUCKET_LABELS[profile.rank_bucket] : '—',
     },
     {
       label: 'Kill Tier',
-      value: profile.kill_tier
-        ? KILL_TIER_TITLES[profile.kill_tier]
-        : '—',
+      value: profile.kill_tier ? KILL_TIER_TITLES[profile.kill_tier] : '—',
     },
   ]
 
@@ -300,6 +285,29 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* ── Free tier upgrade nudge ── */}
+        {isFree && (
+          <button
+            onClick={() => router.push('/upgrade')}
+            className="mt-4 w-full flex items-center justify-between gap-3 bg-gradient-to-r from-amber-950/60 to-zinc-900/60 border border-amber-700/50 hover:border-amber-600 rounded-xl px-4 py-3 transition-colors group"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="text-lg flex-shrink-0">⚡</span>
+              <div className="text-left min-w-0">
+                <p className="text-xs font-bold text-amber-400 group-hover:text-amber-300 transition-colors">
+                  You're on Free — 5 questions/day, no Pack Scanner
+                </p>
+                <p className="text-[11px] text-zinc-500 mt-0.5">
+                  Pro · $9.99/mo — 30 questions · Pack Scanner · Screenshot analysis
+                </p>
+              </div>
+            </div>
+            <span className="flex-shrink-0 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-amber-500 group-hover:bg-amber-400 text-black transition-colors whitespace-nowrap">
+              Upgrade →
+            </span>
+          </button>
+        )}
+
         {/* ── Daily Briefing ── */}
         <section className="pt-6">
           <DailyBriefing />
@@ -362,6 +370,14 @@ export default function Dashboard() {
                 `}>
                   {subscriptionTier.toUpperCase()}
                 </span>
+                {isFree && (
+                  <button
+                    onClick={() => router.push('/upgrade')}
+                    className="text-[10px] text-amber-600 hover:text-amber-400 transition-colors font-mono underline underline-offset-2"
+                  >
+                    Upgrade
+                  </button>
+                )}
               </div>
             </div>
 
