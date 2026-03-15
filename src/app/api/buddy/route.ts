@@ -41,6 +41,7 @@ import { getT11DataSummary } from '@/lib/lwtT11Data';
 import { getDecorationTierSummary } from '@/lib/lwtDecorationTierData';
 import { getHeroTierSummary } from '@/lib/lwtHeroTierData';
 import { getProfessionDataSummary } from '@/lib/lwtProfessionData';
+import { lwtTacticCardData } from '@/lib/lwtTacticCardData';
 import {
   SQUAD_POWER_TIER_LABELS,
   RANK_BUCKET_LABELS,
@@ -92,6 +93,51 @@ function getCurrentDuelDay(): { day: number; label: string } {
   };
 
   return schedule[utcDay] ?? { day: 1, label: 'Radar Training (1pt)' };
+}
+
+// ─── Tactic Card summary helper ──────────────────────────────────────────────
+
+function getTacticCardSummary(): string {
+  const d = lwtTacticCardData;
+  const setups = Object.values(d.recommendedSetups)
+    .map(s => `**${s.name}**\nUse: ${s.use}\nRegular Cards: ${s.regularCards.join(', ')}\nCore Cards: ${s.coreCards.join(', ')}\nTip: ${s.tip}`)
+    .join('\n\n');
+
+  const highlighted = Object.values(d.highlightedCards)
+    .map(c => `- ${c.name}: ${c.effect}${c.priority ? ` | Priority: ${c.priority}` : ''}`)
+    .join('\n');
+
+  const types = Object.values(d.cardTypes)
+    .map(t => `- ${t.icon} (${t.nickname}): ${t.focus}`)
+    .join('\n');
+
+  return `
+## Tactic Cards System (Season 4 & 5)
+${d.overview}
+
+**Card Categories:**
+- Core Cards: ${d.cardCategories.coreCards.slots} slots, max level ${d.cardCategories.coreCards.maxLevel}, permanent (active off-season too), upgraded with Profession XP
+- Regular Cards: ${d.cardCategories.regularCards.battleSlots} Battle slots + ${d.cardCategories.regularCards.resourceSlots} Resource slots, max level ${d.cardCategories.regularCards.maxLevel} (${d.cardCategories.regularCards.maxLevelWithUR} with UR trait), season-only, upgraded by dismantling
+
+**Rarity Traits:**
+- UR (Gold): +1/+2/+3 card levels — always keep these, main effect scales better than secondary stats
+- SSR (Purple): Higher PvP buffs, damage reduction when countered, Profession XP from zombie kills (Resource Cards)
+- Gray: Standard lower buffs
+
+**Card Types:**
+${types}
+
+**Highlighted Cards:**
+${highlighted}
+
+**Recommended Setups:**
+${setups}
+
+**Resource Cards:** Fill all 4 slots with the 4 SSR options. Watch for Profession XP from zombie kill trait (up to 3.90% each) — switch to those when grinding.
+
+**General Tips:**
+${d.generalTips.map(t => `- ${t}`).join('\n')}
+`.trim();
 }
 
 // ─── POST handler ────────────────────────────────────────────────────────────
@@ -377,6 +423,7 @@ Keep responses concise, specific, and tactical. No fluff.`;
   const decorationTierData = getDecorationTierSummary();
   const heroTierData     = getHeroTierSummary();
   const professionData   = getProfessionDataSummary();
+  const tacticCardData   = getTacticCardSummary();
 
   // ── Assemble prompt ──
   return `## About This App
@@ -490,6 +537,9 @@ ${skyBattlefront}
 ## Meteorite Iron War
 ${meteoriteData}
 
+## Tactic Cards (Season 4 & 5)
+${tacticCardData}
+
 ## Meta Tips & Tricks
 ${tricksData}
 
@@ -569,5 +619,6 @@ ${communityIntel}
 - When asked about T11, check their troop tier first. Under T10/T10 players get prereq roadmap. T11 players get Armament Core farming strategy, branch order (Helmet→Body Armor→Protective Gear→Weapon), and star priority (1-star all branches first).
 - When asked about decorations or which decorations to upgrade, lead with their tier (S/A+/A/B/C), reference the Jan 2026 meta priority (Damage Reduction first, then Skill Damage/March Size, then Crit Damage), and give the upgrade path step they should be on (L3 all S+A first, then push S-Tier to L4+).
 - When asked about which heroes to build or invest in, lead with their troop type formation pairings from the Hero Tier List, then tier, then specific hero notes. Flag Lucius as Daily Sale only if relevant.
-- When asked about professions, factor in their season, spend style, and playstyle. Early season = Engineer to build fast. Mid/late season = War Leader for territorial wars. Hybrid: start Engineer, switch with Battle Pass certificate. War Leader Lv.30 Team Strike is the rally inflection point.`;
+- When asked about professions, factor in their season, spend style, and playstyle. Early season = Engineer to build fast. Mid/late season = War Leader for territorial wars. Hybrid: start Engineer, switch with Battle Pass certificate. War Leader Lv.30 Team Strike is the rally inflection point.
+- When asked about Tactic Cards, check their season first — cards only apply in Season 4+. For Season 4/5 players: lead with Core Card picks (2 slots, permanent), then recommended setup based on their playstyle (Quickstride for attackers, Garrison for defenders, Purgator PvE for early-season grinders). Always mention Hybrid Squad (4+1) for mixed squad formations and Counter Reversal as near-universal picks.`;
 }
