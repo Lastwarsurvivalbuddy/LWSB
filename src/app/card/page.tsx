@@ -28,9 +28,25 @@ interface CommanderData {
   subscription_tier: string;
 }
 
+const KILL_CLUB_LABELS: Partial<Record<KillTier, string>> = {
+  '500k':     '500K KILL CLUB',
+  '1m':       '1M KILL CLUB',
+  '2m':       '2M KILL CLUB',
+  '3m':       '3M KILL CLUB',
+  '4m':       '4M KILL CLUB',
+  '5m':       '5M KILL CLUB',
+  '10m':      '10M KILL CLUB',
+  '15m':      '15M KILL CLUB',
+  '20m':      '20M KILL CLUB',
+  '25m':      '25M KILL CLUB',
+  '50m':      '50M KILL CLUB',
+  '100m_plus':'100M+ KILL CLUB',
+};
+
 function KillTierBadge({ tier }: { tier: KillTier | null }) {
   if (!tier) return null;
   const title = KILL_TIER_TITLES[tier] ?? 'Recruit';
+  const clubLabel = KILL_CLUB_LABELS[tier] ?? null;
 
   const insignia: Record<string, React.ReactElement> = {
     under_500k: <path d="M16 4 L22 20 L10 20 Z" fill="none" stroke="#9ca3af" strokeWidth="2" />,
@@ -56,6 +72,11 @@ function KillTierBadge({ tier }: { tier: KillTier | null }) {
       <span style={{ color: '#f59e0b', fontSize: '9px', fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, letterSpacing: '0.05em', textAlign: 'center', textTransform: 'uppercase' }}>
         {title}
       </span>
+      {clubLabel && (
+        <span style={{ color: '#a88a30', fontSize: '7px', fontFamily: 'Rajdhani, sans-serif', fontWeight: 600, letterSpacing: '0.08em', textAlign: 'center', textTransform: 'uppercase', opacity: 0.85 }}>
+          {clubLabel}
+        </span>
+      )}
     </div>
   );
 }
