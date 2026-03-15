@@ -1,6 +1,7 @@
 // src/lib/briefingPrompt.ts
 // Builds the system + user prompt for the Daily Briefing Card
 // Rewritten: March 11, 2026 (session 11) — tight constraints, correct duel day, no hallucination
+// Updated: March 15, 2026 (session 17) — beginner_mode support
 
 // ─── Duel day — exact same logic as dashboard/page.tsx ────────────────────────
 
@@ -37,6 +38,21 @@ function getDuelAdvice(day: number): string {
   return advice[day] ?? "Check in-game calendar for today's duel day."
 }
 
+// ─── Beginner duel advice — plain English version ─────────────────────────────
+
+function getDuelAdviceBeginner(day: number): string {
+  const advice: Record<number, string> = {
+    1: 'Today is Radar Training day — this means you earn alliance points by doing radar missions (the radar tower in your base). It\'s a low-point day so don\'t burn your big speedups.',
+    2: 'Today is Base Expansion day — you earn points by upgrading buildings. If you have buildings ready to upgrade, today is the day to do it.',
+    3: 'Today is Age of Science day — you earn points by doing research (the research lab in your base). Queue up research and use speedups today.',
+    4: 'Today is Train Heroes day — you earn points by leveling up your heroes. Use any hero XP items or recruit tickets you\'ve been saving.',
+    5: 'Today is Total Mobilization day — the best day of the week. Building upgrades, research, AND troop training all earn points. Do as much as you can today.',
+    6: 'Today is Enemy Buster day — you earn points by fighting enemies. Attack infected zones and enemy bases. This is the highest point day.',
+    7: 'Today is the weekly reset — no alliance duel today. Collect your weekly rewards and get ready for next week.',
+  }
+  return advice[day] ?? "Check your in-game calendar for today's event."
+}
+
 // ─── Spend tier label ─────────────────────────────────────────────────────────
 
 function getSpendLabel(spendTier: string): string {
@@ -70,12 +86,15 @@ export async function buildBriefingPrompt(profile: Record<string, unknown>): Pro
   const serverNumber = String(profile.server_number ?? '???')
   const allianceName = profile.alliance_name ? `[${profile.alliance_name}]` : ''
   const killTier = String(profile.kill_tier ?? 'under_500k')
+  const beginnerMode = profile.beginner_mode === true
 
   const duel = getDuelDay()
-  const duelAdvice = getDuelAdvice(duel.day)
+  const duelAdvice = beginnerMode ? getDuelAdviceBeginner(duel.day) : getDuelAdvice(duel.day)
   const spendLabel = getSpendLabel(spendTier)
 
-  const systemPrompt = `You are Last War: Survival Buddy — a tactical AI coach for Last War: Survival.
+  // ── Standard mode prompt ──────────────────────────────────────────────────
+
+  const standardSystemPrompt = `You are Last War: Survival Buddy — a tactical AI coach for Last War: Survival.
 You are generating a Daily Briefing Card for one specific player.
 
 STRICT RULES — violations destroy the product:
@@ -102,6 +121,43 @@ WATCH OUT
 
 Tone: direct, no fluff, no hype. Coach voice.`
 
+  // ── Beginner mode prompt ──────────────────────────────────────────────────
+
+  const beginnerSystemPrompt = `You are Last War: Survival Buddy — a friendly guide for players who are new to Last War: Survival.
+You are generating a Daily Briefing Card for a beginner player.
+
+STRICT RULES — violations destroy the product:
+- Only give advice directly supported by the profile data and duel day context provided. Nothing else.
+- Do NOT reference any game mechanic, event, or feature not explicitly mentioned in the player profile or context below.
+- Do NOT invent scenarios, guess at what events are happening, or infer things not in the data.
+- Do NOT fabricate timers, countdowns, or phase names.
+- Keep advice grounded: HQ level, troop tier, troop type, duel day, spend tier. These are your only inputs.
+- Be honest. If you don't have data for something, don't say it.
+
+BEGINNER TONE RULES:
+- Write like you're texting a friend who just started the game, not briefing a general.
+- Use plain English. No jargon without explanation.
+- When you use a game term, immediately explain it in parentheses. Example: "do some research (upgrade your tech tree in the lab)".
+- Always explain WHY each action matters, not just what to do.
+- Be encouraging. This player is learning. Make them feel capable, not overwhelmed.
+- One clear priority first, then 2 supporting actions. Don't overwhelm.
+
+OUTPUT FORMAT — use exactly this structure, no deviations:
+SITUATION
+[One friendly sentence: what day it is, what's happening today in the game, and one encouraging observation about where this player is]
+
+TOP 3 MOVES
+• [Most important action today — explain what it is AND why it matters, in plain English]
+• [Second action grounded in their HQ level or troop tier — explain the why]
+• [Third action grounded in their spend tier or rank — keep it simple]
+
+WATCH OUT
+[One simple heads-up for today — written as friendly advice, not a warning. Explain any terms used.]
+
+Tone: friendly, clear, encouraging. Like a helpful teammate, not a drill sergeant.`
+
+  const systemPrompt = beginnerMode ? beginnerSystemPrompt : standardSystemPrompt
+
   const userPrompt = `Generate today's Daily Briefing Card.
 
 PLAYER PROFILE:
@@ -110,11 +166,12 @@ PLAYER PROFILE:
 - HQ: ${hqLevel} | Troop Type: ${troopType} | Troop Tier: ${troopTier}
 - Squad Power: ${squadPowerTier} | Rank: ${rankBucket} | Kill Tier: ${killTier}
 - Playstyle: ${playstyle} | Spend: ${spendLabel}
+- Beginner Mode: ${beginnerMode ? 'ON — use plain English, explain terms, be encouraging' : 'OFF — use tactical expert tone'}
 
 TODAY'S DUEL CONTEXT:
 - Today is Duel Day ${duel.day} — ${duel.name}
 - ${duelAdvice}
-- Arms Race: 6 phases, random daily order. Player checks in-game calendar. 1 swap per day. Double-dip Duel actions with matching Arms Race phase.
+- Arms Race: 6 phases, random daily order. ${beginnerMode ? 'Tell the player to open their in-game calendar to see which Arms Race phase is active today, and try to match their duel actions to it.' : 'Player checks in-game calendar. 1 swap per day. Double-dip Duel actions with matching Arms Race phase.'}
 
 Generate the briefing card now. Stay strictly within the data provided above.`
 
