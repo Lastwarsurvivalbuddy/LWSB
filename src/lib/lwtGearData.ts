@@ -1,7 +1,7 @@
 // src/lib/lwtGearData.ts
 // Gear strategy: priority by playstyle, which sets to build first, upgrade path
 // Source: lastwartutorial.com/gears + gearData.ts existing cost data
-// Built: March 11, 2026 (session 5)
+// Built: March 11, 2026 (session 5) — updated March 15, 2026 (session 15): star promotion costs added
 
 // Gear types (4 slots per hero)
 export const GEAR_SLOTS = [
@@ -59,13 +59,13 @@ export const GEAR_BUILD_STRATEGY = {
     'Craft Legendary gear at Gear Factory (any level)',
     'Level it from 0→40 (costs gold + ore per level — see gearData.ts for exact costs)',
     'At L40, promote to 1★ using Legendary Blueprints (requires Gear Factory L20)',
-    'Continue 1★→2★→3★→4★ (100 Legendary Blueprints total for 0★→4★)',
-    '5★ (Mythic) requires 10 Mythic Blueprints — endgame only',
+    'Continue 1★→2★→3★→4★ with Legendary Blueprints',
+    '5★ (Mythic) requires Mythic Blueprints — endgame only',
   ],
   star_promotion_summary: {
-    zero_to_four_star: '100 Legendary Blueprints total (0★→4★)',
-    five_star: '10 Mythic Blueprints (4★→5★)',
+    note: 'Each star = 5 sub-levels. Cost is the same for ALL gear types (Cannon, Chip, Armor, Radar).',
     factory_requirement: 'Gear Factory Level 20 required to begin star promotions',
+    warning: 'Do NOT spend Honor Points on anything except Gear Blueprints (Legendary). They cannot be obtained any other way.',
   },
   material_sources: [
     'Honor Points store — Legendary Gear Blueprints are the ONLY priority here',
@@ -73,6 +73,77 @@ export const GEAR_BUILD_STRATEGY = {
     'Event rewards',
     'Pack purchases (spend tier dependent)',
   ],
+};
+
+// Star promotion costs — per star, cumulative
+// Source: lastwartutorial.com/gears
+// Cost is identical for all gear types
+export const GEAR_STAR_COSTS = {
+  note: 'Each star requires completing 5 sub-levels. Cost is the same for all gear types.',
+  stars: [
+    {
+      star: 1,
+      gold: '93.6M',
+      ore: '62,500',
+      dialetric_ceramic: 750,
+      legendary_blueprints: 5,
+      mythic_blueprints: 0,
+      per_level: { gold: '23.4M (levels 1–4), 0 (level 5)', ore: '12,500 each level', ceramic: 150 },
+    },
+    {
+      star: 2,
+      gold: '121.6M',
+      ore: '81,000',
+      dialetric_ceramic: 975,
+      legendary_blueprints: 10,
+      mythic_blueprints: 0,
+      per_level: { gold: '30.4M (levels 1–4), 0 (level 5)', ore: '16,200 each level', ceramic: 195 },
+    },
+    {
+      star: 3,
+      gold: '150M',
+      ore: '100,000',
+      dialetric_ceramic: 1200,
+      legendary_blueprints: 15,
+      mythic_blueprints: 0,
+      per_level: { gold: '37.5M (levels 1–4), 0 (level 5)', ore: '20,000 each level', ceramic: 240 },
+    },
+    {
+      star: 4,
+      gold: '178M',
+      ore: '118,500',
+      dialetric_ceramic: 1425,
+      legendary_blueprints: 20,
+      mythic_blueprints: 0,
+      per_level: { gold: '44.5M (levels 1–4), 0 (level 5)', ore: '23,700 each level', ceramic: 285 },
+    },
+    {
+      star: 5,
+      gold: '206M',
+      ore: '138,000',
+      dialetric_ceramic: 1650,
+      legendary_blueprints: 0,
+      mythic_blueprints: 10,
+      note: '5★ uses Mythic Blueprints only — endgame',
+      per_level: { gold: '51.5M (levels 1–4), 0 (level 5)', ore: '27,500 each level', ceramic: 330 },
+    },
+  ],
+  cumulative_totals: {
+    zero_to_four_star: {
+      gold: '543.2M',
+      ore: '362,000',
+      dialetric_ceramic: 4350,
+      legendary_blueprints: 50,
+      mythic_blueprints: 0,
+    },
+    zero_to_five_star: {
+      gold: '749.2M',
+      ore: '500,000',
+      dialetric_ceramic: 6000,
+      legendary_blueprints: 50,
+      mythic_blueprints: 10,
+    },
+  },
 };
 
 // Gear assignment rules
@@ -122,6 +193,10 @@ export function getGearDataSummary(): string {
     `${r.rarity}: Max L${r.max_level} — ${r.priority}`
   ).join('\n');
 
+  const starCosts = GEAR_STAR_COSTS.stars.map(s =>
+    `  ${s.star}★: ${s.gold} Gold | ${s.ore} Ore | ${s.dialetric_ceramic} Dialetric Ceramic | ${s.legendary_blueprints > 0 ? s.legendary_blueprints + ' Legendary BPs' : s.mythic_blueprints + ' Mythic BPs'}${s.note ? ' (' + s.note + ')' : ''}`
+  ).join('\n');
+
   return `
 ## Gear System — Strategy Guide
 
@@ -135,8 +210,13 @@ Core rule: ${GEAR_BUILD_STRATEGY.core_rule}
 
 ### Gear Build Path
 ${GEAR_BUILD_STRATEGY.upgrade_path.join('\n')}
-Star costs: 0★→4★ = 100 Legendary Blueprints | 4★→5★ = 10 Mythic Blueprints
-Gear Factory L20 REQUIRED for star promotions.
+
+### Star Promotion Costs (per star, same for all gear types — requires Gear Factory L20)
+${starCosts}
+
+  Totals 0★→4★: 543.2M Gold | 362,000 Ore | 4,350 Ceramic | 50 Legendary BPs
+  Totals 0★→5★: 749.2M Gold | 500,000 Ore | 6,000 Ceramic | 50 Legendary BPs + 10 Mythic BPs
+  Warning: Do NOT spend Honor Points on anything except Legendary Gear Blueprints — they have no other source.
 
 ### Priority by Playstyle
 ${playstyleGuide}
