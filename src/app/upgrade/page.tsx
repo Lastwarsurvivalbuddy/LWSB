@@ -24,6 +24,7 @@ const TIERS = [
       'Full Buddy AI with profile context',
       'Pack Scanner',
       'Daily Briefing + Action Plan',
+      'Desert Storm War Room',
       'Cancel anytime',
     ],
   },
@@ -46,6 +47,7 @@ const TIERS = [
       'Full Buddy AI with profile context',
       'Pack Scanner',
       'Daily Briefing + Action Plan',
+      'Desert Storm War Room',
       'Priority access to new features',
       'Cancel anytime',
     ],
@@ -69,6 +71,7 @@ const TIERS = [
       'Full Buddy AI with profile context',
       'Pack Scanner',
       'Daily Briefing + Action Plan',
+      'Desert Storm War Room',
       'Lifetime access — pay once, never again',
       'Founding Member badge',
       'Every future feature, included',
@@ -93,6 +96,7 @@ const TIERS = [
       'Full Buddy AI with profile context',
       'Pack Scanner',
       'Daily Briefing + Action Plan',
+      'Desert Storm War Room',
       'Built for team play and alliance coordination',
       'Cancel anytime',
     ],
@@ -214,7 +218,7 @@ export default function UpgradePage() {
         </div>
 
         {/* ── Battle Report Analyzer feature callout ── */}
-        <div className="mb-8 bg-red-950/30 border border-red-900/50 rounded-2xl p-5">
+        <div className="mb-6 bg-red-950/30 border border-red-900/50 rounded-2xl p-5">
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 rounded-xl bg-red-900/50 border border-red-800/50 flex items-center justify-center flex-shrink-0">
               <span className="text-2xl">⚔️</span>
@@ -223,7 +227,7 @@ export default function UpgradePage() {
               <div className="flex items-center gap-2 mb-1">
                 <h2 className="text-base font-bold text-white">Battle Report Analyzer</h2>
                 <span className="text-[10px] font-bold bg-red-900/60 border border-red-800/60 text-red-300 px-2 py-0.5 rounded-full tracking-wider">
-                  NEW
+                  PRO+
                 </span>
               </div>
               <p className="text-sm text-zinc-400 leading-relaxed mb-3">
@@ -246,6 +250,28 @@ export default function UpgradePage() {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Desert Storm War Room feature callout ── */}
+        <div className="mb-8 bg-amber-950/20 border border-amber-900/40 rounded-2xl p-5">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-amber-900/30 border border-amber-800/40 flex items-center justify-center flex-shrink-0">
+              <span className="text-2xl">🏜️</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <h2 className="text-base font-bold text-white">Desert Storm War Room</h2>
+                <span className="text-[10px] font-bold bg-green-900/50 border border-green-800/50 text-green-300 px-2 py-0.5 rounded-full tracking-wider">
+                  FREE — ALL TIERS
+                </span>
+              </div>
+              <p className="text-sm text-zinc-400 leading-relaxed">
+                Build your Desert Storm battle plan in seconds. Assign roles — Roamers, East/West flanks,
+                Hospital guards, Silo team. Generate a shareable strategy card with a compass and post it
+                straight to alliance chat. Every card has your alliance name and LastWarSurvivalBuddy.com on it.
+              </p>
             </div>
           </div>
         </div>
@@ -301,7 +327,7 @@ export default function UpgradePage() {
                   </p>
                 </div>
 
-                {/* Stat boxes — 3 stats now */}
+                {/* Stat boxes */}
                 <div className="grid grid-cols-3 gap-1.5 mb-4">
                   <div className="bg-zinc-800/60 rounded-lg px-1.5 py-2 text-center">
                     <div className="text-sm font-bold text-white">
@@ -327,7 +353,7 @@ export default function UpgradePage() {
                 <ul className="space-y-2 mb-6 flex-1">
                   {tier.features.map(f => (
                     <li key={f} className="flex items-start gap-2 text-xs text-zinc-400">
-                      <span className="text-green-500 mt-0.5 flex-shrink-0">✓</span>
+                      <span className={`mt-0.5 flex-shrink-0 ${f.includes('War Room') ? 'text-amber-500' : 'text-green-500'}`}>✓</span>
                       {f}
                     </li>
                   ))}
@@ -362,7 +388,7 @@ export default function UpgradePage() {
           })}
         </div>
 
-        {/* ── Comparison table — what's in each tier ── */}
+        {/* ── Comparison table ── */}
         <div className="mt-10 border border-zinc-800 rounded-2xl overflow-hidden">
           <div className="bg-zinc-900/60 px-5 py-4 border-b border-zinc-800">
             <h3 className="text-sm font-bold text-white">What&apos;s included</h3>
@@ -375,6 +401,7 @@ export default function UpgradePage() {
               { feature: 'Pack Scanner', free: '—', pro: '✓', elite: '✓', founding: '✓' },
               { feature: 'Daily Briefing', free: '✓', pro: '✓', elite: '✓', founding: '✓' },
               { feature: 'Daily Action Plan', free: '✓', pro: '✓', elite: '✓', founding: '✓' },
+              { feature: '🏜️ DS War Room', free: '✓', pro: '✓', elite: '✓', founding: '✓' },
               { feature: 'Profile Context', free: '✓', pro: '✓', elite: '✓', founding: '✓' },
               { feature: 'New Features', free: 'Basic', pro: 'Standard', elite: 'Priority', founding: 'All — forever' },
             ].map(({ feature, free, pro, elite, founding }) => (

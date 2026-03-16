@@ -495,6 +495,40 @@ export default function Dashboard() {
           )}
         </section>
 
+        {/* ── DESERT STORM WAR ROOM ── */}
+        <section className="pt-4">
+          <button
+            onClick={() => router.push('/war-room')}
+            className="w-full group"
+          >
+            <div className="bg-zinc-900/50 border border-zinc-800 hover:border-amber-800/60 rounded-2xl p-5 transition-colors">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-900/20 border border-amber-800/30 flex items-center justify-center flex-shrink-0">
+                    <span className="text-xl">🏜️</span>
+                  </div>
+                  <div className="text-left">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm font-bold text-white">Desert Storm War Room</span>
+                      <span className="text-[10px] font-bold bg-green-500/15 border border-green-500/30 text-green-400 px-1.5 py-0.5 rounded tracking-wider">
+                        FREE
+                      </span>
+                    </div>
+                    <p className="text-xs text-zinc-500 leading-relaxed">
+                      Build your DS battle plan. Assign roles, generate a shareable strategy card, post it straight to alliance chat.
+                    </p>
+                  </div>
+                </div>
+                <span className="text-zinc-600 group-hover:text-zinc-400 transition-colors flex-shrink-0 mt-1">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16">
+                    <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </span>
+              </div>
+            </div>
+          </button>
+        </section>
+
         {/* ── Pack Scanner ── */}
         <section className="pt-4">
           <PackScanner subscriptionTier={subscriptionTier} />
