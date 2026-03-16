@@ -37,10 +37,18 @@ export default function WarRoomPage() {
     setSaving(true);
     try {
       const html2canvas = (await import('html2canvas')).default;
-      const canvas = await html2canvas(planCardRef.current, {
+      const el = planCardRef.current;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const canvas = await html2canvas(el, {
         useCORS: true,
         logging: false,
-      });
+        width: el.scrollWidth,
+        height: el.scrollHeight,
+        windowWidth: el.scrollWidth,
+        windowHeight: el.scrollHeight,
+        scrollX: 0,
+        scrollY: -window.scrollY,
+      } as any);
       const link = document.createElement('a');
       const safeName = (allianceName || 'Alliance').replace(/[^a-zA-Z0-9]/g, '-');
       link.download = `DS-BattlePlan-${safeName}.png`;
@@ -173,7 +181,7 @@ export default function WarRoomPage() {
             {/* Printable card — white bg for screenshot */}
             <div
               ref={planCardRef}
-              className="bg-white text-gray-900 rounded-2xl overflow-hidden border border-gray-200"
+              className="bg-white text-gray-900 rounded-2xl border border-gray-200"
               style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
             >
               {/* Card header */}
