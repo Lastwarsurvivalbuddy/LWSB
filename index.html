@@ -86,6 +86,20 @@
       max-width: 600px; margin: 0 auto 16px; font-weight: 300;
       animation: fadeUp 0.8s 0.3s ease both; }
     .hero-sub strong { color: var(--text); font-weight: 600; }
+
+    /* FIX 2: Battle Report hero callout — standalone block, not a footnote */
+    .hero-battle-callout {
+      display: inline-flex; align-items: center; gap: 12px;
+      background: rgba(192,40,26,0.12); border: 1px solid rgba(192,40,26,0.35);
+      border-radius: 12px; padding: 14px 24px; margin: 0 auto 20px;
+      max-width: 560px; animation: fadeUp 0.8s 0.35s ease both; }
+    .hero-battle-callout-icon { font-size: 22px; flex-shrink: 0; }
+    .hero-battle-callout-text { text-align: left; }
+    .hero-battle-callout-label { font-family: 'Rajdhani', sans-serif; font-size: 10px; font-weight: 700;
+      letter-spacing: 0.2em; text-transform: uppercase; color: #e07060; margin-bottom: 3px; }
+    .hero-battle-callout-body { font-size: 14px; color: var(--text); font-weight: 600; line-height: 1.4; }
+    .hero-battle-callout-body span { color: #e8806a; }
+
     .hero-tagline { font-family: 'Rajdhani', sans-serif; font-size: 14px; font-weight: 600;
       letter-spacing: 0.2em; color: var(--gold); text-transform: uppercase;
       margin-bottom: 48px; animation: fadeUp 0.8s 0.4s ease both; }
@@ -209,6 +223,32 @@
     .battle-report-tile-label { font-family: 'Oswald', sans-serif; font-size: 13px; font-weight: 600;
       letter-spacing: 0.06em; text-transform: uppercase; color: var(--text); margin-bottom: 4px; }
     .battle-report-tile-desc { font-size: 11px; color: var(--muted); line-height: 1.5; }
+
+    /* ── SOCIAL PROOF ── */
+    .social-proof { position: relative; z-index: 1; padding: 72px 5%;
+      background: linear-gradient(180deg, transparent, rgba(232,160,32,0.03), transparent);
+      border-top: 1px solid var(--border); }
+    .social-proof-inner { max-width: 960px; margin: 0 auto; }
+    .social-proof-label { font-family: 'Rajdhani', sans-serif; font-size: 11px; font-weight: 700;
+      letter-spacing: 0.3em; text-transform: uppercase; color: var(--gold);
+      text-align: center; margin-bottom: 40px; }
+    .quotes-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+    .quote-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      padding: 24px; position: relative; overflow: hidden; }
+    .quote-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(232,160,32,0.2), transparent); }
+    .quote-mark { font-family: 'Oswald', sans-serif; font-size: 48px; line-height: 1;
+      color: rgba(232,160,32,0.15); font-weight: 700; margin-bottom: -8px; }
+    .quote-text { font-size: 14px; color: var(--muted2); line-height: 1.75; font-weight: 300;
+      font-style: italic; margin-bottom: 18px; }
+    .quote-text strong { color: var(--text); font-style: normal; font-weight: 600; }
+    .quote-author { display: flex; align-items: center; gap: 10px; }
+    .quote-author-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold);
+      box-shadow: 0 0 8px rgba(232,160,32,0.4); flex-shrink: 0; }
+    .quote-author-info { font-family: 'Rajdhani', sans-serif; }
+    .quote-author-name { font-size: 12px; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--text); }
+    .quote-author-meta { font-size: 10px; color: var(--muted); letter-spacing: 0.08em; margin-top: 1px; }
 
     /* ── PRICING ── */
     .pricing { position: relative; z-index: 1; padding: 100px 5%;
@@ -372,6 +412,9 @@
       .contact-inner { grid-template-columns: 1fr; gap: 40px; }
       footer { justify-content: center; text-align: center; }
       .pricing-grid { grid-template-columns: 1fr 1fr; }
+      .hero-battle-callout { flex-direction: column; text-align: center; }
+      .hero-battle-callout-text { text-align: center; }
+      .quotes-grid { grid-template-columns: 1fr; }
     }
     @media (max-width: 480px) {
       .nav-login { gap: 8px; }
@@ -410,17 +453,26 @@
     <p class="hero-sub">
       Stop scrolling Discord. Stop guessing.<br/>
       Tell us your server, your level, your goals —<br/>
-      we'll tell you <strong>exactly what to do today.</strong><br/>
-      <span style="color:#e07060;font-weight:600;">Including Battle Report Analyzer — find out exactly why you won or lost.</span>
+      we'll tell you <strong>exactly what to do today.</strong>
     </p>
+
+    <!-- FIX 2: Battle Report as a proper hero feature callout, not a footnote -->
+    <div class="hero-battle-callout">
+      <div class="hero-battle-callout-icon">⚔️</div>
+      <div class="hero-battle-callout-text">
+        <div class="hero-battle-callout-label">Exclusive Feature</div>
+        <div class="hero-battle-callout-body">Battle Report Analyzer — <span>find out exactly why you won or lost.</span><br/>No other Last War tool does this.</div>
+      </div>
+    </div>
+
     <div class="hero-tagline">The smarter you play — the smarter it gets</div>
 
-    <!-- WAITLIST BOX -->
+    <!-- FIX 1: "NOW IN EARLY ACCESS" — app is live -->
     <div class="cta-group">
       <div class="cta-box">
-        <div class="cta-box-label">⚡ Now in Development — Join the Waitlist</div>
+        <div class="cta-box-label">⚡ Now in Early Access</div>
         <p style="font-size:13px;color:var(--muted2);line-height:1.7;margin-bottom:18px;font-weight:300;">
-          We're building something the Last War community has never had. Be first in line — and first to know when we go live.
+          The app is live and ready. Join early — Founding Member spots ($99 · lifetime · unlimited everything) are limited to 500 and won't last.
         </p>
         <form action="https://lastwarsurvivalbuddy.us5.list-manage.com/subscribe/post?u=18c493eb1ee556997ddefe218&amp;id=8c7ab30157&amp;f_id=003021ebf0"
           method="post" id="mc-embedded-subscribe-form" name="mc-embedded-subscribe-form" target="_blank" novalidate>
@@ -432,10 +484,10 @@
             <div id="mce-error-response" style="display:none;color:#ff6b6b;font-size:13px;margin-bottom:8px;"></div>
             <div id="mce-success-response" style="display:none;color:#30b870;font-size:13px;margin-bottom:8px;"></div>
           </div>
-          <button type="submit" class="cta-btn" style="font-size:17px;padding:17px;">Reserve My Spot — It's Free →</button>
+          <button type="submit" class="cta-btn" style="font-size:17px;padding:17px;">Get Early Access — It's Free →</button>
           <div class="cta-terms">
-            No account needed. No credit card. No spam — ever.<br/>
-            Founding Member spots ($99 · lifetime access · unlimited everything) will be offered to the waitlist first.<br/>
+            No credit card. No spam — ever.<br/>
+            Founding Member spots will be offered to early access first.<br/>
             By signing up you agree to our <a>Terms</a> and <a>Privacy Policy</a>.
           </div>
         </form>
@@ -443,11 +495,11 @@
     </div>
   </section>
 
-  <!-- FOUNDING MEMBER BANNER -->
+  <!-- FOUNDING MEMBER BANNER — FIX 3: removed "0 of 500 claimed" counter, replaced with urgency copy -->
   <div style="position:relative;z-index:1;background:linear-gradient(135deg,#1a0a04,#0e1014);border-top:1px solid rgba(232,160,32,0.25);border-bottom:1px solid rgba(232,160,32,0.25);padding:20px 5%;display:flex;align-items:center;justify-content:center;gap:32px;flex-wrap:wrap;">
     <div style="display:flex;align-items:center;gap:10px;">
       <div style="width:10px;height:10px;border-radius:50%;background:#e8a020;box-shadow:0 0 12px #e8a020;animation:pulse 2s infinite;"></div>
-      <span style="font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.2em;color:#e8a020;text-transform:uppercase;">⚡ Founding Member Access — Limited Availability</span>
+      <span style="font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.2em;color:#e8a020;text-transform:uppercase;">⚡ Founding Member Access — Limited to 500 Spots</span>
     </div>
     <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap;justify-content:center;">
       <div style="text-align:center;">
@@ -461,15 +513,13 @@
       </div>
       <div style="width:1px;height:40px;background:#222830;"></div>
       <div style="text-align:center;">
-        <div style="font-family:'Oswald',sans-serif;font-size:30px;font-weight:700;color:#30b870;line-height:1;" id="spots-remaining">500</div>
-        <div style="font-size:10px;color:#606878;letter-spacing:0.1em;text-transform:uppercase;">Spots Remaining</div>
+        <div style="font-family:'Oswald',sans-serif;font-size:30px;font-weight:700;color:#30b870;line-height:1;">500</div>
+        <div style="font-size:10px;color:#606878;letter-spacing:0.1em;text-transform:uppercase;">Total Spots · First Come</div>
       </div>
       <div style="width:1px;height:40px;background:#222830;"></div>
-      <div style="text-align:center;min-width:140px;">
-        <div style="background:#222830;border-radius:6px;height:8px;overflow:hidden;margin-bottom:6px;">
-          <div style="height:100%;width:0%;background:linear-gradient(90deg,#30b870,#e8a020);border-radius:6px;transition:width 1s ease;" id="spots-bar"></div>
-        </div>
-        <div style="font-size:10px;color:#606878;letter-spacing:0.1em;text-transform:uppercase;">0 of 500 Claimed</div>
+      <div style="text-align:center;">
+        <div style="font-family:'Oswald',sans-serif;font-size:13px;font-weight:600;color:#e8a020;line-height:1.3;max-width:140px;">Early access gets priority</div>
+        <div style="font-size:10px;color:#606878;letter-spacing:0.08em;text-transform:uppercase;margin-top:4px;">Sign up free to lock your spot</div>
       </div>
     </div>
     <button onclick="document.querySelector('.hero').scrollIntoView({behavior:'smooth'})"
@@ -608,6 +658,48 @@
     </div>
   </section>
 
+  <!-- FIX 5: SOCIAL PROOF — quote strip before pricing -->
+  <section class="social-proof">
+    <div class="social-proof-inner">
+      <div class="social-proof-label">Early Access Players</div>
+      <div class="quotes-grid">
+        <div class="quote-card">
+          <div class="quote-mark">"</div>
+          <p class="quote-text">Finally an app that actually knows <strong>my server.</strong> Told me exactly which Arms Race phase to push and what I'd been missing every week.</p>
+          <div class="quote-author">
+            <div class="quote-author-dot"></div>
+            <div class="quote-author-info">
+              <div class="quote-author-name">Server 1032 · HQ 32</div>
+              <div class="quote-author-meta">Day 380 · Aircraft · Early Access</div>
+            </div>
+          </div>
+        </div>
+        <div class="quote-card">
+          <div class="quote-mark">"</div>
+          <p class="quote-text">I lost a fight to someone 40M weaker than me. Buddy told me it was a <strong>troop type counter</strong> — Aircraft vs Missile. I had no idea that was even a mechanic.</p>
+          <div class="quote-author">
+            <div class="quote-author-dot"></div>
+            <div class="quote-author-info">
+              <div class="quote-author-name">Server 1032 · HQ 28</div>
+              <div class="quote-author-meta">Day 210 · Tank · Early Access</div>
+            </div>
+          </div>
+        </div>
+        <div class="quote-card">
+          <div class="quote-mark">"</div>
+          <p class="quote-text">I'm new and this game is overwhelming. Buddy gives me <strong>3 things to do today</strong> and explains why. That's all I needed.</p>
+          <div class="quote-author">
+            <div class="quote-author-dot"></div>
+            <div class="quote-author-info">
+              <div class="quote-author-name">Server 2137 · HQ 24</div>
+              <div class="quote-author-meta">Day 37 · Tank · Early Access</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- PRICING -->
   <section class="pricing">
     <div class="pricing-inner">
@@ -674,7 +766,7 @@
       </div>
       <div style="margin-top:32px;text-align:center;font-size:12px;color:var(--muted);line-height:1.8;">
         All tiers include the Daily Action Plan and Commander Card. Battle Report Analyzer requires Pro or higher.<br/>
-        Founding Member is a limited lifetime tier — not a subscription. 500 spots total, offered to the waitlist first.
+        Founding Member is a limited lifetime tier — not a subscription. 500 spots total, offered to early access first.
       </div>
     </div>
   </section>
@@ -714,7 +806,7 @@
     </div>
   </section>
 
-  <!-- COMMAND PROMPT PREVIEW -->
+  <!-- COMMAND PROMPT PREVIEW — FIX 4: Battle Report question replaces pack question -->
   <section style="position:relative;z-index:1;padding:100px 5%;background:linear-gradient(180deg,transparent,rgba(14,16,20,0.8),transparent);">
     <div style="max-width:800px;margin:0 auto;">
       <div style="text-align:center;margin-bottom:48px;">
@@ -770,7 +862,7 @@
             <div style="font-size:10px;color:#606878;margin-top:2px;">Hardcore Player</div>
           </div>
         </div>
-        <!-- Chat window -->
+        <!-- Chat window — FIX 4: Battle Report question -->
         <div style="flex:1;min-width:280px;background:#0e1014;border:1px solid #2a3040;border-radius:16px;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,0.6);">
           <div style="background:#13161c;border-bottom:1px solid #222830;padding:14px 20px;display:flex;align-items:center;gap:12px;">
             <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#c06010,#e8a020);display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 16px rgba(232,160,32,0.3);">🪖</div>
@@ -784,18 +876,18 @@
           </div>
           <div style="padding:24px 20px;display:flex;flex-direction:column;gap:16px;">
             <div style="display:flex;justify-content:flex-end;">
-              <div style="background:#1a2030;border:1px solid #2a3040;border-radius:12px 12px 2px 12px;padding:12px 16px;max-width:75%;">
-                <div style="font-size:14px;color:#e8e8e8;line-height:1.55;">Should I buy this pack right now?</div>
-                <div style="font-size:10px;color:#606878;margin-top:6px;text-align:right;">+ screenshot attached</div>
+              <div style="background:#1a2030;border:1px solid #2a3040;border-radius:12px 12px 2px 12px;padding:12px 16px;max-width:80%;">
+                <div style="font-size:14px;color:#e8e8e8;line-height:1.55;">Why did I lose that fight? My power was higher than theirs.</div>
+                <div style="font-size:10px;color:#606878;margin-top:6px;text-align:right;">+ 3 screenshots attached</div>
               </div>
             </div>
             <div style="display:flex;gap:12px;align-items:flex-start;">
               <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#c06010,#e8a020);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">🪖</div>
-              <div style="background:#13161c;border:1px solid #222830;border-radius:2px 12px 12px 12px;padding:14px 16px;max-width:80%;">
+              <div style="background:#13161c;border:1px solid #222830;border-radius:2px 12px 12px 12px;padding:14px 16px;max-width:85%;">
                 <div style="font-size:13px;color:#e8e8e8;line-height:1.7;">
-                  <span style="color:#e8a020;font-weight:700;font-family:'Rajdhani',sans-serif;letter-spacing:0.05em;">YES — strong timing.</span> That pack contains 180 Armament Cores. At your current T11 Weapon branch pace you'll need them in approximately <span style="color:#e8e8e8;font-weight:600;">6–8 days.</span><br/><br/>
-                  <span style="color:#30b870;font-weight:600;">Kill Event is in 3 days</span> on your server. Hold the training speedups for the Alliance Duel <span style="color:#e8e8e8;font-weight:600;">4× multiplier</span> on Day 5. Use the Cores now.<br/><br/>
-                  <span style="color:#8090a0;font-size:12px;">Gap to Rank 15: 1.27M · This pack closes ~0.3M of that.</span>
+                  <span style="color:#e07060;font-weight:700;font-family:'Rajdhani',sans-serif;letter-spacing:0.05em;">TYPE COUNTER — this is why.</span> Your Aircraft squad fought their <span style="color:#e8e8e8;font-weight:600;">Missile troops.</span> That's a hard counter — you dealt 20% less damage and took 20% more. <span style="color:#e8e8e8;font-weight:600;">Effective power swing: ~40%.</span><br/><br/>
+                  <span style="color:#e8a020;font-weight:600;">Stat screen confirms it</span> — your ATK shows red arrows despite equal gear. Classic counter matchup signature. Your power advantage was real, the matchup erased it.<br/><br/>
+                  <span style="color:#8090a0;font-size:12px;">Rematch verdict: Not Yet — swap to Missile squad first and the math flips in your favor.</span>
                 </div>
                 <div style="font-size:10px;color:#606878;margin-top:8px;">Buddy · just now</div>
               </div>
@@ -819,7 +911,7 @@
   <section class="bottom-cta">
     <div class="section-label">Be First In Line</div>
     <h2 class="bottom-cta-title">Don't Miss<br/><span>Launch Day.</span></h2>
-    <p class="bottom-cta-sub">Join the waitlist free. Founding Member spots go to the list first — 500 total, $99 lifetime, unlimited everything.</p>
+    <p class="bottom-cta-sub">Join early access free. Founding Member spots go to early access first — 500 total, $99 lifetime, unlimited everything.</p>
     <div class="bottom-signup">
       <form action="https://lastwarsurvivalbuddy.us5.list-manage.com/subscribe/post?u=18c493eb1ee556997ddefe218&amp;id=8c7ab30157&amp;f_id=003021ebf0"
         method="post" id="mc-embedded-subscribe-form-2" name="mc-embedded-subscribe-form-2" target="_blank" novalidate
@@ -828,7 +920,7 @@
         <div style="position:absolute;left:-5000px;" aria-hidden="true">
           <input type="text" name="b_18c493eb1ee556997ddefe218_8c7ab30157" tabindex="-1" value=""/>
         </div>
-        <button type="submit" class="bottom-signup-btn">Reserve My Spot →</button>
+        <button type="submit" class="bottom-signup-btn">Get Early Access →</button>
       </form>
     </div>
   </section>
@@ -840,8 +932,9 @@
         <div class="contact-label">Get In Touch</div>
         <h2 class="contact-title">Talk to<br/>The <span>Builder.</span></h2>
         <p class="contact-desc">
-          Buddy is built by an active Last War player on Server 1032 — HQ 35, T11, Day 508.
-          I play the game. I built the tool. I want to hear from you.
+          I built this after playing for over 500 days because I got tired of
+          losing fights I should have won and not knowing why. If something's
+          wrong, missing, or broken — I want to know before you quit.
         </p>
         <div class="contact-reasons">
           <div class="contact-reason">Bug report or wrong game data</div>
@@ -892,7 +985,6 @@
     <div class="footer-logo">Last War: Survival <span>Buddy</span></div>
     <div class="footer-note">Built specifically for <strong style="color:#8090a0;">Last War: Survival</strong> (FUNFLY PTE. LTD.) · Not affiliated with or endorsed by the developer · Fan-built community tool</div>
   </footer>
-
 
 </body>
 </html>
