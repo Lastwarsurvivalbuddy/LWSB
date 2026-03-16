@@ -686,12 +686,21 @@ export const COACHING_ACTIONS = {
 };
 
 // ─────────────────────────────────────────────────────────────
-// SECTION 13 — PRE-ANALYSIS INTAKE QUESTIONS
+// SECTION 13 — PRE-ANALYSIS INTAKE QUESTIONS (updated)
+// - report_type moved to Q1 so card list can filter by PvP vs PvE
+// - tactics_cards is now multi-select string[] grouped by card type
+// - deco_level removed — visible directly in Stat Comparison screen
 // ─────────────────────────────────────────────────────────────
 
 export const INTAKE_QUESTIONS = {
-  purpose: 'Capture the three invisible variables that don\'t show in screenshots.',
+  purpose: 'Capture invisible variables that don\'t show in screenshots.',
   questions: [
+    {
+      id: 'report_type',
+      question: 'What type of report is this?',
+      options: ['PvP — I attacked someone', 'PvP — Someone attacked me', 'PvP — Rally', 'PvE — Zombie / Monster'],
+      why: 'Changes analysis logic entirely. Determines which tactics card groups to show. PvE uses different diagnostic path.',
+    },
     {
       id: 'squad_type',
       question: 'What troop type is your main squad?',
@@ -700,27 +709,45 @@ export const INTAKE_QUESTIONS = {
     },
     {
       id: 'tactics_cards',
-      question: 'Did you have any Tactics Cards active?',
-      options: ['Yes — PvP cards active', 'Yes — PvE cards active', 'No / Not sure'],
-      why: 'Determines if morale cards, damage reduction cards, or PvE resistance cards were in play.',
-    },
-    {
-      id: 'deco_level',
-      question: 'Roughly what level are your best decorations?',
-      options: ['None upgraded yet', 'Level 1–2', 'Level 3+', 'Several at Level 5+'],
-      why: 'Calibrates stat comparison gap diagnosis.',
-    },
-    {
-      id: 'report_type',
-      question: 'What type of report is this?',
-      options: ['PvP — I attacked someone', 'PvP — Someone attacked me', 'PvP — Rally', 'PvE — Zombie / Monster'],
-      why: 'Changes analysis logic entirely. PvE uses different diagnostic path.',
+      question: 'Which Tactics Cards were active in your deck?',
+      type: 'multi-select',
+      why: 'Tactics cards are completely invisible in battle reports. Efficient Unity changes formation math. Warmind Morale Boost explains asymmetric losses. Purgator explains PvE virus resistance outcomes.',
+      options_pvp: {
+        'Core Cards — Attacker': [
+          'Warmind – Rapid Rescue',
+          'Warmind – Morale Boost',
+          'Windrusher – Morale Boost',
+          'Windrusher – Rapid Rescue',
+        ],
+        'Core Cards — Defender': [
+          'Buluwark – Comprehensive Enhancement',
+          'Buluwark – Morale Boost',
+        ],
+        'Battle Cards': [
+          'Efficient Unity',
+          'Damage Reduction Reversal',
+          'Damage Reversal',
+          'Attribute Aura',
+          'Warmind – One Against Ten',
+        ],
+      },
+      options_pve: {
+        'PvE Cards': [
+          'Purgator – Monster Slayer',
+        ],
+        'Battle Cards': [
+          'Attribute Aura',
+        ],
+      },
     },
   ],
 };
 
 // ─────────────────────────────────────────────────────────────
 // SECTION 14 — SYSTEM PROMPT BUILDER (for battle-report/route.ts)
+// intake.tactics_cards is now string[] — serialized as comma list
+// intake.report_type moved to first position
+// intake.deco_level removed — read from screenshots instead
 // ─────────────────────────────────────────────────────────────
 
 export function buildBattleReportSystemPrompt(
@@ -735,13 +762,48 @@ export function buildBattleReportSystemPrompt(
     beginner_mode?: boolean;
   },
   intake: {
-    squad_type: string;
-    tactics_cards: string;
-    deco_level: string;
     report_type: string;
+    squad_type: string;
+    tactics_cards: string[]; // multi-select array
   }
 ): string {
-  const isPvE = intake.report_type.toLowerCase().includes('pve') || intake.report_type.toLowerCase().includes('zombie');
+  const isPvE = intake.report_type.toLowerCase().includes('pve') ||
+    intake.report_type.toLowerCase().includes('zombie') ||
+    intake.report_type.toLowerCase().includes('monster');
+
+  const tacticsCardsSummary = intake.tactics_cards.length > 0
+    ? intake.tactics_cards.join(', ')
+    : 'None reported';
+
+  // Derive specific card flags for targeted prompt instructions
+  const hasEfficientUnity = intake.tactics_cards.includes('Efficient Unity');
+  const hasWarmindMorale = intake.tactics_cards.includes('Warmind – Morale Boost');
+  const hasWindrusherMorale = intake.tactics_cards.includes('Windrusher – Morale Boost');
+  const hasWarmindRapidRescue = intake.tactics_cards.includes('Warmind – Rapid Rescue');
+  const hasWindrusherRapidRescue = intake.tactics_cards.includes('Windrusher – Rapid Rescue');
+  const hasBuluwarkComp = intake.tactics_cards.includes('Buluwark – Comprehensive Enhancement');
+  const hasBuluwarkMorale = intake.tactics_cards.includes('Buluwark – Morale Boost');
+  const hasDamageReductionReversal = intake.tactics_cards.includes('Damage Reduction Reversal');
+  const hasDamageReversal = intake.tactics_cards.includes('Damage Reversal');
+  const hasAttributeAura = intake.tactics_cards.includes('Attribute Aura');
+  const hasWarmindOneAgainstTen = intake.tactics_cards.includes('Warmind – One Against Ten');
+  const hasPurgator = intake.tactics_cards.includes('Purgator – Monster Slayer');
+
+  const cardFlags = [
+    hasEfficientUnity ? '- EFFICIENT UNITY ACTIVE: Player has 4 same-type heroes but gets FULL +20% formation bonus, not +15%. Do NOT flag a formation issue if they have a 4+1 lineup.' : '',
+    hasWarmindMorale ? '- WARMIND MORALE BOOST ACTIVE: Player may have entered this fight with stacked morale (+6% per prior PvP win, up to +30% at 5 stacks). Factor into damage advantage analysis. Serial attackers in kill events often arrive at max stacks.' : '',
+    hasWindrusherMorale ? '- WINDRUSHER MORALE BOOST ACTIVE: Player gains +5% morale per march distance tier (up to 5x = +25%). Long-march attacks may have arrived with significant morale advantage.' : '',
+    hasWarmindRapidRescue ? '- WARMIND RAPID RESCUE ACTIVE: Player recovers up to 100% lightly wounded troops after winning PvP (2x daily). Lightly wounded numbers in report may understate actual attrition.' : '',
+    hasWindrusherRapidRescue ? '- WINDRUSHER RAPID RESCUE ACTIVE: Player can grant +50% march speed to self + 3x3 allies (3x daily). Relevant for rally timing and reinforcement windows.' : '',
+    hasBuluwarkComp ? '- BULUWARK COMPREHENSIVE ENHANCEMENT ACTIVE: Player in defense gets +10% HP/ATK/DEF base + up to +24% more at max stacks (2x daily). Explains harder-than-expected garrison defense.' : '',
+    hasBuluwarkMorale ? '- BULUWARK MORALE BOOST ACTIVE: Player in defense gets +3% morale per ally with same card (stacks 9x = +27%). Alliance defense coordination with this card = substantial morale wall.' : '',
+    hasDamageReductionReversal ? '- DAMAGE REDUCTION REVERSAL ACTIVE: Player takes up to 5.10% less damage when at a type disadvantage. Partially offsets the -20% type counter penalty — losses may have been slightly less severe than raw counter math suggests.' : '',
+    hasDamageReversal ? '- DAMAGE REVERSAL ACTIVE: Player deals up to 2.55% more damage when countered. Stacked with Damage Reduction Reversal = partially nullifies type counter disadvantage.' : '',
+    hasAttributeAura ? '- ATTRIBUTE AURA ACTIVE: 1st squad heroes gain up to +4% ATK/DEF/HP in world map PvP. Small but real flat stat boost.' : '',
+    hasWarmindOneAgainstTen ? '- WARMIND ONE AGAINST TEN ACTIVE: Attribute penalties from marching with reduced march size reduced by up to 30%. Player may have marched understrength with less penalty than expected.' : '',
+    hasPurgator ? '- PURGATOR MONSTER SLAYER ACTIVE: +250 virus resistance for 180s + -20% monster damage reduction. PvE performance should reflect this advantage. If damage was still near-zero, VRI research may still be insufficient.' : '',
+    intake.tactics_cards.length === 0 ? '- NO TACTICS CARDS REPORTED: Player either has none equipped or is unsure. Do not assume any card effects. Note in coaching that equipping relevant cards (especially Efficient Unity for formation, Warmind Morale Boost for kill events) is a free power gain.' : '',
+  ].filter(Boolean).join('\n');
 
   return `You are the Last War: Survival Battle Report Analyzer — an expert AI combat coach embedded in Last War: Survival Buddy (LastWarSurvivalBuddy.com).
 
@@ -757,10 +819,12 @@ You will be given one or more screenshots of a Last War: Survival battle report 
 - Spend Style: ${playerProfile.spend_style ?? 'Unknown'}
 
 ## PLAYER INTAKE ANSWERS
-- Squad Type Confirmed: ${intake.squad_type}
-- Tactics Cards Active: ${intake.tactics_cards}
-- Decoration Level: ${intake.deco_level}
 - Report Type: ${intake.report_type}
+- Squad Type Confirmed: ${intake.squad_type}
+- Tactics Cards Active: ${tacticsCardsSummary}
+
+## TACTICS CARD FLAGS (apply these directly to your analysis)
+${cardFlags}
 
 ## COMBAT KNOWLEDGE BASE
 
@@ -773,27 +837,26 @@ You will be given one or more screenshots of a Last War: Survival battle report 
 
 ### FORMATION BONUS
 - 5 same-type heroes: +20% HP/ATK/DEF
-- 4 same-type: +15%
+- 4 same-type: +15% (UNLESS Efficient Unity card active — then +20%)
 - 3+2 mixed: +10%
 - 3 same-type: +5%
-- Efficient Unity tactics card: 4 same-type gets full +20%
 
 ### MORALE
 - Morale Bonus = 1 + (Your Morale - Enemy Morale) / 100
 - Losing troops → morale drops → damage drops → cascade
-- Warmind Morale Boost card: +6% per PvP win, stacks 5x (invisible in report)
-- Windrusher Morale Boost: +5% morale per march distance tier (invisible in report)
+- Warmind Morale Boost card: +6% per PvP win, stacks 5x (invisible in screenshots)
+- Windrusher Morale Boost: +5% morale per march distance tier (invisible in screenshots)
 
 ### EXCLUSIVE WEAPONS
 - Every 3 EW levels = +1 skill level (base max 30, EW max 40)
 - EW Level 20 = 7.5% stat boost + skills at level 36 vs opponent at 30
 - Low skill damage relative to squad power = likely EW gap
 
-### DECORATIONS (show up in stat comparison)
+### DECORATIONS (read directly from stat comparison screen — do not ask player)
 - God of Judgment (S-tier): HP/ATK/DEF/March Size
 - Tower of Victory (S-tier): ATK + Crit Damage
 - Multiple red arrows in stat comparison with similar power = decoration gap
-- Level 3+ UR decos provide significantly more than Level 1-2
+- Read the green/red arrows from Screen 4 — they show the gap directly
 
 ### TROOP LOSSES
 - Lightly Wounded: free recovery, no hospital
@@ -847,7 +910,7 @@ Respond ONLY with a JSON object. No markdown, no preamble. Structure:
   "coaching": ["Array of 3-5 specific actionable coaching items"],
   "rematch_verdict": "Yes — conditions met" | "Not yet — see coaching" | "No — power gap too large" | "N/A — you won",
   "rematch_reasoning": "One sentence on rematch recommendation",
-  "invisible_factors_note": "Brief note on any invisible factors (tactics cards, EW) that may have affected this outcome based on player intake answers"
+  "invisible_factors_note": "Note on tactics cards reported and how they affected this outcome. If no cards were reported, mention that equipping relevant cards (Efficient Unity, Warmind Morale Boost) is a free power gain worth investigating."
 }
 
 ## RULES
@@ -855,6 +918,9 @@ Respond ONLY with a JSON object. No markdown, no preamble. Structure:
 - If a data field is not visible in any screenshot, use "not visible" — NEVER fabricate numbers.
 - Base your counter diagnosis on the troop type breakdown screen, not assumptions.
 - If report type is PvE, ignore PvP counter system and use PvE diagnostic path.
+- Apply Efficient Unity formation correction if that flag is active above.
+- Apply morale card context if Warmind or Windrusher morale flags are active above.
+- Read stat gap from Screen 4 red/green arrows — do not guess from power numbers alone.
 - Be specific. "Your Aircraft took 100% damage while their Missile took 22%" is better than "you were countered."
 - ${playerProfile.beginner_mode ? 'This player is in Beginner Mode. Keep coaching language simple and explain the WHY behind every recommendation.' : 'This is an experienced player. Be direct and technical.'}
 - NEVER invent data. If you cannot read a number from the screenshot, say so.`;
@@ -916,11 +982,12 @@ BATTLE REPORT ANALYZER KNOWLEDGE BASE
 Counter Matrix: Aircraft>Tank>Missile>Aircraft. Each matchup = ~40% effective power swing.
 Buildings: +25% damage to Aircraft in base defense.
 Formation: 5-same = +20% HP/ATK/DEF. 3+2 = +10%. Gap is meaningful.
+Efficient Unity card: 4-same gets full +20% — must be captured in intake.
 Morale: Losing early = cascade. Warmind Morale Boost stacks 5x invisibly.
 EW: Level 20 = 7.5% boost + skills at 36 vs 30. Shows as hero skill damage gap.
-Decorations: God of Judgment + Tower of Victory = S-tier. Red stat arrows = deco gap.
+Decorations: Read from Screen 4 red/green arrows. God of Judgment + Tower of Victory = S-tier.
 Troop Losses: High killed = hospital full = permanent loss.
-PvE: Virus resistance gate in Season 1. AoE heroes for Zombie Siege.
+PvE: Virus resistance gate in Season 1. Purgator card required. AoE heroes for Zombie Siege.
 Screens: 6 screens per report. Screen 2 (troop breakdown) is most critical.
 Quotas: Free=0, Pro=3/day, Elite=5/day, Founding=10/day (shown as unlimited).
   `.trim();

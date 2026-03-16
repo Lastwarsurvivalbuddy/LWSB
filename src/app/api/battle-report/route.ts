@@ -7,10 +7,9 @@ import { buildBattleReportSystemPrompt, BATTLE_REPORT_QUOTAS } from '@/lib/lwtBa
 // ─────────────────────────────────────────────────────────────
 
 interface IntakeAnswers {
-  squad_type: string;
-  tactics_cards: string;
-  deco_level: string;
   report_type: string;
+  squad_type: string;
+  tactics_cards: string[]; // multi-select — empty array is valid
 }
 
 interface ImagePayload {
@@ -182,15 +181,18 @@ export async function POST(req: NextRequest) {
       },
     }));
 
+    const tacticsCardsSummary = intake.tactics_cards.length > 0
+      ? intake.tactics_cards.join(', ')
+      : 'None';
+
     contentBlocks.push({
       type: 'text' as const,
-      text: `Please analyze these ${images.length} battle report screenshot(s). 
+      text: `Please analyze these ${images.length} battle report screenshot(s).
 
 Player confirmed:
-- Their squad type: ${intake.squad_type}
-- Tactics cards active: ${intake.tactics_cards}
-- Decoration level: ${intake.deco_level}
 - Report type: ${intake.report_type}
+- Their squad type: ${intake.squad_type}
+- Tactics cards active: ${tacticsCardsSummary}
 
 Read ALL screenshots as a set. Return ONLY valid JSON matching the schema in your instructions. No markdown, no preamble, no explanation outside the JSON object.`,
     });

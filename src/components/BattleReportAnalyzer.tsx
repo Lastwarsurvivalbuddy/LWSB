@@ -9,10 +9,9 @@ import { supabase } from '@/lib/supabase';
 // ─────────────────────────────────────────────────────────────
 
 interface IntakeAnswers {
-  squad_type: string;
-  tactics_cards: string;
-  deco_level: string;
   report_type: string;
+  squad_type: string;
+  tactics_cards: string[]; // multi-select — empty array is valid (no cards active)
 }
 
 interface ImageFile {
@@ -98,11 +97,43 @@ interface BattleReportAnalyzerProps {
 // CONSTANTS
 // ─────────────────────────────────────────────────────────────
 
-const INTAKE_OPTIONS = {
-  squad_type: ['Tank', 'Aircraft', 'Missile', 'Mixed'],
-  tactics_cards: ['Yes — PvP cards active', 'Yes — PvE cards active', 'No / Not sure'],
-  deco_level: ['None upgraded yet', 'Level 1–2', 'Level 3+', 'Several at Level 5+'],
-  report_type: ['PvP — I attacked someone', 'PvP — Someone attacked me', 'PvP — Rally', 'PvE — Zombie / Monster'],
+const REPORT_TYPE_OPTIONS = [
+  'PvP — I attacked someone',
+  'PvP — Someone attacked me',
+  'PvP — Rally',
+  'PvE — Zombie / Monster',
+];
+
+const SQUAD_TYPE_OPTIONS = ['Tank', 'Aircraft', 'Missile', 'Mixed'];
+
+// Tactics cards grouped — filtered based on report type selection
+const TACTICS_CARDS_PVP: Record<string, string[]> = {
+  'Core Cards — Attacker': [
+    'Warmind – Rapid Rescue',
+    'Warmind – Morale Boost',
+    'Windrusher – Morale Boost',
+    'Windrusher – Rapid Rescue',
+  ],
+  'Core Cards — Defender': [
+    'Buluwark – Comprehensive Enhancement',
+    'Buluwark – Morale Boost',
+  ],
+  'Battle Cards': [
+    'Efficient Unity',
+    'Damage Reduction Reversal',
+    'Damage Reversal',
+    'Attribute Aura',
+    'Warmind – One Against Ten',
+  ],
+};
+
+const TACTICS_CARDS_PVE: Record<string, string[]> = {
+  'PvE Cards': [
+    'Purgator – Monster Slayer',
+  ],
+  'Battle Cards': [
+    'Attribute Aura',
+  ],
 };
 
 const OUTCOME_COLOR: Record<string, string> = {
@@ -179,6 +210,18 @@ function getReportTypeShort(reportType: string): string {
   return 'PvP';
 }
 
+function isPvEReport(reportType: string): boolean {
+  return (
+    reportType.toLowerCase().includes('pve') ||
+    reportType.toLowerCase().includes('zombie') ||
+    reportType.toLowerCase().includes('monster')
+  );
+}
+
+function getCardGroups(reportType: string): Record<string, string[]> {
+  return isPvEReport(reportType) ? TACTICS_CARDS_PVE : TACTICS_CARDS_PVP;
+}
+
 // ─────────────────────────────────────────────────────────────
 // COMPONENT
 // ─────────────────────────────────────────────────────────────
@@ -200,10 +243,9 @@ export default function BattleReportAnalyzer({
   const [images, setImages] = useState<ImageFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [intake, setIntake] = useState<IntakeAnswers>({
-    squad_type: '',
-    tactics_cards: '',
-    deco_level: '',
     report_type: '',
+    squad_type: '',
+    tactics_cards: [],
   });
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [meta, setMeta] = useState<Meta | null>(null);
@@ -221,6 +263,10 @@ export default function BattleReportAnalyzer({
   const isFounding = userTier === 'founding';
   const isAtLimit = !isFounding && reportsUsedToday >= reportsLimitToday;
   const isLocked = isFree || isAtLimit;
+
+  // ── Intake complete — report_type and squad_type required.
+  //    tactics_cards can be empty (player had none active) — that is valid.
+  const intakeComplete = intake.report_type !== '' && intake.squad_type !== '';
 
   // ── Fetch history ─────────────────────────────────────────
   const fetchHistory = useCallback(async () => {
@@ -256,6 +302,28 @@ export default function BattleReportAnalyzer({
       fetchHistory();
     }
   }, [activeTab, historyFetched, fetchHistory]);
+
+  // ── Report type selection — clears cards when type changes ─
+  const handleReportTypeSelect = (val: string) => {
+    setIntake(prev => ({
+      ...prev,
+      report_type: val,
+      tactics_cards: [], // PvP cards irrelevant for PvE and vice versa
+    }));
+  };
+
+  // ── Toggle a tactics card in/out of selection ─────────────
+  const toggleCard = (card: string) => {
+    setIntake(prev => {
+      const already = prev.tactics_cards.includes(card);
+      return {
+        ...prev,
+        tactics_cards: already
+          ? prev.tactics_cards.filter(c => c !== card)
+          : [...prev.tactics_cards, card],
+      };
+    });
+  };
 
   // ── File handling ─────────────────────────────────────────
   const addFiles = useCallback(async (files: File[]) => {
@@ -296,9 +364,6 @@ export default function BattleReportAnalyzer({
     const files = Array.from(e.dataTransfer.files);
     addFiles(files);
   };
-
-  // ── Intake ────────────────────────────────────────────────
-  const intakeComplete = Object.values(intake).every(v => v !== '');
 
   // ── Submit ────────────────────────────────────────────────
   const handleAnalyze = async () => {
@@ -354,7 +419,7 @@ export default function BattleReportAnalyzer({
   const handleReset = () => {
     setStep('upload');
     setImages([]);
-    setIntake({ squad_type: '', tactics_cards: '', deco_level: '', report_type: '' });
+    setIntake({ report_type: '', squad_type: '', tactics_cards: [] });
     setResult(null);
     setMeta(null);
     setError('');
@@ -650,11 +715,31 @@ export default function BattleReportAnalyzer({
                   </div>
                 )}
 
-                {/* Q1 */}
+                {/* Q1 — Report Type (first so cards question can filter by PvP vs PvE) */}
+                <div className="space-y-2">
+                  <label className="text-sm text-gray-300 font-medium">What type of report is this?</label>
+                  <div className="space-y-2">
+                    {REPORT_TYPE_OPTIONS.map(opt => (
+                      <button
+                        key={opt}
+                        onClick={() => handleReportTypeSelect(opt)}
+                        className={`w-full py-2.5 px-3 rounded-xl text-sm font-medium border text-left transition-colors ${
+                          intake.report_type === opt
+                            ? 'border-yellow-400 bg-yellow-400/10 text-yellow-300'
+                            : 'border-gray-700 bg-gray-800 text-gray-300 hover:border-gray-600'
+                        }`}
+                      >
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Q2 — Squad Type */}
                 <div className="space-y-2">
                   <label className="text-sm text-gray-300 font-medium">What&apos;s your main squad&apos;s troop type?</label>
                   <div className="grid grid-cols-2 gap-2">
-                    {INTAKE_OPTIONS.squad_type.map(opt => (
+                    {SQUAD_TYPE_OPTIONS.map(opt => (
                       <button
                         key={opt}
                         onClick={() => setIntake(prev => ({ ...prev, squad_type: opt }))}
@@ -670,65 +755,53 @@ export default function BattleReportAnalyzer({
                   </div>
                 </div>
 
-                {/* Q2 */}
-                <div className="space-y-2">
-                  <label className="text-sm text-gray-300 font-medium">Did you have Tactics Cards active?</label>
-                  <div className="space-y-2">
-                    {INTAKE_OPTIONS.tactics_cards.map(opt => (
-                      <button
-                        key={opt}
-                        onClick={() => setIntake(prev => ({ ...prev, tactics_cards: opt }))}
-                        className={`w-full py-2.5 px-3 rounded-xl text-sm font-medium border text-left transition-colors ${
-                          intake.tactics_cards === opt
-                            ? 'border-yellow-400 bg-yellow-400/10 text-yellow-300'
-                            : 'border-gray-700 bg-gray-800 text-gray-300 hover:border-gray-600'
-                        }`}
-                      >
-                        {opt}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                {/* Q3 — Tactics Cards (multi-select, only shown after report type selected) */}
+                {intake.report_type !== '' && (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm text-gray-300 font-medium">Which Tactics Cards were active in your deck?</label>
+                      <p className="text-xs text-gray-500 mt-0.5">Select all that apply — or skip if none.</p>
+                    </div>
 
-                {/* Q3 */}
-                <div className="space-y-2">
-                  <label className="text-sm text-gray-300 font-medium">Roughly what level are your best decorations?</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {INTAKE_OPTIONS.deco_level.map(opt => (
-                      <button
-                        key={opt}
-                        onClick={() => setIntake(prev => ({ ...prev, deco_level: opt }))}
-                        className={`py-2.5 px-3 rounded-xl text-sm font-medium border transition-colors text-left ${
-                          intake.deco_level === opt
-                            ? 'border-yellow-400 bg-yellow-400/10 text-yellow-300'
-                            : 'border-gray-700 bg-gray-800 text-gray-300 hover:border-gray-600'
-                        }`}
-                      >
-                        {opt}
-                      </button>
+                    {Object.entries(getCardGroups(intake.report_type)).map(([groupName, cards]) => (
+                      <div key={groupName} className="space-y-1.5">
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{groupName}</p>
+                        <div className="space-y-1.5">
+                          {cards.map(card => {
+                            const selected = intake.tactics_cards.includes(card);
+                            return (
+                              <button
+                                key={card}
+                                onClick={() => toggleCard(card)}
+                                className={`w-full py-2.5 px-3 rounded-xl text-sm font-medium border text-left transition-colors flex items-center gap-2.5 ${
+                                  selected
+                                    ? 'border-yellow-400 bg-yellow-400/10 text-yellow-300'
+                                    : 'border-gray-700 bg-gray-800 text-gray-300 hover:border-gray-600'
+                                }`}
+                              >
+                                <span className={`w-4 h-4 shrink-0 rounded border flex items-center justify-center text-xs font-bold ${
+                                  selected
+                                    ? 'bg-yellow-400 border-yellow-400 text-black'
+                                    : 'border-gray-600 bg-gray-900'
+                                }`}>
+                                  {selected ? '✓' : ''}
+                                </span>
+                                {card}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
                     ))}
-                  </div>
-                </div>
 
-                {/* Q4 */}
-                <div className="space-y-2">
-                  <label className="text-sm text-gray-300 font-medium">What type of report is this?</label>
-                  <div className="space-y-2">
-                    {INTAKE_OPTIONS.report_type.map(opt => (
-                      <button
-                        key={opt}
-                        onClick={() => setIntake(prev => ({ ...prev, report_type: opt }))}
-                        className={`w-full py-2.5 px-3 rounded-xl text-sm font-medium border text-left transition-colors ${
-                          intake.report_type === opt
-                            ? 'border-yellow-400 bg-yellow-400/10 text-yellow-300'
-                            : 'border-gray-700 bg-gray-800 text-gray-300 hover:border-gray-600'
-                        }`}
-                      >
-                        {opt}
-                      </button>
-                    ))}
+                    <p className="text-xs text-gray-600 italic">
+                      {intake.tactics_cards.length === 0
+                        ? 'Nothing selected — analyzer will note no cards were active.'
+                        : `${intake.tactics_cards.length} card${intake.tactics_cards.length > 1 ? 's' : ''} selected`
+                      }
+                    </p>
                   </div>
-                </div>
+                )}
 
                 <div className="flex gap-3">
                   <button
