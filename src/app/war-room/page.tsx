@@ -33,27 +33,46 @@ export default function WarRoomPage() {
   }
 
   async function handleSave() {
-    if (!planCardRef.current) return;
+    if (!planCardRef.current || saving) return;
     setSaving(true);
     try {
       const html2canvas = (await import('html2canvas')).default;
       const el = planCardRef.current;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const canvas = await html2canvas(el, {
+        background: '#ffffff',
         useCORS: true,
         logging: false,
-        width: el.scrollWidth,
-        height: el.scrollHeight,
-        windowWidth: el.scrollWidth,
-        windowHeight: el.scrollHeight,
-        scrollX: 0,
-        scrollY: -window.scrollY,
+        width: el.offsetWidth,
+        height: el.offsetHeight,
       } as any);
-      const link = document.createElement('a');
-      const safeName = (allianceName || 'Alliance').replace(/[^a-zA-Z0-9]/g, '-');
-      link.download = `DS-BattlePlan-${safeName}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
+      const url = canvas.toDataURL('image/png');
+      // Mobile: show overlay with press-and-hold instruction
+      // Desktop: trigger download
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      if (isMobile) {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:#0a0a0a;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;';
+        const img = document.createElement('img');
+        img.src = url;
+        img.style.cssText = 'max-width:100%;max-height:75vh;border-radius:12px;display:block;';
+        const msg = document.createElement('p');
+        msg.innerText = 'Press and hold image → Save to Photos';
+        msg.style.cssText = 'color:#e8a020;font-size:15px;font-family:sans-serif;margin-top:20px;text-align:center;';
+        const btn = document.createElement('button');
+        btn.innerText = '✕ Close';
+        btn.style.cssText = 'margin-top:16px;background:#333;color:#fff;border:none;padding:10px 24px;border-radius:8px;font-size:14px;cursor:pointer;';
+        btn.onclick = () => document.body.removeChild(overlay);
+        overlay.appendChild(img);
+        overlay.appendChild(msg);
+        overlay.appendChild(btn);
+        document.body.appendChild(overlay);
+      } else {
+        const link = document.createElement('a');
+        const safeName = (allianceName || 'Alliance').replace(/[^a-zA-Z0-9]/g, '-');
+        link.download = `DS-BattlePlan-${safeName}.png`;
+        link.href = url;
+        link.click();
+      }
     } catch (err) {
       console.error('Save failed:', err);
     } finally {
@@ -213,9 +232,9 @@ export default function WarRoomPage() {
               </div>
 
               {/* Stage timeline strip */}
-              <div className="bg-gray-100 px-5 py-2 flex gap-4 overflow-x-auto">
+              <div className="bg-gray-100 px-5 py-2 flex flex-wrap gap-x-4 gap-y-1">
                 {DS_STAGES.map((s, i) => (
-                  <div key={i} className="flex-shrink-0 text-xs text-gray-500">
+                  <div key={i} className="text-xs text-gray-500">
                     <span className="font-medium text-gray-700">{s.stage}</span>
                   </div>
                 ))}
