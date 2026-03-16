@@ -571,7 +571,7 @@ export default function Dashboard() {
               ))}
             </div>
 
-            {/* Edit profile + Commander Card links */}
+            {/* Edit profile + Commander Card + Contact links */}
             <div className="pt-1 border-t border-zinc-800 flex items-center justify-between">
               <button
                 onClick={() => router.push('/profile/edit')}
@@ -582,6 +582,17 @@ export default function Dashboard() {
                     stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 Edit profile
+              </button>
+              <button
+                onClick={() => router.push('/contact')}
+                className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1"
+              >
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
+                  <path d="M1 2.5h10a.5.5 0 01.5.5v6a.5.5 0 01-.5.5H1a.5.5 0 01-.5-.5V3a.5.5 0 01.5-.5z"
+                    stroke="currentColor" strokeWidth="1.2" />
+                  <path d="M1 3l5 4 5-4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                </svg>
+                Contact
               </button>
               <button
                 onClick={() => router.push('/card')}
