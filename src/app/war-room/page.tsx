@@ -35,24 +35,24 @@ export default function WarRoomPage() {
     try {
       const html2canvas = (await import('html2canvas')).default;
       const el = planCardRef.current;
-
-      // Force layout recalc before measuring
-      el.style.overflow = 'visible';
-      const rect = el.getBoundingClientRect();
-      const w = Math.round(rect.width);
-      const h = Math.round(el.scrollHeight);
+      const fullHeight = el.scrollHeight;
+      const fullWidth = el.offsetWidth;
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const canvas = await html2canvas(el, {
         useCORS: true,
         logging: false,
-        width: w,
-        height: h,
-        x: 0,
-        y: 0,
+        width: fullWidth,
+        height: fullHeight,
+        onclone: (clonedDoc: Document) => {
+          const clonedEl = clonedDoc.querySelector('[data-capture="plan-card"]') as HTMLElement;
+          if (clonedEl) {
+            clonedEl.style.height = fullHeight + 'px';
+            clonedEl.style.overflow = 'visible';
+            clonedEl.style.position = 'relative';
+          }
+        },
       } as any);
-
-      el.style.overflow = '';
       const url = canvas.toDataURL('image/png');
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       if (isMobile) {
@@ -201,6 +201,7 @@ export default function WarRoomPage() {
 
             <div
               ref={planCardRef}
+              data-capture="plan-card"
               style={{
                 background: '#ffffff',
                 borderRadius: '16px',
