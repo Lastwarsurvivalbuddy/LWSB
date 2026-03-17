@@ -1,8 +1,12 @@
-// src/lib/lwtVIPData.ts
-// VIP Program — full level guide from LWT source, cross-referenced with vipData.ts
-// Source: lastwartutorial.com content extract
-// Note: vipData.ts already exists with milestone data. This module adds LWT-sourced
-//       strategy layer, earning methods, and spend-tier-specific guidance.
+// ============================================================
+// lwtVIPData.ts
+// VIP Program — Complete Guide
+// Last War: Survival Buddy
+// ============================================================
+// Sources: lastwartutorial.com/vip-program (verified March 2026)
+// Merged from lwtVIPData.ts + lwtVIPProgramData.ts
+// All mechanics confirmed against LWT source.
+// ============================================================
 
 export interface VIPEarningMethod {
   method: string;
@@ -25,162 +29,139 @@ export interface VIPSpendAdvice {
   keyPriority: string;
 }
 
-// ─── KEY MILESTONES (LWT-sourced, cross-checks vipData.ts) ──────────────────
-
+// ─── KEY MILESTONES ───────────────────────────────────────────
 export const VIP_LEVEL_BENEFITS: VIPLevelBenefit[] = [
   {
     level: 3,
     keyUnlock: 'Auto-battle feature unlocks',
     cumulativePoints: 1000,
     strategicImportance: 'HIGH',
-    notes:
-      'First meaningful unlock. Auto-battle saves time on zombie kills and missions. Get here quickly — even F2P can reach VIP 3 within the first week via free VIP points.',
+    notes: 'First meaningful unlock. Auto-battle saves time on zombie kills and missions. Get here quickly — even F2P can reach VIP 3 within the first week via free VIP points.',
   },
   {
     level: 5,
     keyUnlock: 'Faster building queue + additional building slot',
     cumulativePoints: 3500,
     strategicImportance: 'HIGH',
-    notes:
-      'Speeds up early progression significantly. Reachable within the first month without heavy spending.',
+    notes: 'VIP 5 is the threshold where major bonuses begin accelerating. Construction speed, research speed, and combat stats all become meaningful here. Reachable within the first month without heavy spending.',
   },
   {
     level: 8,
     keyUnlock: 'Shirley hero shard rewards begin / Special VIP daily gift',
     cumulativePoints: 15000,
     strategicImportance: 'CRITICAL',
-    notes:
-      'VIP 8 is the single most important milestone for mid-game players. Shirley is a top-tier support hero — the VIP 8 daily shards are a primary Shirley unlock path for F2P and budget players. Do not skip this milestone.',
+    notes: 'VIP 8 is the single most important milestone for mid-game players. Shirley is a top-tier support hero — the VIP 8 daily shards are a primary Shirley unlock path for F2P and budget players. Do not skip this milestone.',
   },
   {
     level: 10,
     keyUnlock: 'Daily VIP gift chest improves significantly',
     cumulativePoints: 36000,
     strategicImportance: 'MEDIUM',
-    notes:
-      'Noticeable daily reward improvement. Reachable for moderate spenders within 1–2 months.',
+    notes: 'Noticeable daily reward improvement. Reachable for moderate spenders within 1–2 months.',
   },
   {
     level: 11,
-    keyUnlock: 'Additional march slot unlocks',
+    keyUnlock: 'Additional march slot unlocks (4th march)',
     cumulativePoints: 55000,
     strategicImportance: 'CRITICAL',
-    notes:
-      'Extra march slot is massive — enables simultaneous gathering + combat marches. Huge QoL and event efficiency upgrade. High-priority target for all players.',
+    notes: 'Extra march slot is massive — enables simultaneous gathering + combat marches. Huge QoL and event efficiency upgrade. High-priority target for all players. Achievable at HQ 17 for F2P players who save diamonds consistently.',
   },
   {
     level: 13,
     keyUnlock: 'Improved daily VIP gift + faster research speed bonus',
     cumulativePoints: 100000,
     strategicImportance: 'MEDIUM',
-    notes:
-      'Research speed bonus compounds over time. Worthwhile long-term but not urgent.',
+    notes: 'Research speed bonus compounds over time. Worthwhile long-term but not urgent.',
   },
   {
     level: 15,
     keyUnlock: '5th march slot unlocks',
     cumulativePoints: 200000,
     strategicImportance: 'CRITICAL',
-    notes:
-      '5th march is a major power multiplier — 5 simultaneous marches means 5x gathering, 5x combat presence. Target for serious investors. Requires sustained spending or VIP point farming over many months.',
+    notes: '5th march is a major power multiplier — 5 simultaneous marches means 5x gathering, 5x combat presence. Target for serious investors. Requires sustained spending or VIP point farming over many months.',
   },
   {
     level: 18,
-    keyUnlock: 'Maximum VIP tier — all bonuses active',
+    keyUnlock: 'Maximum VIP tier — all bonuses active + exclusive base skin',
     cumulativePoints: 1000000,
     strategicImportance: 'HIGH',
-    notes:
-      'Endgame tier for heavy investors. Full VIP 18 bonuses include max march slots, max daily gifts, and maximum speed bonuses across all categories. Long-term goal only.',
+    notes: 'Endgame tier for heavy investors. Full VIP 18 bonuses include max march slots, max daily gifts, and maximum speed bonuses. Special perk: developers create a custom Exclusive Base Skin specifically for you. Long-term goal only.',
   },
 ];
 
-// ─── VIP POINT EARNING METHODS ───────────────────────────────────────────────
-
+// ─── VIP POINT EARNING METHODS ────────────────────────────────
 export const VIP_EARNING_METHODS: VIPEarningMethod[] = [
   {
     method: 'Daily Login',
     pointsPerAction: '50–200 pts/day (scales with current VIP level)',
-    notes:
-      'Free and automatic. Log in every day — missing days compounds loss over months.',
+    notes: 'Free and automatic. Log in every day — missing days compounds loss over months.',
   },
   {
     method: 'Diamond Spending',
     pointsPerAction: '1 VIP point per 1 Diamond spent',
-    notes:
-      'Most efficient conversion rate for spenders. Every Diamond purchase through packs or the store generates VIP points. Primary earning method for paying players.',
+    notes: 'Most efficient conversion rate for spenders. Every Diamond purchase through packs or the store generates VIP points. Primary earning method for paying players.',
   },
   {
     method: 'Pack Purchases',
     pointsPerAction: 'Varies by pack — displayed at purchase',
-    notes:
-      'Always check VIP point value when evaluating a pack. Two packs with similar Diamond counts can differ significantly in VIP points awarded.',
+    notes: 'Always check VIP point value when evaluating a pack. Two packs with similar Diamond counts can differ significantly in VIP points awarded.',
   },
   {
     method: 'VIP Gift Cards / VIP Scrolls',
     pointsPerAction: 'Fixed amount per card',
-    notes:
-      'Obtainable from events and the Alliance store. Stockpile and use in bulk when close to a key VIP milestone.',
+    notes: 'Obtainable from events and the Alliance store. Alliance store has a weekly purchase limit — buy every week. Stockpile and spend in bulk when close to a key milestone.',
   },
   {
     method: 'Season Battle Pass',
     pointsPerAction: 'Lump sum of VIP points awarded at purchase',
-    notes:
-      'Season pass is one of the best-value purchases in the game — includes VIP points alongside speed-ups, heroes, and resources.',
+    notes: 'Season pass is one of the best-value purchases in the game — includes VIP points alongside speed-ups, heroes, and resources.',
   },
   {
     method: 'Event Rewards',
     pointsPerAction: 'Varies by event',
-    notes:
-      'Many timed events include VIP points in reward tiers. Participate in all events to accumulate passively.',
+    notes: 'Many timed events include VIP points in reward tiers. Participate in all events to accumulate passively.',
   },
   {
     method: 'Hot Deals Purchases',
     pointsPerAction: 'Displayed on deal',
-    notes:
-      'Hot Deals that include Diamond purchases generate VIP points. Factor this in when evaluating Hot Deal value.',
+    notes: 'Hot Deals that include Diamond purchases generate VIP points. Factor this in when evaluating Hot Deal value.',
   },
 ];
 
-// ─── SPEND TIER GUIDANCE ─────────────────────────────────────────────────────
-
+// ─── SPEND TIER GUIDANCE ──────────────────────────────────────
 export const VIP_SPEND_ADVICE: VIPSpendAdvice[] = [
   {
     spendTier: 'F2P (Free to Play)',
     targetVIPLevel: 'VIP 5–8',
-    strategy:
-      'Focus on daily login points and event rewards. Push to VIP 8 for Shirley shards — this alone justifies the slow climb. VIP Scrolls from Alliance store accelerate progress.',
-    keyPriority: 'Hit VIP 8 for Shirley. Every day of VIP 8+ is a free Shirley shard.',
+    strategy: 'Focus on daily login points and event rewards. Push to VIP 8 for Shirley shards — this alone justifies the slow climb. VIP Scrolls from Alliance store accelerate progress. Buy 24-hour VIP activations early, graduate to 7-day, then target 30-day by HQ 17 if diamonds are saved.',
+    keyPriority: 'Hit VIP 8 for Shirley. Every day of VIP 8+ is a free Shirley shard. Never miss daily login.',
   },
   {
     spendTier: 'Budget ($5–$30/mo)',
     targetVIPLevel: 'VIP 8–11',
-    strategy:
-      'Season Pass is the single best purchase — dense VIP points plus speed-ups and hero shards. Supplement with selective Hot Deals that include Diamond. Target VIP 11 for the extra march slot.',
+    strategy: 'Season Pass is the single best purchase — dense VIP points plus speed-ups and hero shards. Supplement with selective Hot Deals that include Diamond. Target VIP 11 for the extra march slot. Maintain 30-day VIP activations whenever possible.',
     keyPriority: 'Season Pass first. Then save for Hot Deals that push VIP 11 within 3–4 months.',
   },
   {
     spendTier: 'Mid ($50–$100/mo)',
     targetVIPLevel: 'VIP 11–13',
-    strategy:
-      'Season Pass + Monthly Card + selective Hot Deals. VIP 11 march slot should be reachable within 60–90 days. VIP 13 research bonus is worthwhile once 11 is locked.',
+    strategy: 'Season Pass + Monthly Card + selective Hot Deals. VIP 11 march slot should be reachable within 60–90 days. VIP 13 research bonus is worthwhile once 11 is locked. Always maintain 30-day VIP.',
     keyPriority: 'March slot at VIP 11 is the unlock that changes gameplay. Get there first.',
   },
   {
     spendTier: 'Investor ($200+/mo)',
     targetVIPLevel: 'VIP 15+',
-    strategy:
-      'VIP 15 (5th march) is achievable within 3–6 months at this spend rate. Prioritize packs with highest Diamond-to-VIP-point ratio. Evaluate every purchase for VIP value.',
+    strategy: 'VIP 15 (5th march) is achievable within 3–6 months at this spend rate. Prioritize packs with highest Diamond-to-VIP-point ratio. Evaluate every purchase for VIP value. Always maintain 30-day VIP.',
     keyPriority: '5th march at VIP 15 is the endgame efficiency multiplier. Everything leads here.',
   },
 ];
 
-// ─── VIP DAILY GIFTS BY TIER ─────────────────────────────────────────────────
-
+// ─── VIP DAILY GIFTS BY TIER ──────────────────────────────────
 export const VIP_DAILY_GIFT_NOTES: { levelRange: string; quality: string; notes: string }[] = [
   {
     levelRange: 'VIP 1–4',
     quality: 'Basic',
-    notes: 'Small resources and speed-ups. Valuable early but modest.',
+    notes: 'Small resources and speed-ups. Valuable early but modest. Claim golden chest daily regardless.',
   },
   {
     levelRange: 'VIP 5–7',
@@ -190,7 +171,7 @@ export const VIP_DAILY_GIFT_NOTES: { levelRange: string; quality: string; notes:
   {
     levelRange: 'VIP 8–10',
     quality: 'Good',
-    notes: 'Shirley shards begin at VIP 8. This is where daily gifts become genuinely impactful.',
+    notes: 'Shirley shards begin at VIP 8. This is where daily gifts become genuinely impactful. Two chests available: golden (upper right, all VIP levels) + blue (under VIP description, requires active VIP status).',
   },
   {
     levelRange: 'VIP 11–14',
@@ -204,53 +185,87 @@ export const VIP_DAILY_GIFT_NOTES: { levelRange: string; quality: string; notes:
   },
 ];
 
-// ─── GENERAL TIPS ────────────────────────────────────────────────────────────
-
+// ─── GENERAL TIPS ─────────────────────────────────────────────
 export const VIP_GENERAL_TIPS: { category: string; tip: string }[] = [
   {
-    category: 'Milestones',
-    tip:
-      'VIP 3 → VIP 8 → VIP 11 → VIP 15 are the four key targets. Everything else is a waypoint. Plan spending around hitting these in order.',
+    category: 'Core Concept',
+    tip: 'VIP Level and VIP Status are TWO SEPARATE THINGS. VIP Level is permanent — it never decreases. VIP Status is temporary activation purchased with diamonds. High VIP level means nothing if status is not active — all bonuses are locked until activated.',
+  },
+  {
+    category: 'Core Concept',
+    tip: 'When VIP status expires, your VIP level and accumulated points are fully retained. Only the bonuses go inactive. You never lose progression.',
+  },
+  {
+    category: 'Activation',
+    tip: 'ALWAYS activate VIP before starting long construction, research, or troop training. VIP bonuses apply only to actions STARTED while VIP is active — activating after an upgrade has begun does NOT reduce remaining time.',
+  },
+  {
+    category: 'Activation',
+    tip: 'VIP activation options: 1,000 diamonds = 24 hours. 3,000 diamonds = 7 days. 10,000 diamonds = 30 days. Monthly Pass (~30€) automatically grants 30 days. Additional time stacks if already active.',
+  },
+  {
+    category: 'Activation',
+    tip: '30-day activation is always the best diamond-to-time ratio. Prioritize this whenever possible. Target continuous 30-day activations as your default state.',
   },
   {
     category: 'Milestones',
-    tip:
-      'VIP 8 is the most underrated milestone in the game. The Shirley shard accumulation alone is worth the grind for F2P and budget players.',
+    tip: 'VIP 3 → VIP 8 → VIP 11 → VIP 15 are the four key targets. Everything else is a waypoint. Plan spending around hitting these in order.',
+  },
+  {
+    category: 'Milestones',
+    tip: 'VIP 8 is the most underrated milestone in the game. The Shirley shard accumulation alone is worth the grind for F2P and budget players.',
   },
   {
     category: 'Earning',
-    tip:
-      'Never miss daily login. 365 days of login VIP points adds up significantly toward the next milestone.',
+    tip: 'Never miss daily login. 365 days of login VIP points adds up significantly toward the next milestone.',
   },
   {
     category: 'Earning',
-    tip:
-      'VIP Scrolls from Alliance store have a weekly purchase limit. Buy them every week — they go directly toward your next milestone.',
+    tip: 'VIP Scrolls from Alliance store have a weekly purchase limit. Buy them every week — they go directly toward your next milestone.',
   },
   {
-    category: 'Spending',
-    tip:
-      'When close to a VIP milestone, stockpile VIP Scrolls and spend them all in one session to hit the milestone cleanly.',
+    category: 'Earning',
+    tip: '1-hour bonus VIP time trick: whenever you reach a new VIP level (green progress bar fills), you receive 1 free hour of VIP time — but only if VIP is not already active. Early-game F2P players can time their VIP point purchases to trigger this bonus on demand.',
   },
   {
-    category: 'Spending',
-    tip:
-      'Season Pass is always the best-value purchase for VIP progression. If you spend anything, start there.',
+    category: 'Daily Chests',
+    tip: 'Claim both free daily chests every day: golden chest (upper right corner of VIP page, all VIP levels) + blue chest (under VIP level description, requires active VIP status). Never skip these.',
   },
   {
     category: 'March Slots',
-    tip:
-      'VIP 11 (4th march) and VIP 15 (5th march) are the two most impactful gameplay unlocks in the entire VIP tree. Every other upgrade is incremental — these are step-changes.',
+    tip: 'VIP 11 (4th march) and VIP 15 (5th march) are the two most impactful gameplay unlocks in the entire VIP tree. Every other upgrade is incremental — these are step-changes.',
   },
   {
     category: 'F2P',
-    tip:
-      'F2P players who log in daily and buy Alliance store VIP Scrolls weekly can realistically reach VIP 8 within 2–3 months. It is slow but achievable.',
+    tip: 'F2P players who log in daily and buy Alliance store VIP Scrolls weekly can realistically reach VIP 8 within 2–3 months. It is slow but achievable.',
+  },
+  {
+    category: 'F2P',
+    tip: 'F2P target: reach 30-day VIP activations by HQ 17 if diamonds are saved. Prioritize VIP over speed-ups — VIP is always the better diamond investment.',
+  },
+  {
+    category: 'VIP Store',
+    tip: 'The shopping cart icon on the VIP page opens the VIP Store with exclusive items. Check it regularly.',
+  },
+  {
+    category: 'VIP 18',
+    tip: 'VIP 18 exclusive perk: developers create a custom Exclusive Base Skin specifically for your account. Highest prestige cosmetic in the game.',
   },
 ];
 
-// ─── SUMMARY FUNCTION ────────────────────────────────────────────────────────
+// ─── BUDDY RULES (prevent hallucination) ─────────────────────
+export const VIP_BUDDY_RULES: string[] = [
+  'ALWAYS distinguish VIP Level (permanent, never decreases) from VIP Status (temporary activation) — players frequently confuse them. Make this clear in every VIP answer.',
+  'VIP bonuses do NOT apply to in-progress actions — always tell players to activate BEFORE starting construction, research, or troop training.',
+  'When VIP expires, level and points are fully retained. Player never loses VIP level. Only bonuses go inactive.',
+  '30-day activation is the best value — recommend it whenever possible over shorter durations.',
+  'The 1-hour bonus VIP time trick on level-up is a useful early-game tip for F2P players who lack diamonds.',
+  'VIP 5 is the meaningful threshold — below this the bonuses are modest.',
+  'Never suggest spending diamonds on speed-ups over VIP activation — VIP is always the better investment.',
+  'Key milestones in priority order: VIP 8 (Shirley shards) → VIP 11 (4th march) → VIP 15 (5th march). Always frame advice around these.',
+];
 
+// ─── SUMMARY FUNCTION ─────────────────────────────────────────
 export function getLWTVIPSummary(): string {
   const milestones = VIP_LEVEL_BENEFITS.map(
     (v) =>
@@ -277,11 +292,29 @@ export function getLWTVIPSummary(): string {
     (t) => `  [${t.category}] ${t.tip}`
   ).join('\n');
 
-  return `## VIP System (Extended Guide)
+  const buddyRules = VIP_BUDDY_RULES.map(
+    (r, i) => `  ${i + 1}. ${r}`
+  ).join('\n');
 
-The VIP system rewards consistent spending and daily engagement with march slots, speed bonuses, daily gift chests, and hero shards. The four CRITICAL milestones are VIP 3, VIP 8, VIP 11, and VIP 15.
+  return `## VIP System — Complete Guide
 
-### Key Milestones
+### CRITICAL DISTINCTION
+VIP Level = permanent, never decreases. VIP Status = temporary activation purchased with diamonds.
+Having a high VIP level means NOTHING if status is not active — all bonuses are locked.
+When VIP expires: level and points are fully retained. Only bonuses go inactive.
+
+### VIP Activation Costs
+- 1,000 diamonds = 24 hours
+- 3,000 diamonds = 7 days
+- 10,000 diamonds = 30 days (best value — always recommend this)
+- Monthly Pass (~30€) = 30 days automatic
+Additional time stacks on existing time.
+
+### ACTIVATION RULE
+Always activate VIP BEFORE starting construction, research, or troop training.
+Bonuses do NOT apply retroactively to in-progress actions.
+
+### Key Milestones (priority targets)
 ${milestones}
 
 ### How to Earn VIP Points
@@ -293,7 +326,10 @@ ${spendAdvice}
 ### Daily Gift Quality by Level
 ${dailyGifts}
 
-### General Tips
+### Tips & Tricks
 ${tips}
+
+### Buddy Rules — Follow These Exactly
+${buddyRules}
 `;
 }
