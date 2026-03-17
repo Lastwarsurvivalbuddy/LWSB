@@ -2,8 +2,9 @@
 // Builds the system + user prompt for the Daily Briefing Card
 // Rewritten: March 11, 2026 (session 11) — tight constraints, correct duel day, no hallucination
 // Updated: March 15, 2026 (session 17) — beginner_mode support
+// Updated: March 17, 2026 (session 28) — radar task day guidance added
 
-// ─── Duel day — exact same logic as dashboard/page.tsx ────────────────────────
+// ─── Duel day — aligned to 2am UTC reset ─────────────────────────────────────
 
 function getDuelDay(): { day: number; name: string } {
   const duelDays: Record<number, string> = {
@@ -24,16 +25,25 @@ function getDuelDay(): { day: number; name: string } {
 }
 
 // ─── Duel day advice — only what we know for certain ─────────────────────────
+//
+// Radar task scoring:
+//   Day 1 (Radar Training) — radar tasks score VS points ✅ USE THEM
+//   Day 2 (Base Expansion) — radar tasks do NOT score    ⛔ SAVE for Day 3
+//   Day 3 (Age of Science) — radar tasks score VS points ✅ USE THEM
+//   Day 4 (Train Heroes)   — radar tasks do NOT score    ⛔ SAVE for Day 5
+//   Day 5 (Total Mob.)     — radar tasks score VS points ✅ USE THEM
+//   Day 6 (Enemy Buster)   — radar tasks do NOT score    free to use, not saving for Day 7
+//   Day 7 (Reset)          — radar tasks do NOT score    ⛔ SAVE for Day 1
 
 function getDuelAdvice(day: number): string {
   const advice: Record<number, string> = {
-    1: 'Duel Day 1 (Radar Training) — stack radar missions, save drone chip chests, align stamina use with Drone Boost Arms Race phase.',
-    2: 'Duel Day 2 (Base Expansion) — open pre-wrapped buildings, use Legendary Trade Truck if available (200K pts), align construction with City Building Arms Race phase.',
-    3: 'Duel Day 3 (Age of Science) — use research speedups, click to collect pre-staged research, use Valor Badges, align with Tech Research Arms Race phase.',
-    4: 'Duel Day 4 (Train Heroes) — use hero recruit tickets, spend UR/SSR shards if available, use Hero EXP, align with Hero Advancement Arms Race phase.',
-    5: 'Duel Day 5 (Total Mobilization) — best triple-dip day: construction + research + training all overlap Arms Race. Stack everything.',
-    6: 'Duel Day 6 (Enemy Buster) — war day, 4 alliance pts. Use healing speedups today (only day they score). Coordinate kills on opponent server. Remove wall defense or shield.',
-    7: 'Duel Day 7 (Reset) — no duel today. Claim rewards, queue upgrades, prep for Monday.',
+    1: 'Duel Day 1 (Radar Training) — radar tasks score VS points today: run them. Save drone chip chests. Align stamina use with Drone Boost Arms Race phase if active. Don\'t let radar tasks hit cap or you stop accruing.',
+    2: 'Duel Day 2 (Base Expansion) — open pre-wrapped buildings, use Legendary Trade Truck if available (200K pts), align construction with City Building Arms Race phase. Save radar tasks — they score on Day 3, not today.',
+    3: 'Duel Day 3 (Age of Science) — radar tasks score VS points today: run them. Use research speedups, click to collect pre-staged research, use Valor Badges. Align with Tech Research Arms Race phase if active.',
+    4: 'Duel Day 4 (Train Heroes) — use hero recruit tickets, spend UR/SSR shards if available, use Hero EXP, align with Hero Advancement Arms Race phase. Save radar tasks — they score on Day 5, not today.',
+    5: 'Duel Day 5 (Total Mobilization) — radar tasks score VS points today: run them. Best triple-dip day: construction + research + training all overlap Arms Race. Stack everything.',
+    6: 'Duel Day 6 (Enemy Buster) — war day, 4 alliance pts. Use healing speedups today (only day they score). Coordinate kills on opponent server. Remove wall defense or shield. Radar tasks don\'t score VS today — no need to save them either.',
+    7: 'Duel Day 7 (Reset) — no duel today. Claim rewards, queue upgrades, prep for Monday. Save radar tasks — they score VS points on Day 1 tomorrow.',
   }
   return advice[day] ?? "Check in-game calendar for today's duel day."
 }
@@ -42,13 +52,13 @@ function getDuelAdvice(day: number): string {
 
 function getDuelAdviceBeginner(day: number): string {
   const advice: Record<number, string> = {
-    1: 'Today is Radar Training day — this means you earn alliance points by doing radar missions (the radar tower in your base). It\'s a low-point day so don\'t burn your big speedups.',
-    2: 'Today is Base Expansion day — you earn points by upgrading buildings. If you have buildings ready to upgrade, today is the day to do it.',
-    3: 'Today is Age of Science day — you earn points by doing research (the research lab in your base). Queue up research and use speedups today.',
-    4: 'Today is Train Heroes day — you earn points by leveling up your heroes. Use any hero XP items or recruit tickets you\'ve been saving.',
-    5: 'Today is Total Mobilization day — the best day of the week. Building upgrades, research, AND troop training all earn points. Do as much as you can today.',
-    6: 'Today is Enemy Buster day — you earn points by fighting enemies. Attack infected zones and enemy bases. This is the highest point day.',
-    7: 'Today is the weekly reset — no alliance duel today. Collect your weekly rewards and get ready for next week.',
+    1: 'Today is Radar Training day — radar missions score alliance points today, so run them. The radar tower is in your base. Don\'t let your radar tasks fill up or you\'ll stop getting new ones.',
+    2: 'Today is Base Expansion day — you earn points by upgrading buildings. If you have buildings ready to upgrade, today is the day to do it. Save your radar missions for tomorrow (Day 3) — they score points then, not today.',
+    3: 'Today is Age of Science day — you earn points by doing research (the research lab in your base). Queue up research and use speedups today. Radar missions also score today, so run those too.',
+    4: 'Today is Train Heroes day — you earn points by leveling up your heroes. Use any hero XP items or recruit tickets you\'ve been saving. Save your radar missions for tomorrow (Day 5) — they score points then, not today.',
+    5: 'Today is Total Mobilization day — the best day of the week. Building upgrades, research, AND troop training all earn points. Do as much as you can today. Radar missions also score today, so run those too.',
+    6: 'Today is Enemy Buster day — you earn points by fighting enemies. Attack infected zones and enemy bases. This is the highest point day. Radar missions don\'t score today, but you don\'t need to save them either.',
+    7: 'Today is the weekly reset — no alliance duel today. Collect your weekly rewards and get ready for next week. Save your radar missions for tomorrow (Day 1) — they\'ll score points then.',
   }
   return advice[day] ?? "Check your in-game calendar for today's event."
 }
@@ -112,7 +122,7 @@ SITUATION
 [One sentence: server day, today's duel day and name, one honest observation about this player's current situation]
 
 TOP 3 MOVES
-• [Action grounded in duel day context]
+• [Action grounded in duel day context — include radar task guidance if relevant today]
 • [Action grounded in player's troop tier / HQ level]
 • [Action grounded in spend tier or rank]
 
@@ -147,7 +157,7 @@ SITUATION
 [One friendly sentence: what day it is, what's happening today in the game, and one encouraging observation about where this player is]
 
 TOP 3 MOVES
-• [Most important action today — explain what it is AND why it matters, in plain English]
+• [Most important action today — explain what it is AND why it matters, in plain English. Include radar task guidance if relevant today.]
 • [Second action grounded in their HQ level or troop tier — explain the why]
 • [Third action grounded in their spend tier or rank — keep it simple]
 
