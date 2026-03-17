@@ -1,6 +1,8 @@
 // src/app/api/briefing/route.ts
-// Daily Briefing Card — generates once per day per user, cached in Supabase
-// Built: March 11, 2026 (session 11) — fixed session 14: UTC date consistency
+// Daily Briefing Card — generates once per duel day per user, cached in Supabase
+// Built: March 11, 2026 (session 11)
+// Fixed session 14: UTC date consistency
+// Fixed session 28: cache key aligned to duel reset (2am UTC), not midnight UTC
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
@@ -15,12 +17,16 @@ function getSupabase() {
   );
 }
 
-// Always derive date from UTC — never local time
-function getUTCDateString(): string {
+// Duel day resets at 2am UTC — subtract 2 hours so the cache key
+// aligns with the duel period, not the UTC calendar date.
+// Example: 1:30am UTC Tuesday → cache key is still Monday's date.
+// Example: 2:01am UTC Tuesday → cache key flips to Tuesday's date.
+function getDuelDateString(): string {
   const now = new Date();
-  const year = now.getUTCFullYear();
-  const month = String(now.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(now.getUTCDate()).padStart(2, '0');
+  const adjusted = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+  const year = adjusted.getUTCFullYear();
+  const month = String(adjusted.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(adjusted.getUTCDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
 
@@ -39,17 +45,17 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const today = getUTCDateString();
+    const duelDate = getDuelDateString();
 
     // ── Check cache ───────────────────────────────────────────────────────────
     const { data: cached } = await supabase
       .from('daily_briefings')
       .select('briefing_text, briefing_date, generated_at')
       .eq('user_id', user.id)
-      .eq('briefing_date', today)
+      .eq('briefing_date', duelDate)
       .single();
 
-    if (cached?.briefing_text && cached.briefing_date === today) {
+    if (cached?.briefing_text && cached.briefing_date === duelDate) {
       return NextResponse.json({
         briefing: cached.briefing_text,
         cached: true,
@@ -107,7 +113,7 @@ export async function GET(req: NextRequest) {
       .from('daily_briefings')
       .upsert({
         user_id: user.id,
-        briefing_date: today,
+        briefing_date: duelDate,
         briefing_text: briefingText,
         generated_at: now,
       }, { onConflict: 'user_id,briefing_date' });
@@ -116,7 +122,7 @@ export async function GET(req: NextRequest) {
       briefing: briefingText,
       cached: false,
       generatedAt: now,
-      briefingDate: today,
+      briefingDate: duelDate,
     });
 
   } catch (err) {
@@ -136,13 +142,13 @@ export async function POST(req: NextRequest) {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const today = getUTCDateString();
+    const duelDate = getDuelDateString();
 
     await supabase
       .from('daily_briefings')
       .delete()
       .eq('user_id', user.id)
-      .eq('briefing_date', today);
+      .eq('briefing_date', duelDate);
 
     return NextResponse.json({ cleared: true });
   } catch (err) {
