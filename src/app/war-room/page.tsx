@@ -35,35 +35,50 @@ export default function WarRoomPage() {
     try {
       const html2canvas = (await import('html2canvas')).default;
       const el = planCardRef.current;
-      const fullHeight = el.scrollHeight;
-      const fullWidth = el.offsetWidth;
+
+      // Clone the card at a fixed 600px width off-screen so html2canvas
+      // always captures the full card regardless of mobile screen width
+      const clone = el.cloneNode(true) as HTMLElement;
+      clone.style.cssText = `
+        position: fixed;
+        top: -9999px;
+        left: -9999px;
+        width: 600px;
+        overflow: visible;
+        font-family: system-ui, -apple-system, sans-serif;
+        background: #ffffff;
+        border-radius: 16px;
+        border: 1px solid #e5e7eb;
+        z-index: -1;
+      `;
+      document.body.appendChild(clone);
+
+      // Wait one frame for layout
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const captureHeight = clone.scrollHeight;
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const canvas = await html2canvas(el, {
+      const canvas = await html2canvas(clone, {
         useCORS: true,
         logging: false,
-        width: fullWidth,
-        height: fullHeight,
-        onclone: (clonedDoc: Document) => {
-          const clonedEl = clonedDoc.querySelector('[data-capture="plan-card"]') as HTMLElement;
-          if (clonedEl) {
-            clonedEl.style.height = fullHeight + 'px';
-            clonedEl.style.overflow = 'visible';
-            clonedEl.style.position = 'relative';
-          }
-        },
+        width: 600,
+        height: captureHeight,
       } as any);
+
+      document.body.removeChild(clone);
+
       const url = canvas.toDataURL('image/png');
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       if (isMobile) {
         const overlay = document.createElement('div');
         overlay.style.cssText = 'position:fixed;inset:0;background:#0a0a0a;z-index:9999;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;align-items:center;padding:20px;';
-        const img = document.createElement('img');
-        img.src = url;
-        img.style.cssText = 'width:100%;border-radius:12px;display:block;margin-top:20px;';
         const msg = document.createElement('p');
         msg.innerText = 'Press and hold image → Save to Photos';
-        msg.style.cssText = 'color:#e8a020;font-size:15px;font-family:sans-serif;margin-top:16px;text-align:center;flex-shrink:0;';
+        msg.style.cssText = 'color:#e8a020;font-size:15px;font-family:sans-serif;margin-top:16px;margin-bottom:16px;text-align:center;flex-shrink:0;';
+        const img = document.createElement('img');
+        img.src = url;
+        img.style.cssText = 'width:100%;border-radius:12px;display:block;';
         const btn = document.createElement('button');
         btn.innerText = '✕ Close';
         btn.style.cssText = 'margin-top:16px;margin-bottom:32px;background:#333;color:#fff;border:none;padding:10px 24px;border-radius:8px;font-size:14px;cursor:pointer;flex-shrink:0;';
