@@ -4,9 +4,9 @@
 // Updated: March 15, 2026 (session 17) — beginner_mode support
 // Updated: March 17, 2026 (session 28) — radar task day guidance added
 // Updated: March 17, 2026 (session 30) — supplemental Alliance Duel scoring tips added per day
+// Updated: March 17, 2026 (session 38) — use server_day only, not computed_server_day (runs ahead of reset)
 
-// ─── Duel day — aligned to duel reset ────────────────────────────────────────
-
+// ─── Duel day — aligned to duel reset ─────────────────────────────────────────
 function getDuelDay(): { day: number; name: string } {
   const duelDays: Record<number, string> = {
     1: 'Radar Training',
@@ -25,17 +25,7 @@ function getDuelDay(): { day: number; name: string } {
   return { day, name: duelDays[day] ?? 'Unknown' }
 }
 
-// ─── Duel day advice — only what we know for certain ─────────────────────────
-//
-// Radar task scoring:
-//   Day 1 (Radar Training) — radar tasks score VS points ✅ USE THEM
-//   Day 2 (Base Expansion) — radar tasks do NOT score    ⛔ SAVE for Day 3
-//   Day 3 (Age of Science) — radar tasks score VS points ✅ USE THEM
-//   Day 4 (Train Heroes)   — radar tasks do NOT score    ⛔ SAVE for Day 5
-//   Day 5 (Total Mob.)     — radar tasks score VS points ✅ USE THEM
-//   Day 6 (Enemy Buster)   — radar tasks do NOT score    free to use, not saving for Day 7
-//   Day 7 (Reset)          — radar tasks do NOT score    ⛔ SAVE for Day 1
-
+// ─── Duel day advice ───────────────────────────────────────────────────────────
 function getDuelAdvice(day: number): string {
   const advice: Record<number, string> = {
     1: 'Duel Day 1 (Radar Training) — radar tasks score VS points today: run them. Save drone chip chests. Align stamina use with Drone Boost Arms Race phase if active. Don\'t let radar tasks hit cap or you stop accruing. Advanced Scoring Tips to maximize Alliance Duel: review your alliance duel scoring theme. Open drone chip chests today — they score. If you sent gathering squads out before reset, call them back now for Day 1 gathering points. Don\'t let your radar task queue fill up or accrual stops.',
@@ -49,8 +39,7 @@ function getDuelAdvice(day: number): string {
   return advice[day] ?? "Check in-game calendar for today's duel day."
 }
 
-// ─── Beginner duel advice — plain English version ─────────────────────────────
-
+// ─── Beginner duel advice ──────────────────────────────────────────────────────
 function getDuelAdviceBeginner(day: number): string {
   const advice: Record<number, string> = {
     1: 'Today is Radar Training day — radar missions score alliance points today, so run them. The radar tower is in your base. Don\'t let your radar tasks fill up or you\'ll stop getting new ones. Tip: open any drone chests you have saved — they score today too. If you sent troops out gathering before reset, call them back now to get gathering points for today.',
@@ -64,8 +53,7 @@ function getDuelAdviceBeginner(day: number): string {
   return advice[day] ?? "Check your in-game calendar for today's event."
 }
 
-// ─── Spend tier label ─────────────────────────────────────────────────────────
-
+// ─── Spend tier label ──────────────────────────────────────────────────────────
 function getSpendLabel(spendTier: string): string {
   const map: Record<string, string> = {
     f2p: 'F2P',
@@ -78,13 +66,14 @@ function getSpendLabel(spendTier: string): string {
   return map[spendTier] ?? spendTier
 }
 
-// ─── Main export ──────────────────────────────────────────────────────────────
-
+// ─── Main export ───────────────────────────────────────────────────────────────
 export async function buildBriefingPrompt(profile: Record<string, unknown>): Promise<{
-  systemPrompt: string;
-  userPrompt: string;
+  systemPrompt: string
+  userPrompt: string
 }> {
-  const serverDay = Number(profile.computed_server_day ?? profile.server_day ?? 1)
+  // Use server_day only — computed_server_day increments ahead of the actual reset
+  // and will show tomorrow's day until reset actually fires at 2am UTC
+  const serverDay = Number(profile.server_day ?? 1)
   const hqLevel = Number(profile.hq_level ?? 1)
   const season = Number(profile.season ?? 0)
   const spendTier = String(profile.spend_style ?? profile.spend_tier ?? 'f2p')
@@ -103,10 +92,8 @@ export async function buildBriefingPrompt(profile: Record<string, unknown>): Pro
   const duelAdvice = beginnerMode ? getDuelAdviceBeginner(duel.day) : getDuelAdvice(duel.day)
   const spendLabel = getSpendLabel(spendTier)
 
-  // ── Standard mode prompt ──────────────────────────────────────────────────
-
-  const standardSystemPrompt = `You are Last War: Survival Buddy — a tactical AI coach for Last War: Survival.
-You are generating a Daily Briefing Card for one specific player.
+  // ── Standard mode prompt ─────────────────────────────────────────────────────
+  const standardSystemPrompt = `You are Last War: Survival Buddy — a tactical AI coach for Last War: Survival. You are generating a Daily Briefing Card for one specific player.
 
 STRICT RULES — violations destroy the product:
 - Only give advice directly supported by the profile data and duel day context provided. Nothing else.
@@ -132,10 +119,8 @@ WATCH OUT
 
 Tone: direct, no fluff, no hype. Coach voice.`
 
-  // ── Beginner mode prompt ──────────────────────────────────────────────────
-
-  const beginnerSystemPrompt = `You are Last War: Survival Buddy — a friendly guide for players who are new to Last War: Survival.
-You are generating a Daily Briefing Card for a beginner player.
+  // ── Beginner mode prompt ─────────────────────────────────────────────────────
+  const beginnerSystemPrompt = `You are Last War: Survival Buddy — a friendly guide for players who are new to Last War: Survival. You are generating a Daily Briefing Card for a beginner player.
 
 STRICT RULES — violations destroy the product:
 - Only give advice directly supported by the profile data and duel day context provided. Nothing else.
