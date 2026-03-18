@@ -3,9 +3,8 @@
 // Updated: March 8, 2026 — profile data model redesign (buckets replace raw stats)
 // Updated: March 9, 2026 — corrected Alliance Duel day mapping + real game labels
 // Updated: March 17, 2026 — beginner_mode support
-// Updated: March 17, 2026 — hero upgrades locked to Day 4 only (never recommend outside Train Heroes day)
-//                          — greeting uses commander_name, not HQ level
-//                          — beginner troop training only on Day 5
+// Updated: March 17, 2026 — hero upgrades locked to Day 4 only, greeting uses commander_name
+// Updated: March 17, 2026 — full day-by-day beginner plan rewrite with correct per-day actions
 
 import type { SquadPowerTier, RankBucket, PowerBucket, KillTier } from '@/lib/profileTypes'
 import { SQUAD_POWER_TIER_LABELS, RANK_BUCKET_LABELS, KILL_TIER_TITLES } from '@/lib/profileTypes'
@@ -87,11 +86,10 @@ export function getNextExpBreakpoint(currentHeroLevel: number): { level: number;
 // ─── Alliance Duel Day Calculation ─────────────────────────────────────────────
 // Reset is always 2am UTC — no DST adjustment ever applied
 //
-// Confirmed schedule (Server 1032):
 // 2am UTC Mon → Day 1: Radar Training      (1 pt)
 // 2am UTC Tue → Day 2: Base Expansion      (2 pts)
 // 2am UTC Wed → Day 3: Age of Science      (2 pts)
-// 2am UTC Thu → Day 4: Train Heroes        (2 pts)  ← ONLY day to recommend hero upgrades
+// 2am UTC Thu → Day 4: Train Heroes        (2 pts)  ← ONLY day for hero upgrades
 // 2am UTC Fri → Day 5: Total Mobilization  (2 pts)
 // 2am UTC Sat → Day 6: Enemy Buster        (4 pts)
 // 2am UTC Sun → Day 7: Reset               (0 pts)
@@ -104,7 +102,7 @@ interface DuelDayResult {
 
 export function getDuelDay(now: Date = new Date()): DuelDayResult {
   const adjusted = new Date(now.getTime() - 2 * 60 * 60 * 1000)
-  const utcDay = adjusted.getUTCDay() // 0=Sun, 1=Mon, ..., 6=Sat
+  const utcDay = adjusted.getUTCDay()
   const schedule: Record<number, DuelDayResult> = {
     0: { day: 7, label: 'Reset',              points: 0 },
     1: { day: 1, label: 'Radar Training',     points: 1 },
@@ -131,7 +129,7 @@ export interface CommanderProfile {
   squad_power_tier?: SquadPowerTier
   power_bucket?: PowerBucket
   kill_tier?: KillTier
-  tier?: string // subscription tier
+  tier?: string
   beginner_mode?: boolean
 }
 
@@ -157,12 +155,14 @@ function getGreeting(profile: CommanderProfile): string {
 }
 
 // ─── Beginner Action Plan Generator ────────────────────────────────────────────
-// Plain English. One clear task at a time. No jargon. No endgame content.
-// Max 4 actions. Encouraging tone.
 // HARD RULES:
-//   - Hero upgrades: Day 4 ONLY. No exceptions.
-//   - Troop training: Day 5 ONLY (Total Mobilization), or if literally nothing else to do.
-//   - HQ push: Always present except reset day.
+//   - Hero upgrades: Day 4 ONLY. Never any other day.
+//   - Troop training: Day 5 ONLY.
+//   - No HQ push action on any day.
+//   - Radar tasks: open Days 1, 3, 5 only. Save all other days.
+//   - Survivor cards: open Day 2 only. Never mention saving them.
+//   - Gold tasks/trucks: Day 2 and Day 6 only.
+//   - Never mention starting builds or saving survivors.
 
 function generateBeginnerActionPlan(profile: CommanderProfile): ActionPlanResult {
   const actions: DailyAction[] = []
@@ -171,58 +171,183 @@ function generateBeginnerActionPlan(profile: CommanderProfile): ActionPlanResult
   const maxHeroLevel = getMaxHeroLevelForHQ(hq)
   const nextBreakpoint = getNextExpBreakpoint(maxHeroLevel)
 
-  // ── Today's alliance event (plain English) ──
-  const duelAction = getBeginnerDuelAction(day, label, points, hq, profile)
-  if (duelAction) actions.push(duelAction)
+  switch (day) {
 
-  // ── HQ upgrade push — always present except reset day ──
-  if (day !== 7) {
-    actions.push({
-      id: 'hq_push_beginner',
-      category: 'general',
-      priority: hq < 16 ? 'high' : 'medium',
-      title: '🏠 Push Your HQ Upgrade',
-      detail: `Your HQ is level ${hq}. ${hq < 20
-        ? `Getting your HQ higher is your most important long-term goal — it unlocks stronger troops, more buildings, and bigger hero levels. Make sure your next HQ upgrade is queued and work on clearing any requirements blocking it.`
-        : `Keep pushing HQ upgrades — every level unlocks more power. Make sure your next upgrade is queued.`}`,
-      buddyPrompt: `I'm at HQ ${hq}, server day ${profile.server_day ?? '?'}. What do I need to do to upgrade my HQ to the next level, and what should I be doing today to get there faster?`,
-    })
+    // ── DAY 1: Radar Training ──────────────────────────────────────────────────
+    case 1:
+      actions.push({
+        id: 'day1_drone',
+        category: 'general',
+        priority: 'critical',
+        title: '🚁 Upgrade Drone Data & Parts',
+        detail: 'Use your drone data and drone parts to upgrade your drone today. This is the primary scoring action for Radar Training day (1 pt). Check all available drone upgrade slots.',
+        buddyPrompt: `Today is Alliance Duel Day 1 — Radar Training. I'm at HQ ${hq}. How do I upgrade my drone efficiently? What data and parts should I prioritize?`,
+        points: 1,
+      })
+      actions.push({
+        id: 'day1_radar',
+        category: 'general',
+        priority: 'high',
+        title: '📡 Clear Your Radar Tasks',
+        detail: 'Today is one of three days this week where radar tasks score VS points (Days 1, 3, 5). Open and complete your radar tasks now.',
+        buddyPrompt: `Today is Day 1 — radar tasks score today. I'm at HQ ${hq}. Which radar tasks should I prioritize and how do I complete them efficiently?`,
+      })
+      actions.push({
+        id: 'day1_gather',
+        category: 'general',
+        priority: 'medium',
+        title: '🌾 Send Out Gatherers',
+        detail: 'Send your troops out to gather resources on the map. Keep your marches busy all day. Focus on whatever resource is your current bottleneck.',
+        buddyPrompt: `I'm at HQ ${hq} on server day ${profile.server_day ?? '?'}. What resources should I be gathering today and what's the most efficient gathering setup for my level?`,
+      })
+      break
+
+    // ── DAY 2: Base Expansion ──────────────────────────────────────────────────
+    case 2:
+      actions.push({
+        id: 'day2_builds',
+        category: 'alliance_duel',
+        priority: 'critical',
+        title: '🏗️ Complete Building Upgrades — Scores Today',
+        detail: 'Today is Base Expansion — finishing building upgrades earns alliance points (2 pts). Complete anything in queue and keep your builders busy all day.',
+        buddyPrompt: `Today is Alliance Duel Day 2 — Base Expansion. I'm at HQ ${hq}, server day ${profile.server_day ?? '?'}. What buildings should I prioritize upgrading today to score the most alliance points?`,
+        points: 2,
+      })
+      actions.push({
+        id: 'day2_survivors',
+        category: 'general',
+        priority: 'high',
+        title: '🃏 Open Your Survivor Recruitment Tickets',
+        detail: 'Survivor Recruitment Tickets score VS points on Day 2 only. Open all your tickets now to earn points for your alliance.',
+        buddyPrompt: `Today is Day 2 — survivor tickets score today. I'm at HQ ${hq}. How do I get the most out of my survivor tickets and what survivors should I be looking for at my level?`,
+      })
+      actions.push({
+        id: 'day2_tasks',
+        category: 'general',
+        priority: 'medium',
+        title: '✅ Deploy Gold Tasks & Gold Trucks Only',
+        detail: 'Only use gold (high-value) tasks and gold trucks today — they score the most VS points. Skip silver and bronze tasks. Save radar tasks — today is not a radar scoring day.',
+        buddyPrompt: `Today is Day 2. I'm at HQ ${hq}. How do I identify gold tasks vs lower-tier tasks, and how do I maximize VS points from tasks today?`,
+      })
+      break
+
+    // ── DAY 3: Age of Science ──────────────────────────────────────────────────
+    case 3:
+      actions.push({
+        id: 'day3_research',
+        category: 'research',
+        priority: 'critical',
+        title: '🔬 Complete Research — Scores Today',
+        detail: 'Today is Age of Science — completing research earns alliance points (2 pts). Finish anything in queue and start new research. Use Secretary of Science to cut time. Focus on Military tree.',
+        buddyPrompt: `Today is Alliance Duel Day 3 — Age of Science. I'm at HQ ${hq}, troop type ${profile.troop_type}. What research should I complete today for the most alliance points and best long-term progression?`,
+        points: 2,
+      })
+      actions.push({
+        id: 'day3_drone_chests',
+        category: 'general',
+        priority: 'high',
+        title: '📦 Open Drone Component Chests',
+        detail: 'Open your drone component chests today — these score VS points on Day 3. Check your inventory for any drone component chests and open them all.',
+        buddyPrompt: `Today is Day 3 — drone component chests score today. I'm at HQ ${hq}. How do I get more drone component chests and what components should I prioritize?`,
+      })
+      actions.push({
+        id: 'day3_radar',
+        category: 'general',
+        priority: 'high',
+        title: '📡 Open Radar Tasks — Scores Today',
+        detail: 'Today is one of three radar scoring days (Days 1, 3, 5). Open and complete your radar tasks now to earn VS points.',
+        buddyPrompt: `Today is Day 3 — radar tasks score today. I'm at HQ ${hq}. Which radar tasks give the most points and how should I complete them?`,
+      })
+      break
+
+    // ── DAY 4: Train Heroes ────────────────────────────────────────────────────
+    case 4:
+      actions.push({
+        id: 'day4_heroes',
+        category: 'heroes',
+        priority: 'critical',
+        title: '🦸 Hero Day — Use Your EXP Items NOW',
+        detail: `Today is Train Heroes — the ONLY day of the week to spend Hero EXP items. Every hero level scores alliance points (2 pts). Your heroes can reach level ${maxHeroLevel}. ${nextBreakpoint ? `Push toward level ${nextBreakpoint.level} for a power spike.` : 'Push your main hero as high as you can.'} Use everything you have saved.`,
+        buddyPrompt: `Today is Alliance Duel Day 4 — Train Heroes, the only day hero EXP scores. I'm at HQ ${hq}, max hero level ${maxHeroLevel}. Which heroes should I prioritize and how do I maximize alliance points today?`,
+        points: 2,
+      })
+      actions.push({
+        id: 'day4_radar_save',
+        category: 'general',
+        priority: 'medium',
+        title: '📡 Save Radar Tasks — Not a Scoring Day',
+        detail: 'Today is NOT a radar scoring day. Hold your radar tasks — use them on Days 1, 3, and 5 only.',
+        buddyPrompt: `Today is Day 4. I'm at HQ ${hq}. What else can I do today alongside hero leveling to maximize my progress?`,
+      })
+      break
+
+    // ── DAY 5: Total Mobilization ──────────────────────────────────────────────
+    case 5:
+      actions.push({
+        id: 'day5_troops',
+        category: 'troops',
+        priority: 'critical',
+        title: `🪖 Train ${getTroopTypeLabel(profile.troop_type)} Troops All Day`,
+        detail: `Today is Total Mobilization — every troop you train scores alliance points (2 pts). Keep your barracks running non-stop. Focus on ${getTroopTypeLabel(profile.troop_type)} troops at the highest tier you can train.`,
+        buddyPrompt: `Today is Alliance Duel Day 5 — Total Mobilization. I'm at HQ ${hq} with ${profile.troop_type} troops at ${profile.troop_tier}. How do I maximize troop training today for the most alliance points?`,
+        points: 2,
+      })
+      actions.push({
+        id: 'day5_radar',
+        category: 'general',
+        priority: 'high',
+        title: '📡 Open Radar Tasks — Scores Today',
+        detail: 'Today is one of three radar scoring days (Days 1, 3, 5). Open and complete your radar tasks now to earn VS points alongside troop training.',
+        buddyPrompt: `Today is Day 5 — radar tasks score today. I'm at HQ ${hq}. Which radar tasks give the best return and how do I complete them alongside troop training?`,
+      })
+      break
+
+    // ── DAY 6: Enemy Buster ────────────────────────────────────────────────────
+    case 6:
+      actions.push({
+        id: 'day6_battle',
+        category: 'alliance_duel',
+        priority: 'critical',
+        title: '⚔️ Alliance Battle Day — Coordinate with Your Leader',
+        detail: 'Today is Enemy Buster — the highest-value alliance day of the week (4 pts). Your whole alliance attacks another server together. Check your alliance chat for instructions from your leader and participate.',
+        buddyPrompt: `Today is Alliance Duel Day 6 — Enemy Buster, worth 4 alliance points. I'm at HQ ${hq}. How can I contribute to my alliance today and what should I be doing during the battle?`,
+        points: 4,
+      })
+      actions.push({
+        id: 'day6_tasks',
+        category: 'general',
+        priority: 'high',
+        title: '✅ Deploy Gold Tasks & Gold Trucks Only',
+        detail: 'Only use gold (high-value) tasks and gold trucks today — they score the most VS points. Skip silver and bronze tasks.',
+        buddyPrompt: `Today is Day 6. I'm at HQ ${hq}. How do I tell which tasks are gold tier, and how do I maximize VS points from tasks alongside the alliance battle?`,
+      })
+      break
+
+    // ── DAY 7: Reset ───────────────────────────────────────────────────────────
+    case 7:
+      actions.push({
+        id: 'day7_gather',
+        category: 'general',
+        priority: 'medium',
+        title: '🌾 Start Long Gather Runs Before Reset',
+        detail: 'Before the 2am UTC reset, send your troops out on long gathering runs. They\'ll complete after the reset and resources count toward Day 1 gathering points.',
+        buddyPrompt: `Today is Alliance Duel reset day. I'm at HQ ${hq}. How do I set up gathering runs before the reset to maximize my Day 1 resources? What should I be gathering?`,
+      })
+      actions.push({
+        id: 'day7_radar_save',
+        category: 'general',
+        priority: 'medium',
+        title: '📡 Save Radar Tasks — Use Tomorrow on Day 1',
+        detail: 'Today is NOT a radar scoring day. Hold your radar tasks and use them tomorrow on Day 1 when they score VS points.',
+        buddyPrompt: `Today is the reset day. I'm at HQ ${hq}. What should I do to set myself up well for the new week?`,
+      })
+      break
   }
 
-  // ── Hero leveling — DAY 4 ONLY ──
-  // HARD RULE: Never recommend hero upgrades on any other day.
-  // Hero EXP, skill medals, exclusive weapons all score on Duel Day 4 (Train Heroes).
-  // Spending them any other day wastes VS points.
-  if (day === 4) {
-    actions.push({
-      id: 'hero_level_beginner',
-      category: 'heroes',
-      priority: 'critical',
-      title: '🦸 Hero Day — Level Up Your Heroes NOW',
-      detail: `Today is Train Heroes day — the ONLY day of the week to use your Hero EXP items. Every hero level earns alliance points. Your heroes can reach level ${maxHeroLevel} right now. ${nextBreakpoint ? `Push toward level ${nextBreakpoint.level} — that's when they get a noticeable power spike.` : 'Push your main hero as high as you can.'} Use all the EXP items you've been saving.`,
-      buddyPrompt: `Today is Alliance Duel Day 4 — Train Heroes. I'm at HQ ${hq} and my heroes can reach level ${maxHeroLevel}. Which heroes should I prioritize and how do I get the most alliance points today?`,
-      points: 2,
-    })
-  }
-
-  // ── Troop training — DAY 5 ONLY (Total Mobilization) ──
-  // On other days troop training doesn't score extra and is just filler noise.
-  if (day === 5 && profile.troop_tier === 'under_t10') {
-    actions.push({
-      id: 'troop_train_beginner',
-      category: 'troops',
-      priority: 'high',
-      title: `🪖 Train Troops All Day — It Scores Today`,
-      detail: `Today is Total Mobilization — every troop you train earns alliance points. Keep your barracks running non-stop all day. Focus on ${getTroopTypeLabel(profile.troop_type)} troops.`,
-      buddyPrompt: `Today is Alliance Duel Day 5 — Total Mobilization. I'm a newer player at HQ ${hq} with ${profile.troop_type} troops. How do I maximize troop training today for the most alliance points?`,
-    })
-  }
-
-  // Sort by priority
   const priorityOrder: Record<ActionPriority, number> = { critical: 0, high: 1, medium: 2, low: 3 }
   actions.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority])
 
-  const strategicInsight = getBeginnerStrategicInsight(day, label, hq)
+  const strategicInsight = getBeginnerStrategicInsight(day, hq)
 
   return {
     actions: actions.slice(0, 4),
@@ -236,109 +361,26 @@ function generateBeginnerActionPlan(profile: CommanderProfile): ActionPlanResult
   }
 }
 
-function getBeginnerDuelAction(
-  day: number,
-  label: string,
-  points: number,
-  hq: number,
-  profile: CommanderProfile
-): DailyAction | null {
-  if (day === 7) {
-    return {
-      id: 'duel_reset_beginner',
-      category: 'alliance_duel',
-      priority: 'low',
-      title: '📅 Rest Day — No Alliance Event Today',
-      detail: 'The Alliance Duel resets today. No event scoring until tomorrow. Good day to collect resources, complete daily missions, and queue upgrades.',
-      buddyPrompt: `Today is the Alliance Duel reset day. I'm a newer player at HQ ${hq}. What are the best things to do on a rest day to set myself up for the week?`,
-    }
-  }
-
-  if (day === 1) {
-    return {
-      id: 'duel_radar_beginner',
-      category: 'alliance_duel',
-      priority: 'low',
-      title: '🚁 Alliance Event: Radar Training (Low-Key Day)',
-      detail: "Today is the lowest-scoring alliance day of the week (1 point). No special action required — just play normally. Good day to focus on your base and save resources for the bigger scoring days.",
-      buddyPrompt: `Today is Alliance Duel Day 1 — Radar Training, the lowest-scoring day. I'm at HQ ${hq}. What should I focus on to set up for the rest of the week?`,
-      points: 1,
-    }
-  }
-
-  if (day === 6) {
-    return {
-      id: 'duel_enemy_buster_beginner',
-      category: 'alliance_duel',
-      priority: 'critical',
-      title: '⚔️ Big Alliance Battle Day — Join Your Alliance!',
-      detail: "Today is the most important alliance day of the week (4 pts). Your whole alliance attacks another server together. Check in with your alliance leader for instructions. Even as a newer player, showing up helps.",
-      buddyPrompt: `Today is Alliance Duel Day 6 — Enemy Buster. I'm a newer player at HQ ${hq}. How can I help my alliance even at my level? What should I do?`,
-      points: 4,
-    }
-  }
-
-  const dayDetails: Record<number, { title: string; task: string; category: ActionCategory }> = {
-    2: {
-      title: '🏗️ Alliance Event: Upgrade Your Base',
-      task: 'Complete building upgrades today — finishing upgrades earns alliance points. Make sure something is always building.',
-      category: 'alliance_duel',
-    },
-    3: {
-      title: '🔬 Alliance Event: Complete Research',
-      task: 'Finishing research earns alliance points today. If nothing is queued, start something new in the Military tree.',
-      category: 'research',
-    },
-    4: {
-      title: '🦸 Alliance Event: Train Heroes',
-      task: 'Today is the one day a week to use your Hero EXP items — every hero level earns alliance points. Save EXP for today every other day of the week.',
-      category: 'heroes',
-    },
-    5: {
-      title: '🪖 Alliance Event: Train Troops',
-      task: 'Train as many troops as you can today. Every troop trained earns alliance points. Keep your barracks full all day.',
-      category: 'troops',
-    },
-  }
-
-  const d = dayDetails[day]
-  if (!d) return null
-
-  return {
-    id: `duel_day${day}_beginner`,
-    category: d.category,
-    priority: 'critical',
-    title: d.title,
-    detail: `${d.task} This is one of the stronger scoring days of the week (${points} pts).`,
-    buddyPrompt: `Today is Alliance Duel Day ${day} (${label}). I'm a newer player at HQ ${hq}. What's the simplest way to earn as many alliance points as possible today?`,
-    points,
-  }
-}
-
 function getTroopTypeLabel(troopType: string): string {
   const map: Record<string, string> = { aircraft: 'Aircraft', tank: 'Tank', missile: 'Missile' }
   return map[troopType] ?? troopType
 }
 
-function getBeginnerStrategicInsight(day: number, label: string, hq: number): string {
-  if (day === 7) return `Rest day — no alliance event scoring today. Good time to collect resources, complete daily missions, and plan your next upgrade.`
-  if (day === 6) return `Today is the biggest alliance battle day of the week. Log in, check your alliance chat for instructions, and participate — even small contributions help.`
-  if (day === 1) return `Today is a low-key alliance day (Radar Training, 1 point). No pressure — just play normally and save your Hero EXP for Thursday's Train Heroes day.`
-  if (day === 4) return `Today is Train Heroes day — the ONLY day to use Hero EXP items. Every hero level scores alliance points. Don't level heroes on any other day.`
-  if (day >= 2 && day <= 5) {
-    const tasks: Record<number, string> = {
-      2: 'finishing building upgrades',
-      3: 'completing research',
-      5: 'training troops',
-    }
-    return `Today your alliance earns points by ${tasks[day] ?? 'the daily event'}. Focus on that one thing and you'll make a real difference for your team.`
+function getBeginnerStrategicInsight(day: number, hq: number): string {
+  const insights: Record<number, string> = {
+    1: `Today is Radar Training — upgrade your drone, clear radar tasks, and send gatherers out. Low-key scoring day.`,
+    2: `Today is Base Expansion — complete building upgrades and open your survivor tickets. Gold tasks and trucks only. Save radar tasks.`,
+    3: `Today is Age of Science — complete research and open drone component chests. Open your radar tasks today, they score now.`,
+    4: `Today is Train Heroes — the ONLY day to use Hero EXP items. Every level scores alliance points. Save radar tasks.`,
+    5: `Today is Total Mobilization — train troops non-stop and open your radar tasks. Both score alliance points today.`,
+    6: `Today is Enemy Buster — biggest alliance day of the week (4 pts). Coordinate with your leader. Gold tasks and trucks only.`,
+    7: `Today is reset day — no scoring. Start gather runs before the 2am UTC reset and save your radar tasks for tomorrow.`,
   }
-  return `HQ ${hq} — keep upgrading your base consistently. Every level unlocks new power.`
+  return insights[day] ?? `HQ ${hq} — keep building and stay consistent.`
 }
 
 // ─── Main Action Plan Generator ────────────────────────────────────────────────
 export function generateActionPlan(profile: CommanderProfile): ActionPlanResult {
-  // Route to beginner plan if beginner_mode is set
   if (profile.beginner_mode) {
     return generateBeginnerActionPlan(profile)
   }
@@ -346,168 +388,152 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
   const actions: DailyAction[] = []
   const { day, label, points } = getDuelDay()
 
-  const isDoubleDay    = day >= 2 && day <= 5
+  const isDoubleDay      = day >= 2 && day <= 5
   const isEnemyBusterDay = day === 6
-  const isDroneDay     = day === 1
-  const isResetDay     = day === 7
+  const isDroneDay       = day === 1
+  const isResetDay       = day === 7
 
-  const hq         = profile.hq_level || 1
-  const isEarlyGame  = hq < 16
-  const isMidGame    = hq >= 16 && hq < 30
-  const isEndGame    = hq >= 30
+  const hq          = profile.hq_level || 1
+  const isEarlyGame = hq < 16
+  const isMidGame   = hq >= 16 && hq < 30
+  const isEndGame   = hq >= 30
 
-  const isT11       = profile.troop_tier === 't11'
-  const isT10       = profile.troop_tier === 't10'
-  const isBelowT10  = profile.troop_tier === 'under_t10'
+  const isT11      = profile.troop_tier === 't11'
+  const isT10      = profile.troop_tier === 't10'
+  const isBelowT10 = profile.troop_tier === 'under_t10'
+  const isSpender  = ['investor', 'whale', 'mega_whale'].includes(profile.spend_style)
 
-  const isSpender   = ['investor', 'whale', 'mega_whale'].includes(profile.spend_style)
-
-  const maxHeroLevel     = getMaxHeroLevelForHQ(hq)
+  const maxHeroLevel      = getMaxHeroLevelForHQ(hq)
   const nextHeroMilestone = getNextHeroMilestone(hq)
   const nextBreakpoint    = getNextExpBreakpoint(maxHeroLevel)
 
-  // ── Double-dip days (Days 2–5) ──
   if (isDoubleDay) {
     actions.push({
       id: 'double_dip',
       category: 'alliance_duel',
       priority: 'critical',
       title: `⚡ Double-Dip Day — Duel Day ${day}: ${label} + Arms Race`,
-      detail: `Today is Alliance Duel Day ${day} (${label}, ${points} pts). Every action you take for the Duel ALSO scores Arms Race points. This is the highest efficiency play in the game. Focus: ${getDuelFocusDetail(day, profile)}.`,
-      buddyPrompt: `Today is Alliance Duel Day ${day} (${label}). Help me maximize both my Duel score AND Arms Race points at the same time. My HQ is ${hq}, troop tier is ${profile.troop_tier}, playstyle is ${profile.playstyle}.`,
+      detail: `Today is Alliance Duel Day ${day} (${label}, ${points} pts). Every action you take for the Duel ALSO scores Arms Race points. Focus: ${getDuelFocusDetail(day, profile)}.`,
+      buddyPrompt: `Today is Alliance Duel Day ${day} (${label}). Help me maximize both my Duel score AND Arms Race points. My HQ is ${hq}, troop tier is ${profile.troop_tier}, playstyle is ${profile.playstyle}.`,
       points,
     })
   }
 
-  // ── Enemy Buster Day (Day 6) ──
   if (isEnemyBusterDay) {
     actions.push({
       id: 'enemy_buster',
       category: 'alliance_duel',
       priority: 'critical',
       title: '🔥 Enemy Buster Day — 4 Alliance Points (Max Value)',
-      detail: 'Day 6 of Alliance Duel is the highest-value day of the week (4 pts). Your alliance is attacking the opponent server. Coordinate with alliance, maximize kills, use march buffs.',
-      buddyPrompt: `Today is Alliance Duel Day 6 — Enemy Buster, worth 4 alliance points. Help me maximize my contribution. My HQ is ${hq}, Squad 1 power is ${squadPowerLabel(profile.squad_power_tier)}, troop type is ${profile.troop_type}, rank is ${rankLabel(profile.rank_bucket)}.`,
+      detail: 'Day 6 of Alliance Duel is the highest-value day of the week (4 pts). Coordinate with alliance, maximize kills, use march buffs.',
+      buddyPrompt: `Today is Alliance Duel Day 6 — Enemy Buster, worth 4 alliance points. My HQ is ${hq}, Squad 1 power is ${squadPowerLabel(profile.squad_power_tier)}, troop type is ${profile.troop_type}, rank is ${rankLabel(profile.rank_bucket)}.`,
       points: 4,
     })
   }
 
-  // ── Radar Training Day (Day 1) ──
   if (isDroneDay) {
     actions.push({
       id: 'radar_training_day',
       category: 'alliance_duel',
       priority: 'medium',
       title: '🚁 Radar Training Day — Alliance Duel Day 1 (1 Point)',
-      detail: 'Lowest-value Duel day. Good day to focus on development tasks without sacrificing high-value scoring. Complete drone upgrades if available.',
-      buddyPrompt: `Today is Alliance Duel Day 1 (Radar Training, 1 point — lowest value day). What should I focus on to set up for the rest of the week? HQ ${hq}, troop tier ${profile.troop_tier}.`,
+      detail: 'Lowest-value Duel day. Focus on development tasks. Complete drone upgrades if available.',
+      buddyPrompt: `Today is Alliance Duel Day 1 (Radar Training, 1 point). What should I focus on to set up for the week? HQ ${hq}, troop tier ${profile.troop_tier}.`,
       points: 1,
     })
   }
 
-  // ── Hero action — DAY 4 ONLY ──
-  // HARD RULE: Never recommend hero upgrades on any other day.
-  // Hero EXP, skill medals, exclusive weapons score on Duel Day 4 only.
-  // Spending them on any other day wastes VS points.
+  // HARD RULE: Hero upgrades Day 4 ONLY
   if (day === 4) {
     actions.push({
       id: 'hero_exp_duel',
       category: 'heroes',
       priority: 'critical',
       title: '🦸 Train Heroes Day — Level Up Heroes for Duel + Arms Race',
-      detail: `Duel Day 4 is Train Heroes. Every hero level you gain scores Alliance Duel AND Arms Race points simultaneously. At HQ ${hq} your heroes can reach level ${maxHeroLevel}. ${nextBreakpoint ? `Next power spike: level ${nextBreakpoint.level} (${nextBreakpoint.label}).` : 'Push to max level.'}`,
-      buddyPrompt: `Today is Duel Day 4 — Train Heroes. I want to level up heroes for maximum Duel and Arms Race scoring. My HQ is ${hq}, max hero level I can reach is ${maxHeroLevel}. ${nextBreakpoint ? `Next key breakpoint is level ${nextBreakpoint.level}: ${nextBreakpoint.label}.` : ''} What heroes should I prioritize and how much EXP do I need?`,
+      detail: `Duel Day 4 is Train Heroes. Every hero level scores Alliance Duel AND Arms Race simultaneously. At HQ ${hq} heroes can reach level ${maxHeroLevel}. ${nextBreakpoint ? `Next power spike: level ${nextBreakpoint.level} (${nextBreakpoint.label}).` : 'Push to max level.'}`,
+      buddyPrompt: `Today is Duel Day 4 — Train Heroes. HQ ${hq}, max hero level ${maxHeroLevel}. ${nextBreakpoint ? `Next breakpoint: level ${nextBreakpoint.level}: ${nextBreakpoint.label}.` : ''} What heroes should I prioritize?`,
       points: 2,
     })
   }
 
-  // ── Total Mobilization Day (Day 5) ──
   if (day === 5) {
     actions.push({
       id: 'troop_training_duel',
       category: 'troops',
       priority: 'high',
       title: '🪖 Total Mobilization — Max Troop Training for Duel + Arms Race',
-      detail: `Duel Day 5 is Total Mobilization. Every troop you train scores Alliance Duel AND Arms Race points simultaneously. Queue up as much ${profile.troop_type} training as possible. ${isBelowT10 ? 'Focus on highest tier available.' : isT10 ? 'Push T10 training.' : 'T11 training maximizes point value.'}`,
-      buddyPrompt: `Today is Duel Day 5 — Total Mobilization. I want to maximize troop training for both Alliance Duel and Arms Race scoring. My troop type is ${profile.troop_type}, tier is ${profile.troop_tier}, HQ ${hq}. What's the optimal training strategy?`,
+      detail: `Every troop trained scores Alliance Duel AND Arms Race simultaneously. Queue max ${profile.troop_type} training. ${isBelowT10 ? 'Focus on highest tier available.' : isT10 ? 'Push T10 training.' : 'T11 maximizes point value.'}`,
+      buddyPrompt: `Today is Duel Day 5 — Total Mobilization. Troop type ${profile.troop_type}, tier ${profile.troop_tier}, HQ ${hq}. What's the optimal training strategy?`,
     })
   }
 
-  // ── Age of Science Day (Day 3) ──
   if (day === 3) {
     actions.push({
       id: 'research_duel',
       category: 'research',
       priority: 'high',
       title: '🔬 Age of Science — Complete Research for Duel + Arms Race',
-      detail: `Duel Day 3 is Age of Science. Completing research scores both Duel and Arms Race points. ${isT11 ? 'Focus on T11 Armament Research branches.' : isT10 ? 'Push military research toward T11 unlock.' : 'Complete highest available military research.'}`,
-      buddyPrompt: `Today is Duel Day 3 — Age of Science. What research should I prioritize to maximize both Alliance Duel and Arms Race scoring? HQ ${hq}, troop tier ${profile.troop_tier}, troop type ${profile.troop_type}.`,
+      detail: `Completing research scores both Duel and Arms Race. ${isT11 ? 'Focus on T11 Armament Research.' : isT10 ? 'Push military research toward T11.' : 'Complete highest available military research.'}`,
+      buddyPrompt: `Today is Duel Day 3 — Age of Science. HQ ${hq}, troop tier ${profile.troop_tier}, troop type ${profile.troop_type}. What research maximizes both Duel and Arms Race scoring?`,
     })
   }
 
-  // ── Base Expansion Day (Day 2) ──
   if (day === 2) {
     actions.push({
       id: 'building_duel',
       category: 'alliance_duel',
       priority: 'high',
       title: '🏗️ Base Expansion — Upgrade Buildings for Duel + Arms Race',
-      detail: `Duel Day 2 is Base Expansion. Complete building upgrades today to score Duel and Arms Race points. ${isEarlyGame ? 'Prioritize Barracks and Military Academy.' : isMidGame ? 'Focus on production and military buildings.' : 'Push high-level military buildings and Overlord.'}`,
-      buddyPrompt: `Today is Duel Day 2 — Base Expansion. What buildings should I upgrade to maximize both Alliance Duel and Arms Race scoring? HQ ${hq}, server day ${profile.server_day}.`,
+      detail: `Complete building upgrades to score Duel and Arms Race points. ${isEarlyGame ? 'Prioritize Barracks and Military Academy.' : isMidGame ? 'Focus on production and military buildings.' : 'Push high-level military buildings and Overlord.'}`,
+      buddyPrompt: `Today is Duel Day 2 — Base Expansion. HQ ${hq}, server day ${profile.server_day}. What buildings maximize both Duel and Arms Race scoring?`,
     })
   }
 
-  // ── T10 unlock path (non-double days) ──
   if (isBelowT10 && !isDoubleDay && !isResetDay) {
     actions.push({
       id: 't10_path',
       category: 'troops',
       priority: 'high',
       title: '🎯 T10 Unlock Path — Check Your Prerequisites',
-      detail: `You're working toward T10. T10 unlocks at HQ 16 with specific Barracks and research requirements. ${hq < 16 ? `You're HQ ${hq} — focus on reaching HQ 16 as your primary goal.` : 'You have the HQ level — check research prerequisites in the Military tree.'}`,
-      buddyPrompt: `I'm working toward T10 troops. I'm at HQ ${hq}, server day ${profile.server_day}, troop tier ${profile.troop_tier}. What are my exact T10 unlock prerequisites and what should I do today to get there faster?`,
+      detail: `${hq < 16 ? `HQ ${hq} — focus on reaching HQ 16 as your primary goal.` : 'You have the HQ level — check research prerequisites in the Military tree.'}`,
+      buddyPrompt: `Working toward T10. HQ ${hq}, server day ${profile.server_day}, troop tier ${profile.troop_tier}. What are my exact prerequisites and what should I do today?`,
     })
   }
 
-  // ── T11 Armament Research (non-double, non-reset days) ──
   if (isT11 && !isDoubleDay && !isResetDay) {
     actions.push({
       id: 't11_armament',
       category: 'troops',
       priority: 'high',
       title: '⚙️ T11 Armament Research — Check Branch Progress',
-      detail: 'T11 Armament Research has multiple branches (Ground, Air, Missile, Accessories). Each branch unlocks different T11 unit advantages. Review current branch completion and queue next materials.',
-      buddyPrompt: `I'm working on T11 Armament Research. My troop type is ${profile.troop_type} and I'm HQ ${hq}. Help me prioritize which T11 branches to focus on and what materials I need to queue next.`,
+      detail: 'T11 Armament Research has multiple branches (Ground, Air, Missile, Accessories). Review current branch completion and queue next materials.',
+      buddyPrompt: `T11 Armament Research. Troop type ${profile.troop_type}, HQ ${hq}. Which branches should I focus on and what materials do I need next?`,
     })
   }
 
-  // ── Hot Deals (spenders) ──
   if (isSpender && !isResetDay) {
     actions.push({
       id: 'hot_deal_check',
       category: 'spend',
       priority: 'medium',
       title: "💰 Check Today's Hot Deals",
-      detail: `As an ${profile.spend_style} tier player, check today's Hot Deals for time-limited offers. Best value deals align with your current bottleneck. Screenshot any active deal and ask Buddy if it's worth buying.`,
-      buddyPrompt: `I'm an ${profile.spend_style} player at HQ ${hq} with ${profile.troop_tier} troops, Squad 1 power ${squadPowerLabel(profile.squad_power_tier)}. I want to evaluate today's Hot Deals. What should I be looking for and what's my current biggest bottleneck that a pack could solve?`,
+      detail: `Check today's Hot Deals for time-limited offers. Screenshot any active deal and ask Buddy if it's worth buying.`,
+      buddyPrompt: `${profile.spend_style} player at HQ ${hq}, ${profile.troop_tier} troops, Squad 1 power ${squadPowerLabel(profile.squad_power_tier)}. Evaluate today's Hot Deals — what's my biggest bottleneck a pack could solve?`,
     })
   }
 
-  // ── Defense review (endgame, non-double, non-reset) ──
   if (isEndGame && !isDoubleDay && !isResetDay) {
     actions.push({
       id: 'defense_review',
       category: 'defense',
       priority: 'low',
       title: '🛡️ Defense Review — Check Squad Position Balance',
-      detail: 'Squads engage in position order (1→2→3→4), not by squad label. Ensure your strongest squad is in position 1. Consider troop type counter advantages when arranging.',
-      buddyPrompt: `Help me review my defense setup. Squads engage by position order 1→2→3→4. My troop type is ${profile.troop_type}, HQ ${hq}, Squad 1 power ${squadPowerLabel(profile.squad_power_tier)}, rank ${rankLabel(profile.rank_bucket)}${profile.kill_tier ? `, kill tier: ${killTitle(profile.kill_tier)}` : ''}. Is my defense optimal?`,
+      detail: 'Squads engage in position order (1→2→3→4). Ensure your strongest squad is in position 1. Consider troop type counter advantages.',
+      buddyPrompt: `Defense review. Troop type ${profile.troop_type}, HQ ${hq}, Squad 1 power ${squadPowerLabel(profile.squad_power_tier)}, rank ${rankLabel(profile.rank_bucket)}${profile.kill_tier ? `, kill tier: ${killTitle(profile.kill_tier)}` : ''}. Is my defense optimal?`,
     })
   }
 
   const strategicInsight = getStrategicInsight(day, label, points, profile, maxHeroLevel, isDoubleDay)
-
-  // Sort by priority
   const priorityOrder: Record<ActionPriority, number> = { critical: 0, high: 1, medium: 2, low: 3 }
   actions.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority])
 
@@ -545,23 +571,17 @@ function getStrategicInsight(
 ): string {
   if (isDoubleDay) {
     if (day === 4) {
-      return `Today is Train Heroes Day — the ONLY day to spend Hero EXP items. Every hero level scores both Alliance Duel and Arms Race simultaneously. Save EXP every other day of the week for today.`
+      return `Today is Train Heroes Day — the ONLY day to spend Hero EXP items. Every hero level scores both Alliance Duel and Arms Race simultaneously.`
     }
-    return `Today is one of 4 double-dip days this week. Every action for Alliance Duel Day ${day} (${label}) simultaneously scores Arms Race points. This is the highest efficiency play in the game — most players miss this entirely.`
+    return `Double-dip day — every action for Alliance Duel Day ${day} (${label}) simultaneously scores Arms Race points. Highest efficiency play in the game.`
   }
-  if (day === 6) {
-    return `Enemy Buster Day is worth 4 Alliance Duel points — the highest of any day. Coordinate with alliance leadership for maximum kill count and impact.`
-  }
-  if (day === 7) {
-    return `Reset day — no Alliance Duel scoring today. Good time to plan the week, check upcoming events, and queue resources for the new duel cycle starting tomorrow (Radar Training Day).`
-  }
-  if (day === 1) {
-    return `Radar Training Day is the lowest-value Duel day (1 point). Use today to stockpile resources and save your Hero EXP for Thursday's Train Heroes day — the only day hero upgrades score VS points.`
-  }
+  if (day === 6) return `Enemy Buster Day — 4 Alliance Duel points, highest of the week. Coordinate with alliance leadership for maximum kills.`
+  if (day === 7) return `Reset day — no scoring today. Start gather runs before the 2am UTC reset and save radar tasks for tomorrow.`
+  if (day === 1) return `Radar Training — lowest-value Duel day (1 point). Upgrade drones, gather resources, clear radar tasks.`
   const nextMilestone = getNextHeroMilestone(profile.hq_level)
   return nextMilestone
-    ? `HQ ${profile.hq_level} unlocks hero level ${maxHeroLevel}. Reach HQ ${nextMilestone.targetHQ} to unlock hero level ${nextMilestone.heroLevel} — the next major capability jump.`
-    : `Your heroes are at max unlock level ${maxHeroLevel} for your HQ. Focus on Armament Research and troop tier progression.`
+    ? `HQ ${profile.hq_level} unlocks hero level ${maxHeroLevel}. Reach HQ ${nextMilestone.targetHQ} to unlock hero level ${nextMilestone.heroLevel}.`
+    : `Heroes at max unlock level ${maxHeroLevel}. Focus on Armament Research and troop tier progression.`
 }
 
 export const generateDailyPlan = generateActionPlan
