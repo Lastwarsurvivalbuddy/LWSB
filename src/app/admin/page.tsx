@@ -46,19 +46,23 @@ export default function MissionControlPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'submissions'>('overview')
   const [submissionFilter, setSubmissionFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [token, setToken] = useState<string | null>(null)
 
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.replace('/signin'); return }
+      setToken(session.access_token)
       setAuthorized(true)
       setLoading(false)
     }
     checkAuth()
   }, [router])
 
-  const fetchStats = useCallback(async () => {
-    const res = await fetch('/api/admin/stats')
+  const fetchStats = useCallback(async (accessToken: string) => {
+    const res = await fetch('/api/admin/stats', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
     if (res.status === 403) {
       router.replace('/dashboard')
       return
@@ -72,8 +76,8 @@ export default function MissionControlPage() {
   }, [router])
 
   useEffect(() => {
-    if (authorized) fetchStats()
-  }, [authorized, fetchStats])
+    if (authorized && token) fetchStats(token)
+  }, [authorized, token, fetchStats])
 
   const handleSubmissionAction = async (id: string, action: 'approve' | 'reject') => {
     setActionLoading(id)
@@ -81,7 +85,7 @@ export default function MissionControlPage() {
       .from('community_submissions')
       .update({ status: action === 'approve' ? 'approved' : 'rejected' })
       .eq('id', id)
-    await fetchStats()
+    if (token) await fetchStats(token)
     setActionLoading(null)
   }
 
