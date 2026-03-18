@@ -139,6 +139,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ── 5. Load player profile ────────────────────────────────
+    // FIX: query by id (not user_id) — matches commander_profile table schema
     const { data: profileData } = await supabase
       .from('commander_profile')
       .select('hq_level, troop_type, troop_tier, squad_power, server_day, spend_style, hero_power, beginner_mode')
@@ -146,14 +147,14 @@ export async function POST(req: NextRequest) {
       .single() as { data: ProfileRow | null };
 
     const playerProfile = {
-      hq_level:     profileData?.hq_level     ?? undefined,
-      troop_type:   profileData?.troop_type   ?? undefined,
-      troop_tier:   profileData?.troop_tier   ?? undefined,
-      squad_power:  profileData?.squad_power  ?? undefined,
-      server_day:   profileData?.server_day   ?? undefined,
-      spend_style:  profileData?.spend_style  ?? undefined,
-      hero_power:   profileData?.hero_power   ?? undefined,
-      beginner_mode: profileData?.beginner_mode ?? false,
+      hq_level:      profileData?.hq_level      ?? undefined,
+      troop_type:    profileData?.troop_type     ?? undefined,
+      troop_tier:    profileData?.troop_tier     ?? undefined,
+      squad_power:   profileData?.squad_power    ?? undefined,
+      server_day:    profileData?.server_day     ?? undefined,
+      spend_style:   profileData?.spend_style    ?? undefined,
+      hero_power:    profileData?.hero_power     ?? undefined,
+      beginner_mode: profileData?.beginner_mode  ?? false,
     };
 
     // ── 6. Build system prompt ────────────────────────────────
@@ -251,26 +252,25 @@ Return ONLY valid JSON matching the schema in your instructions. No markdown, no
       await supabase
         .from('daily_usage')
         .upsert({
-          user_id: user.id,
-          date: today,
-          question_count: 0,
-          screenshot_count: 0,
+          user_id:             user.id,
+          date:                today,
+          question_count:      0,
+          screenshot_count:    0,
           battle_report_count: 1,
         });
     }
 
     // ── 11. Save report to battle_reports table ───────────────
-    // Extract opponent fields from analysis — these are new fields added to JSON schema
-    const outcome        = (analysis.outcome as string)        ?? 'Unknown';
-    const verdict        = (analysis.verdict as string)        ?? 'Analysis complete';
-    const reportType     = (analysis.report_type as string)    ?? intake.report_type;
-    const opponentName   = (analysis.opponent_name as string)  ?? 'Unknown';
-    const opponentPower  = (analysis.opponent_power as string) ?? 'not visible';
+    const outcome       = (analysis.outcome       as string) ?? 'Unknown';
+    const verdict       = (analysis.verdict       as string) ?? 'Analysis complete';
+    const reportType    = (analysis.report_type   as string) ?? intake.report_type;
+    const opponentName  = (analysis.opponent_name  as string) ?? 'Unknown';
+    const opponentPower = (analysis.opponent_power as string) ?? 'not visible';
 
     await supabase
       .from('battle_reports')
       .insert({
-        user_id: user.id,
+        user_id:     user.id,
         outcome,
         report_type: reportType,
         verdict,
@@ -278,7 +278,7 @@ Return ONLY valid JSON matching the schema in your instructions. No markdown, no
         images_count: images.length,
         intake_data: {
           ...intake,
-          opponent_name: opponentName,
+          opponent_name:  opponentName,
           opponent_power: opponentPower,
         },
       });
@@ -288,8 +288,8 @@ Return ONLY valid JSON matching the schema in your instructions. No markdown, no
       success: true,
       analysis,
       meta: {
-        images_analyzed: images.length,
-        reports_used_today: currentCount + 1,
+        images_analyzed:        images.length,
+        reports_used_today:     currentCount + 1,
         reports_remaining_today:
           tier === 'founding' ? 'unlimited' : Math.max(0, dailyLimit - (currentCount + 1)),
         display_limit: getDisplayLimit(tier),
@@ -317,7 +317,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Fetch last 10 reports — include intake_data so we can pull opponent fields
     const { data: reports, error } = await supabase
       .from('battle_reports')
       .select('id, created_at, outcome, report_type, verdict, images_count, intake_data')
@@ -329,8 +328,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch reports' }, { status: 500 });
     }
 
-    // Normalize reports — pull opponent_name and opponent_power out of intake_data
-    // so the component doesn't need to dig into jsonb
     const normalizedReports = (reports ?? []).map((r: {
       id: string;
       created_at: string;
@@ -342,18 +339,17 @@ export async function GET(req: NextRequest) {
     }) => {
       const intakeData = (r.intake_data as Record<string, unknown>) ?? {};
       return {
-        id: r.id,
-        created_at: r.created_at,
-        outcome: r.outcome,
-        report_type: r.report_type,
-        verdict: r.verdict,
-        images_count: r.images_count,
+        id:             r.id,
+        created_at:     r.created_at,
+        outcome:        r.outcome,
+        report_type:    r.report_type,
+        verdict:        r.verdict,
+        images_count:   r.images_count,
         opponent_name:  (intakeData.opponent_name  as string) ?? 'Unknown',
         opponent_power: (intakeData.opponent_power as string) ?? 'not visible',
       };
     });
 
-    // Also return today's quota status
     const today = getUTCDateString();
     const { data: usageData } = await supabase
       .from('daily_usage')
@@ -376,11 +372,11 @@ export async function GET(req: NextRequest) {
       reports: normalizedReports,
       quota: {
         tier,
-        used_today: usedToday,
-        limit: dailyLimit,
+        used_today:    usedToday,
+        limit:         dailyLimit,
         display_limit: getDisplayLimit(tier),
-        remaining: tier === 'founding' ? 'unlimited' : Math.max(0, dailyLimit - usedToday),
-        can_analyze: tier !== 'free' && usedToday < dailyLimit,
+        remaining:     tier === 'founding' ? 'unlimited' : Math.max(0, dailyLimit - usedToday),
+        can_analyze:   tier !== 'free' && usedToday < dailyLimit,
       },
     });
   } catch (error) {

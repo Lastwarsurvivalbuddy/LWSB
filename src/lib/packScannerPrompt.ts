@@ -8,7 +8,6 @@ import { getHotDealsSummary } from './lwtHotDealsData';
 interface PackScannerProfile {
   commander_tag: string;
   spend_style?: string;
-  spend_tier?: string;
   hq_level?: number;
   season?: number;
   troop_tier?: string;
@@ -18,7 +17,7 @@ interface PackScannerProfile {
 }
 
 export function buildPackScannerPrompt(profile: PackScannerProfile): string {
-  const spendStyle = profile.spend_style ?? profile.spend_tier ?? 'unknown';
+  const spendStyle = profile.spend_style ?? 'unknown';
   const hq = profile.hq_level ?? '?';
   const season = profile.season ?? '?';
   const troopTier = profile.troop_tier ?? 'unknown';

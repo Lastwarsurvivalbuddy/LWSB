@@ -61,13 +61,14 @@ const supabase = createClient(
 );
 
 // ─── Daily limits per tier ───────────────────────────────────────────────────
+// FIX: Founding Member is unlimited (soft cap enforced separately if needed)
 
 const TIER_LIMITS: Record<string, { questions: number; screenshots: number }> = {
-  free:     { questions: 5,   screenshots: 0  },
-  pro:      { questions: 30,  screenshots: 10 },
-  elite:    { questions: 100, screenshots: 20 },
-  founding: { questions: 20,  screenshots: 5  },
-  alliance: { questions: 100, screenshots: 20 },
+  free:     { questions: 5,    screenshots: 0  },
+  pro:      { questions: 30,   screenshots: 10 },
+  elite:    { questions: 100,  screenshots: 20 },
+  founding: { questions: 9999, screenshots: 9999 },
+  alliance: { questions: 100,  screenshots: 20 },
 };
 
 // ─── Duel day calculation ────────────────────────────────────────────────────
@@ -213,7 +214,7 @@ export async function POST(req: NextRequest) {
     const { data: profile } = await supabase
       .from('commander_profile')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single();
 
     const duel = getCurrentDuelDay();
@@ -339,7 +340,7 @@ async function buildSystemPrompt(
 Last War: Survival Buddy (LastWarSurvivalBuddy.com) is a personalized AI coaching app for Last War: Survival players. It is a fan-built community tool — not affiliated with or endorsed by FUNFLY PTE. LTD.
 Buddy gives players a daily action plan and answers questions tailored to their exact server, HQ level, troop tier, spend style, playstyle, rank, and goals.
 Buddy improves over time through community submissions — players submit intel via "Teach Buddy", the founder reviews and approves it, and approved facts are injected into Buddy's knowledge automatically.
-Subscription tiers: Free (5 questions/day), Buddy Pro $9.99/mo (30 questions, 10 screenshots), Buddy Elite $19.99/mo (100 questions, 20 screenshots), Founding Member $99 lifetime (20 questions, 5 screenshots — 500 spots only).
+Subscription tiers: Free (5 questions/day), Buddy Pro $9.99/mo (30 questions, 10 screenshots), Buddy Elite $19.99/mo (100 questions, 20 screenshots), Founding Member $99 lifetime (unlimited — 500 spots only).
 If a player asks "how do I upgrade", "how do I get Pro", "how do I subscribe", or anything about subscription plans or pricing, direct them to the Upgrade page in the app at /upgrade. Do NOT interpret this as a question about in-game upgrades.
 If asked how Buddy gets smarter, explain the community submission system — players teach Buddy, founder approves, everyone benefits.
 
@@ -349,7 +350,8 @@ Keep responses concise, specific, and tactical. No fluff.`;
   }
 
   // ── Profile display translations ──
-  const serverDay = profile.computed_server_day ?? profile.server_day ?? 'Unknown';
+  // FIX: read server_day only — computed_server_day runs ahead of actual reset
+  const serverDay = profile.server_day ?? 'Unknown';
 
   const squadPower = profile.squad_power_tier
     ? SQUAD_POWER_TIER_LABELS[profile.squad_power_tier as SquadPowerTier] ?? profile.squad_power_tier
@@ -427,7 +429,7 @@ Keep responses concise, specific, and tactical. No fluff.`;
 Last War: Survival Buddy (LastWarSurvivalBuddy.com) is a personalized AI coaching app for Last War: Survival players. It is a fan-built community tool — not affiliated with or endorsed by FUNFLY PTE. LTD.
 Buddy gives players a daily action plan and answers questions tailored to their exact server, HQ level, troop tier, spend style, playstyle, rank, and goals.
 Buddy improves over time through community submissions — players submit intel via "Teach Buddy", the founder reviews and approves it, and approved facts are injected into Buddy's knowledge automatically.
-Subscription tiers: Free (5 questions/day), Buddy Pro $9.99/mo (30 questions, 10 screenshots), Buddy Elite $19.99/mo (100 questions, 20 screenshots), Founding Member $99 lifetime (20 questions, 5 screenshots — 500 spots only).
+Subscription tiers: Free (5 questions/day), Buddy Pro $9.99/mo (30 questions, 10 screenshots), Buddy Elite $19.99/mo (100 questions, 20 screenshots), Founding Member $99 lifetime (unlimited — 500 spots only).
 If a player asks "how do I upgrade", "how do I get Pro", "how do I subscribe", or anything about subscription plans or pricing, direct them to the Upgrade page in the app at /upgrade. Do NOT interpret this as a question about in-game upgrades.
 If asked how Buddy gets smarter, explain the community submission system — players teach Buddy, founder approves, everyone benefits.
 
