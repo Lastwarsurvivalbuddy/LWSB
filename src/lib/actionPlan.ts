@@ -9,7 +9,8 @@
 // Updated: March 18, 2026 — T11 Armament Training fires every day; Day 2 split Training+Research;
 //                           Day 4 adds hero skills, exclusive weapons, ghost ops;
 //                           Day 5 troop copy generalized; defense review removed;
-//                           research copy fixed; Sec Sci added
+//                           research copy fixed; Sec Sci added;
+//                           server_day removed from dutyReport (not auto-incremented)
 
 import type { SquadPowerTier, RankBucket, PowerBucket, KillTier } from '@/lib/profileTypes'
 import { SQUAD_POWER_TIER_LABELS, RANK_BUCKET_LABELS, KILL_TIER_TITLES } from '@/lib/profileTypes'
@@ -319,7 +320,7 @@ function generateBeginnerActionPlan(profile: CommanderProfile): ActionPlanResult
     duelDayPoints: points,
     strategicInsight,
     greeting: getGreeting(profile),
-    dutyReport: `Server Day ${profile.server_day || '—'} · Today's Alliance Event: ${label}`,
+    dutyReport: `Today's Alliance Event: ${label}`,
     insight: strategicInsight,
   }
 }
@@ -559,7 +560,7 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
     duelDayPoints: points,
     strategicInsight,
     greeting: getGreeting(profile),
-    dutyReport: `Server Day ${profile.server_day || '—'} · Duel Day ${day}: ${label}`,
+    dutyReport: `Duel Day ${day}: ${label}`,
     insight: strategicInsight,
   }
 }

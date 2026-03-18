@@ -1,5 +1,4 @@
 'use client'
-
 // src/components/DailyActionPlan.tsx
 // Fixed session 18: Today's Orders checkbox state persisted to Supabase (action_completions table)
 
@@ -13,10 +12,10 @@ interface Props {
 }
 
 const priorityConfig: Record<ActionPriority, { label: string; color: string; bar: string }> = {
-  critical: { label: 'CRITICAL', color: 'text-red-400', bar: 'bg-red-500' },
-  high:     { label: 'HIGH',     color: 'text-amber-400', bar: 'bg-amber-500' },
-  medium:   { label: 'MED',      color: 'text-sky-400',  bar: 'bg-sky-500' },
-  low:      { label: 'LOW',      color: 'text-zinc-400', bar: 'bg-zinc-500' },
+  critical: { label: 'CRITICAL', color: 'text-red-400',    bar: 'bg-red-500'    },
+  high:     { label: 'HIGH',     color: 'text-amber-400',  bar: 'bg-amber-500'  },
+  medium:   { label: 'MED',      color: 'text-sky-400',    bar: 'bg-sky-500'    },
+  low:      { label: 'LOW',      color: 'text-zinc-400',   bar: 'bg-zinc-500'   },
 }
 
 // UTC date string — resets completions daily at midnight UTC
@@ -112,7 +111,8 @@ function ActionCard({
           >
             <svg
               className={`w-4 h-4 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
-              fill="none" viewBox="0 0 16 16"
+              fill="none"
+              viewBox="0 0 16 16"
             >
               <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -154,7 +154,7 @@ export default function DailyActionPlan({ profile }: Props) {
   const plan = generateDailyPlan(profile)
   const criticalCount = plan.actions.filter(a => a.priority === 'critical').length
 
-  // ── Completion state ────────────────────────────────────────────────────
+  // ── Completion state ────────────────────────────────────────────────────────
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set())
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const userIdRef = useRef<string | null>(null)
@@ -177,7 +177,6 @@ export default function DailyActionPlan({ profile }: Props) {
       }
     }
     loadCompletions()
-
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     }
@@ -291,7 +290,7 @@ export default function DailyActionPlan({ profile }: Props) {
       {/* Footer */}
       <div className="mt-4 flex items-center justify-between">
         <p className="text-[10px] text-zinc-700 font-mono">
-          Updates at next Duel reset - 2am UCT
+          Updates at next Duel reset — 2am UTC
         </p>
         <button
           onClick={() => window.location.reload()}
