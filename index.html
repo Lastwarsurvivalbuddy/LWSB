@@ -49,16 +49,24 @@
     .nav-logo-text { font-family: 'Oswald', sans-serif; font-size: 20px; font-weight: 700;
       letter-spacing: 0.08em; color: var(--text); }
     .nav-logo-text span { color: var(--gold); }
-    .nav-login { display: flex; align-items: center; gap: 12px; }
-    .nav-login input { background: rgba(255,255,255,0.05); border: 1px solid var(--border2);
-      border-radius: 6px; padding: 7px 12px; color: var(--text); font-size: 13px; width: 140px;
-      outline: none; font-family: 'Open Sans', sans-serif; transition: border-color 0.2s; }
-    .nav-login input:focus { border-color: var(--gold); }
-    .nav-login input::placeholder { color: var(--muted); }
-    .nav-login-btn { background: transparent; border: 1px solid var(--border2); border-radius: 6px;
-      padding: 7px 16px; color: var(--muted2); font-size: 13px; font-weight: 600; cursor: pointer;
-      font-family: 'Oswald', sans-serif; letter-spacing: 0.06em; transition: all 0.2s; }
-    .nav-login-btn:hover { border-color: var(--gold); color: var(--gold); }
+    /* CHANGE 1: Nav CTA — replaced email/password/Sign In with single Join the List button */
+    .nav-cta-btn {
+      background: linear-gradient(135deg, var(--red), var(--gold2));
+      border: none; border-radius: 6px;
+      padding: 9px 20px; color: #fff;
+      font-family: 'Oswald', sans-serif; font-size: 13px; font-weight: 600;
+      letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer;
+      box-shadow: 0 2px 12px rgba(192,96,16,0.35);
+      transition: all 0.2s; white-space: nowrap; }
+    .nav-cta-btn:hover { box-shadow: 0 4px 20px rgba(232,160,32,0.45); transform: translateY(-1px); }
+    /* Keep sign-in as a subtle text link for existing users */
+    .nav-signin-link {
+      font-family: 'Rajdhani', sans-serif; font-size: 12px; font-weight: 600;
+      letter-spacing: 0.1em; color: var(--muted); text-transform: uppercase;
+      cursor: pointer; transition: color 0.2s; text-decoration: none; background: none;
+      border: none; padding: 0; }
+    .nav-signin-link:hover { color: var(--muted2); }
+    .nav-login { display: flex; align-items: center; gap: 16px; }
 
     /* ── HERO ── */
     .hero { position: relative; z-index: 1; min-height: 100vh;
@@ -86,11 +94,25 @@
       max-width: 600px; margin: 0 auto 16px; font-weight: 300;
       animation: fadeUp 0.8s 0.3s ease both; }
     .hero-sub strong { color: var(--text); font-weight: 600; }
+
+    /* CHANGE 2: Hero inline CTA button — sits between tagline and Battle Report callout */
+    .hero-inline-cta {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: linear-gradient(135deg, var(--red), var(--gold2), var(--gold));
+      border: none; border-radius: 8px; padding: 14px 32px;
+      color: #fff; font-family: 'Oswald', sans-serif; font-size: 16px; font-weight: 600;
+      letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer;
+      box-shadow: 0 4px 24px rgba(192,96,16,0.45);
+      transition: transform 0.15s, box-shadow 0.15s;
+      margin-bottom: 20px; animation: fadeUp 0.8s 0.35s ease both; }
+    .hero-inline-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(232,160,32,0.55); }
+    .hero-inline-cta:active { transform: translateY(0); }
+
     .hero-battle-callout {
       display: inline-flex; align-items: center; gap: 12px;
       background: rgba(192,40,26,0.12); border: 1px solid rgba(192,40,26,0.35);
       border-radius: 12px; padding: 14px 24px; margin: 0 auto 20px;
-      max-width: 560px; animation: fadeUp 0.8s 0.35s ease both; }
+      max-width: 560px; animation: fadeUp 0.8s 0.4s ease both; }
     .hero-battle-callout-icon { font-size: 22px; flex-shrink: 0; }
     .hero-battle-callout-text { text-align: left; }
     .hero-battle-callout-label { font-family: 'Rajdhani', sans-serif; font-size: 10px; font-weight: 700;
@@ -99,7 +121,7 @@
     .hero-battle-callout-body span { color: #e8806a; }
     .hero-tagline { font-family: 'Rajdhani', sans-serif; font-size: 14px; font-weight: 600;
       letter-spacing: 0.2em; color: var(--gold); text-transform: uppercase;
-      margin-bottom: 48px; animation: fadeUp 0.8s 0.4s ease both; }
+      margin-bottom: 32px; animation: fadeUp 0.8s 0.45s ease both; }
 
     /* ── CTA BOX ── */
     .cta-group { display: flex; flex-direction: column; align-items: center; gap: 16px;
@@ -310,6 +332,11 @@
       border-color: rgba(160,100,232,0.35); }
     .price-card.purple-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
       background: linear-gradient(90deg, transparent, var(--purple), transparent); }
+    /* CHANGE 3: Pro card gets blue accent line to match its badge */
+    .price-card.blue-card { background: linear-gradient(160deg, #040e1a, var(--card));
+      border-color: rgba(96,160,232,0.3); }
+    .price-card.blue-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--blue), transparent); }
     .price-tier-name { font-family: 'Rajdhani', sans-serif; font-size: 11px; font-weight: 700;
       letter-spacing: 0.2em; text-transform: uppercase; }
     .price-amount { font-family: 'Oswald', sans-serif; font-size: 38px; font-weight: 700; line-height: 1; }
@@ -476,7 +503,6 @@
     /* ── MOBILE ── */
     @media (max-width: 768px) {
       nav { padding: 0 4%; }
-      .nav-login input { display: none; }
       .hero { padding: 100px 4% 60px; }
       .stats-row { gap: 20px; }
       .stat-divider { display: none; }
@@ -492,6 +518,7 @@
       .hero-battle-callout { flex-direction: column; text-align: center; }
       .hero-battle-callout-text { text-align: center; }
       .quotes-grid { grid-template-columns: 1fr; }
+      .nav-signin-link { display: none; }
     }
     @media (max-width: 480px) {
       .nav-login { gap: 8px; }
@@ -507,16 +534,15 @@
   <div class="grid-overlay"></div>
   <div class="scanlines"></div>
 
-  <!-- NAV -->
+  <!-- NAV — CHANGE 1: replaced email/password/Sign In with Join the List CTA + subtle Sign In text link -->
   <nav>
     <div class="nav-logo">
       <div class="nav-logo-icon">🪖</div>
       <div class="nav-logo-text">Last War: Survival <span>Buddy</span></div>
     </div>
     <div class="nav-login">
-      <input type="email" placeholder="Email" autocomplete="email"/>
-      <input type="password" placeholder="Password" autocomplete="current-password" style="width:120px"/>
-      <button class="nav-login-btn">Sign In</button>
+      <button class="nav-signin-link" onclick="document.querySelector('.hero').scrollIntoView({behavior:'smooth'})">Sign In</button>
+      <button class="nav-cta-btn" onclick="document.querySelector('.cta-box').scrollIntoView({behavior:'smooth'})">Join the List →</button>
     </div>
   </nav>
 
@@ -533,6 +559,10 @@
       Tell us your server, your level, your goals —<br/>
       we'll tell you <strong>exactly what to do today.</strong>
     </p>
+    <!-- CHANGE 2: Hero inline CTA — above Battle Report callout, scrolls to email capture -->
+    <button class="hero-inline-cta" onclick="document.querySelector('.cta-box').scrollIntoView({behavior:'smooth'})">
+      Join the List — It's Free →
+    </button>
     <div class="hero-battle-callout">
       <div class="hero-battle-callout-icon">⚔️</div>
       <div class="hero-battle-callout-text">
@@ -595,7 +625,7 @@
         <div style="font-size:10px;color:#606878;letter-spacing:0.08em;text-transform:uppercase;margin-top:4px;">List gets first offer</div>
       </div>
     </div>
-    <button onclick="document.querySelector('.hero').scrollIntoView({behavior:'smooth'})"
+    <button onclick="document.querySelector('.cta-box').scrollIntoView({behavior:'smooth'})"
       style="background:linear-gradient(135deg,#c0281a,#e8a020);border:none;border-radius:8px;padding:12px 24px;color:#fff;font-family:'Oswald',sans-serif;font-size:14px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;box-shadow:0 4px 20px rgba(232,160,32,0.3);white-space:nowrap;transition:all 0.2s;">
       Claim Your Spot →
     </button>
@@ -614,6 +644,107 @@
     <div class="stat"><span class="stat-number">0</span><span class="stat-label">Discord Scrolling Required</span></div>
   </div>
 
+  <!-- CHANGE 4: COMMAND PROMPT PREVIEW — moved up immediately after stats row -->
+  <section style="position:relative;z-index:1;padding:100px 5%;background:linear-gradient(180deg,transparent,rgba(14,16,20,0.8),transparent);border-top:1px solid var(--border);">
+    <div style="max-width:800px;margin:0 auto;">
+      <div style="text-align:center;margin-bottom:48px;">
+        <div style="font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.3em;color:#e8a020;text-transform:uppercase;margin-bottom:12px;">The Feature That Changes Everything</div>
+        <h2 style="font-family:'Oswald',sans-serif;font-size:clamp(28px,4vw,42px);font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#e8e8e8;margin-bottom:14px;">Ask Your Buddy Anything</h2>
+        <p style="font-size:15px;color:#8090a0;max-width:520px;margin:0 auto;line-height:1.75;font-weight:300;">
+          Not generic advice. Not a Reddit thread from 6 months ago.<br/>
+          An answer that knows <em>your</em> server, <em>your</em> rank, <em>your</em> goals — right now.
+        </p>
+      </div>
+      <div style="display:flex;align-items:center;gap:48px;flex-wrap:wrap;">
+        <div style="width:100%;text-align:center;margin-bottom:-32px;">
+          <span style="font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.2em;color:#606878;text-transform:uppercase;background:#0e1014;border:1px solid #222830;border-radius:100px;padding:4px 14px;">— Example Conversation —</span>
+        </div>
+        <!-- Soldier -->
+        <div style="flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:0;position:relative;user-select:none;">
+          <svg width="160" height="380" viewBox="0 0 160 380" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter:drop-shadow(0 0 32px rgba(232,160,32,0.18)) drop-shadow(0 0 8px rgba(232,160,32,0.1));">
+            <ellipse cx="80" cy="42" rx="34" ry="12" fill="#1a1e26"/>
+            <ellipse cx="80" cy="36" rx="28" ry="22" fill="#1a1e26"/>
+            <rect x="52" y="52" width="56" height="6" rx="3" fill="#141720"/>
+            <ellipse cx="80" cy="57" rx="22" ry="10" fill="#0e1014" opacity="0.9"/>
+            <rect x="72" y="64" width="16" height="12" rx="4" fill="#161a22"/>
+            <path d="M44 76 Q44 70 80 70 Q116 70 116 76 L120 160 Q120 168 80 168 Q40 168 40 160 Z" fill="#161a22"/>
+            <rect x="58" y="82" width="44" height="32" rx="4" fill="#1e2430"/>
+            <rect x="63" y="87" width="14" height="18" rx="2" fill="#232b38"/>
+            <rect x="83" y="87" width="14" height="18" rx="2" fill="#232b38"/>
+            <ellipse cx="40" cy="84" rx="16" ry="10" fill="#1a1e28" transform="rotate(-10 40 84)"/>
+            <ellipse cx="120" cy="84" rx="16" ry="10" fill="#1a1e28" transform="rotate(10 120 84)"/>
+            <path d="M40 90 Q28 110 24 150 Q22 158 28 162 Q34 166 38 154 L46 110 Z" fill="#161a22"/>
+            <path d="M120 90 Q132 108 136 148 Q138 158 132 162 Q126 166 122 154 L116 110 Z" fill="#161a22"/>
+            <g transform="rotate(-15 80 130)">
+              <rect x="20" y="130" width="120" height="8" rx="3" fill="#0e1218"/>
+              <rect x="20" y="130" width="30" height="8" rx="2" fill="#141820"/>
+              <rect x="120" y="126" width="24" height="6" rx="2" fill="#0a0e14"/>
+              <rect x="66" y="118" width="8" height="14" rx="2" fill="#141820"/>
+            </g>
+            <rect x="46" y="162" width="68" height="10" rx="3" fill="#131720"/>
+            <rect x="68" y="162" width="24" height="10" rx="2" fill="#1a2030"/>
+            <path d="M50 172 L46 260 Q45 270 54 272 Q63 274 65 264 L70 172 Z" fill="#141820"/>
+            <path d="M110 172 L114 260 Q115 270 106 272 Q97 274 95 264 L90 172 Z" fill="#141820"/>
+            <path d="M46 264 Q44 278 42 285 Q38 292 48 294 Q60 296 64 286 Q67 278 65 264 Z" fill="#0e1014"/>
+            <path d="M114 264 Q116 278 118 285 Q122 292 112 294 Q100 296 96 286 Q93 278 95 264 Z" fill="#0e1014"/>
+            <ellipse cx="56" cy="224" rx="10" ry="8" fill="#1a2030"/>
+            <ellipse cx="104" cy="224" rx="10" ry="8" fill="#1a2030"/>
+            <rect x="60" y="122" width="40" height="2" rx="1" fill="#e8a020" opacity="0.5"/>
+            <rect x="60" y="128" width="28" height="1" rx="1" fill="#e8a020" opacity="0.3"/>
+            <rect x="54" y="52" width="52" height="2" rx="1" fill="#e8a020" opacity="0.4"/>
+          </svg>
+          <div style="width:120px;height:14px;background:radial-gradient(ellipse,rgba(232,160,32,0.18),transparent 70%);margin-top:-10px;border-radius:50%;"></div>
+          <div style="margin-top:16px;background:rgba(232,160,32,0.08);border:1px solid rgba(232,160,32,0.25);border-radius:8px;padding:7px 16px;text-align:center;">
+            <div style="font-family:'Rajdhani',sans-serif;font-size:9px;letter-spacing:0.2em;color:#e8a020;text-transform:uppercase;margin-bottom:3px;">Commander</div>
+            <div style="font-family:'Oswald',sans-serif;font-size:13px;color:#e8e8e8;font-weight:600;letter-spacing:0.06em;">500+ Days Played</div>
+            <div style="font-size:10px;color:#606878;margin-top:2px;">Hardcore Player</div>
+          </div>
+        </div>
+        <!-- Chat window -->
+        <div style="flex:1;min-width:280px;background:#0e1014;border:1px solid #2a3040;border-radius:16px;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,0.6);">
+          <div style="background:#13161c;border-bottom:1px solid #222830;padding:14px 20px;display:flex;align-items:center;gap:12px;">
+            <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#c06010,#e8a020);display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 16px rgba(232,160,32,0.3);">🪖</div>
+            <div>
+              <div style="font-family:'Oswald',sans-serif;font-size:14px;font-weight:600;color:#e8e8e8;letter-spacing:0.06em;">BUDDY AI</div>
+              <div style="font-size:10px;color:#30b870;letter-spacing:0.1em;display:flex;align-items:center;gap:5px;">
+                <span style="width:5px;height:5px;border-radius:50%;background:#30b870;display:inline-block;"></span> Online · Knows your full profile
+              </div>
+            </div>
+            <div style="margin-left:auto;font-family:'Rajdhani',sans-serif;font-size:10px;color:#606878;letter-spacing:0.1em;text-transform:uppercase;">500+ Days · Hardcore Player</div>
+          </div>
+          <div style="padding:24px 20px;display:flex;flex-direction:column;gap:16px;">
+            <div style="display:flex;justify-content:flex-end;">
+              <div style="background:#1a2030;border:1px solid #2a3040;border-radius:12px 12px 2px 12px;padding:12px 16px;max-width:80%;">
+                <div style="font-size:14px;color:#e8e8e8;line-height:1.55;">Why did I lose that fight? My power was higher than theirs.</div>
+                <div style="font-size:10px;color:#606878;margin-top:6px;text-align:right;">+ 3 screenshots attached</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:12px;align-items:flex-start;">
+              <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#c06010,#e8a020);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">🪖</div>
+              <div style="background:#13161c;border:1px solid #222830;border-radius:2px 12px 12px 12px;padding:14px 16px;max-width:85%;">
+                <div style="font-size:13px;color:#e8e8e8;line-height:1.7;">
+                  <span style="color:#e07060;font-weight:700;font-family:'Rajdhani',sans-serif;letter-spacing:0.05em;">TYPE COUNTER — this is why.</span> Your Aircraft squad fought their <span style="color:#e8e8e8;font-weight:600;">Missile troops.</span> That's a hard counter — you dealt 20% less damage and took 20% more. <span style="color:#e8e8e8;font-weight:600;">Effective power swing: ~40%.</span><br/><br/>
+                  <span style="color:#e8a020;font-weight:600;">Stat screen confirms it</span> — your ATK shows red arrows despite equal gear. Classic counter matchup signature. Your power advantage was real, the matchup erased it.<br/><br/>
+                  <span style="color:#8090a0;font-size:12px;">Rematch verdict: Not Yet — swap to Missile squad first and the math flips in your favor.</span>
+                </div>
+                <div style="font-size:10px;color:#606878;margin-top:8px;">Buddy · just now</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;margin-top:8px;padding-top:16px;border-top:1px solid #222830;">
+              <div style="flex:1;background:#07080a;border:1px solid #2a3040;border-radius:8px;padding:12px 16px;font-size:13px;color:#606878;font-family:'Open Sans',sans-serif;">
+                Ask your Buddy anything about Last War: Survival...
+              </div>
+              <button style="background:linear-gradient(135deg,#c0281a,#e8a020);border:none;border-radius:8px;padding:12px 18px;color:#fff;font-family:'Oswald',sans-serif;font-size:13px;font-weight:600;letter-spacing:0.08em;cursor:pointer;">ASK →</button>
+            </div>
+            <div style="text-align:center;font-size:11px;color:#606878;">
+              ✦ Free accounts get <span style="color:#e8a020;">5 questions per day</span> · 30/day with Pro · 100/day with Elite
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- BATTLE REPORT ANALYZER FEATURE SECTION -->
   <section class="battle-report-banner">
     <div class="battle-report-inner">
@@ -629,7 +760,7 @@
           <br/><br/>
           No other Last War tool does this.
         </p>
-        <a href="#notify" onclick="document.querySelector('.hero').scrollIntoView({behavior:'smooth'});return false;" class="battle-report-cta">
+        <a href="#notify" onclick="document.querySelector('.cta-box').scrollIntoView({behavior:'smooth'});return false;" class="battle-report-cta">
           ⚔️ Launching April 19, 2026 — Join the List →
         </a>
       </div>
@@ -685,7 +816,7 @@
           with your alliance name, role assignments, compass, and stage-by-stage
           instructions. Save it. Post it. Done in 30 seconds.
         </p>
-        <a href="#notify" onclick="document.querySelector('.hero').scrollIntoView({behavior:'smooth'});return false;"
+        <a href="#notify" onclick="document.querySelector('.cta-box').scrollIntoView({behavior:'smooth'});return false;"
           style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#c06010,#e8a020);border:none;border-radius:8px;padding:13px 24px;color:#fff;font-family:'Oswald',sans-serif;font-size:14px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;box-shadow:0 4px 20px rgba(232,160,32,0.3);transition:all 0.2s;text-decoration:none;">
           🏜️ Launching April 19, 2026 — Join the List →
         </a>
@@ -839,7 +970,7 @@
     </div>
   </section>
 
-  <!-- PRICING -->
+  <!-- PRICING — CHANGE 3: Pro gets "Best Value" badge, Elite loses "Most Popular" -->
   <section class="pricing">
     <div class="pricing-inner">
       <div style="text-align:center;">
@@ -860,12 +991,15 @@
           <div class="price-feature">✦ Commander Card</div>
           <div class="price-feature war-room">✦ <strong>🏜️ DS War Room</strong></div>
         </div>
-        <!-- Pro -->
-        <div class="price-card">
-          <div class="price-tier-name" style="color:var(--blue);">Buddy Pro</div>
-          <div class="price-amount" style="color:var(--text);">$9.99<span>/mo</span></div>
+        <!-- Pro — Best Value badge, blue accent -->
+        <div class="price-card blue-card">
+          <div class="price-header">
+            <div class="price-tier-name" style="color:var(--blue);">Buddy Pro</div>
+            <div class="price-badge" style="background:var(--blue);color:#07080a;">Best Value</div>
+          </div>
+          <div class="price-amount" style="color:var(--blue);">$9.99<span>/mo</span></div>
           <div class="price-cadence">Cancel anytime</div>
-          <div class="price-divider"></div>
+          <div class="price-divider" style="background:rgba(96,160,232,0.2);"></div>
           <div class="price-feature">✦ <strong>30 questions</strong> / day</div>
           <div class="price-feature">✦ <strong>10 screenshots</strong> / day</div>
           <div class="price-feature highlight">✦ <strong>⚔️ 3 Battle Reports</strong> / day</div>
@@ -873,12 +1007,9 @@
           <div class="price-feature">✦ Daily action plan</div>
           <div class="price-feature war-room">✦ <strong>🏜️ DS War Room</strong></div>
         </div>
-        <!-- Elite -->
+        <!-- Elite — no badge -->
         <div class="price-card gold-card">
-          <div class="price-header">
-            <div class="price-tier-name" style="color:var(--gold);">Buddy Elite</div>
-            <div class="price-badge" style="background:var(--gold);color:#0a0c10;">Most Popular</div>
-          </div>
+          <div class="price-tier-name" style="color:var(--gold);">Buddy Elite</div>
           <div class="price-amount" style="color:var(--gold);">$19.99<span>/mo</span></div>
           <div class="price-cadence">Cancel anytime</div>
           <div class="price-divider" style="background:rgba(232,160,32,0.2);"></div>
@@ -889,7 +1020,7 @@
           <div class="price-feature">✦ Priority features</div>
           <div class="price-feature war-room">✦ <strong>🏜️ DS War Room</strong></div>
         </div>
-        <!-- Founding Member -->
+        <!-- Founding Member — 500 Only badge unchanged -->
         <div class="price-card purple-card">
           <div class="price-header">
             <div class="price-tier-name" style="color:var(--purple2);">Founding Member</div>
@@ -945,107 +1076,6 @@
         <div class="learn-step">
           <div class="learn-step-num">4</div>
           <div class="learn-step-text"><strong>You earn Commander status</strong><br/>Top contributors unlock better tools, deeper insights, and recognition.</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- COMMAND PROMPT PREVIEW -->
-  <section style="position:relative;z-index:1;padding:100px 5%;background:linear-gradient(180deg,transparent,rgba(14,16,20,0.8),transparent);">
-    <div style="max-width:800px;margin:0 auto;">
-      <div style="text-align:center;margin-bottom:48px;">
-        <div style="font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.3em;color:#e8a020;text-transform:uppercase;margin-bottom:12px;">The Feature That Changes Everything</div>
-        <h2 style="font-family:'Oswald',sans-serif;font-size:clamp(28px,4vw,42px);font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#e8e8e8;margin-bottom:14px;">Ask Your Buddy Anything</h2>
-        <p style="font-size:15px;color:#8090a0;max-width:520px;margin:0 auto;line-height:1.75;font-weight:300;">
-          Not generic advice. Not a Reddit thread from 6 months ago.<br/>
-          An answer that knows <em>your</em> server, <em>your</em> rank, <em>your</em> goals — right now.
-        </p>
-      </div>
-      <div style="display:flex;align-items:center;gap:48px;flex-wrap:wrap;">
-        <div style="width:100%;text-align:center;margin-bottom:-32px;">
-          <span style="font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.2em;color:#606878;text-transform:uppercase;background:#0e1014;border:1px solid #222830;border-radius:100px;padding:4px 14px;">— Example Conversation —</span>
-        </div>
-        <!-- Soldier -->
-        <div style="flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:0;position:relative;user-select:none;">
-          <svg width="160" height="380" viewBox="0 0 160 380" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter:drop-shadow(0 0 32px rgba(232,160,32,0.18)) drop-shadow(0 0 8px rgba(232,160,32,0.1));">
-            <ellipse cx="80" cy="42" rx="34" ry="12" fill="#1a1e26"/>
-            <ellipse cx="80" cy="36" rx="28" ry="22" fill="#1a1e26"/>
-            <rect x="52" y="52" width="56" height="6" rx="3" fill="#141720"/>
-            <ellipse cx="80" cy="57" rx="22" ry="10" fill="#0e1014" opacity="0.9"/>
-            <rect x="72" y="64" width="16" height="12" rx="4" fill="#161a22"/>
-            <path d="M44 76 Q44 70 80 70 Q116 70 116 76 L120 160 Q120 168 80 168 Q40 168 40 160 Z" fill="#161a22"/>
-            <rect x="58" y="82" width="44" height="32" rx="4" fill="#1e2430"/>
-            <rect x="63" y="87" width="14" height="18" rx="2" fill="#232b38"/>
-            <rect x="83" y="87" width="14" height="18" rx="2" fill="#232b38"/>
-            <ellipse cx="40" cy="84" rx="16" ry="10" fill="#1a1e28" transform="rotate(-10 40 84)"/>
-            <ellipse cx="120" cy="84" rx="16" ry="10" fill="#1a1e28" transform="rotate(10 120 84)"/>
-            <path d="M40 90 Q28 110 24 150 Q22 158 28 162 Q34 166 38 154 L46 110 Z" fill="#161a22"/>
-            <path d="M120 90 Q132 108 136 148 Q138 158 132 162 Q126 166 122 154 L116 110 Z" fill="#161a22"/>
-            <g transform="rotate(-15 80 130)">
-              <rect x="20" y="130" width="120" height="8" rx="3" fill="#0e1218"/>
-              <rect x="20" y="130" width="30" height="8" rx="2" fill="#141820"/>
-              <rect x="120" y="126" width="24" height="6" rx="2" fill="#0a0e14"/>
-              <rect x="66" y="118" width="8" height="14" rx="2" fill="#141820"/>
-            </g>
-            <rect x="46" y="162" width="68" height="10" rx="3" fill="#131720"/>
-            <rect x="68" y="162" width="24" height="10" rx="2" fill="#1a2030"/>
-            <path d="M50 172 L46 260 Q45 270 54 272 Q63 274 65 264 L70 172 Z" fill="#141820"/>
-            <path d="M110 172 L114 260 Q115 270 106 272 Q97 274 95 264 L90 172 Z" fill="#141820"/>
-            <path d="M46 264 Q44 278 42 285 Q38 292 48 294 Q60 296 64 286 Q67 278 65 264 Z" fill="#0e1014"/>
-            <path d="M114 264 Q116 278 118 285 Q122 292 112 294 Q100 296 96 286 Q93 278 95 264 Z" fill="#0e1014"/>
-            <ellipse cx="56" cy="224" rx="10" ry="8" fill="#1a2030"/>
-            <ellipse cx="104" cy="224" rx="10" ry="8" fill="#1a2030"/>
-            <rect x="60" y="122" width="40" height="2" rx="1" fill="#e8a020" opacity="0.5"/>
-            <rect x="60" y="128" width="28" height="1" rx="1" fill="#e8a020" opacity="0.3"/>
-            <rect x="54" y="52" width="52" height="2" rx="1" fill="#e8a020" opacity="0.4"/>
-          </svg>
-          <div style="width:120px;height:14px;background:radial-gradient(ellipse,rgba(232,160,32,0.18),transparent 70%);margin-top:-10px;border-radius:50%;"></div>
-          <div style="margin-top:16px;background:rgba(232,160,32,0.08);border:1px solid rgba(232,160,32,0.25);border-radius:8px;padding:7px 16px;text-align:center;">
-            <div style="font-family:'Rajdhani',sans-serif;font-size:9px;letter-spacing:0.2em;color:#e8a020;text-transform:uppercase;margin-bottom:3px;">Commander</div>
-            <div style="font-family:'Oswald',sans-serif;font-size:13px;color:#e8e8e8;font-weight:600;letter-spacing:0.06em;">500+ Days Played</div>
-            <div style="font-size:10px;color:#606878;margin-top:2px;">Hardcore Player</div>
-          </div>
-        </div>
-        <!-- Chat window -->
-        <div style="flex:1;min-width:280px;background:#0e1014;border:1px solid #2a3040;border-radius:16px;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,0.6);">
-          <div style="background:#13161c;border-bottom:1px solid #222830;padding:14px 20px;display:flex;align-items:center;gap:12px;">
-            <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#c06010,#e8a020);display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 16px rgba(232,160,32,0.3);">🪖</div>
-            <div>
-              <div style="font-family:'Oswald',sans-serif;font-size:14px;font-weight:600;color:#e8e8e8;letter-spacing:0.06em;">BUDDY AI</div>
-              <div style="font-size:10px;color:#30b870;letter-spacing:0.1em;display:flex;align-items:center;gap:5px;">
-                <span style="width:5px;height:5px;border-radius:50%;background:#30b870;display:inline-block;"></span> Online · Knows your full profile
-              </div>
-            </div>
-            <div style="margin-left:auto;font-family:'Rajdhani',sans-serif;font-size:10px;color:#606878;letter-spacing:0.1em;text-transform:uppercase;">500+ Days · Hardcore Player</div>
-          </div>
-          <div style="padding:24px 20px;display:flex;flex-direction:column;gap:16px;">
-            <div style="display:flex;justify-content:flex-end;">
-              <div style="background:#1a2030;border:1px solid #2a3040;border-radius:12px 12px 2px 12px;padding:12px 16px;max-width:80%;">
-                <div style="font-size:14px;color:#e8e8e8;line-height:1.55;">Why did I lose that fight? My power was higher than theirs.</div>
-                <div style="font-size:10px;color:#606878;margin-top:6px;text-align:right;">+ 3 screenshots attached</div>
-              </div>
-            </div>
-            <div style="display:flex;gap:12px;align-items:flex-start;">
-              <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#c06010,#e8a020);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">🪖</div>
-              <div style="background:#13161c;border:1px solid #222830;border-radius:2px 12px 12px 12px;padding:14px 16px;max-width:85%;">
-                <div style="font-size:13px;color:#e8e8e8;line-height:1.7;">
-                  <span style="color:#e07060;font-weight:700;font-family:'Rajdhani',sans-serif;letter-spacing:0.05em;">TYPE COUNTER — this is why.</span> Your Aircraft squad fought their <span style="color:#e8e8e8;font-weight:600;">Missile troops.</span> That's a hard counter — you dealt 20% less damage and took 20% more. <span style="color:#e8e8e8;font-weight:600;">Effective power swing: ~40%.</span><br/><br/>
-                  <span style="color:#e8a020;font-weight:600;">Stat screen confirms it</span> — your ATK shows red arrows despite equal gear. Classic counter matchup signature. Your power advantage was real, the matchup erased it.<br/><br/>
-                  <span style="color:#8090a0;font-size:12px;">Rematch verdict: Not Yet — swap to Missile squad first and the math flips in your favor.</span>
-                </div>
-                <div style="font-size:10px;color:#606878;margin-top:8px;">Buddy · just now</div>
-              </div>
-            </div>
-            <div style="display:flex;gap:10px;align-items:center;margin-top:8px;padding-top:16px;border-top:1px solid #222830;">
-              <div style="flex:1;background:#07080a;border:1px solid #2a3040;border-radius:8px;padding:12px 16px;font-size:13px;color:#606878;font-family:'Open Sans',sans-serif;">
-                Ask your Buddy anything about Last War: Survival...
-              </div>
-              <button style="background:linear-gradient(135deg,#c0281a,#e8a020);border:none;border-radius:8px;padding:12px 18px;color:#fff;font-family:'Oswald',sans-serif;font-size:13px;font-weight:600;letter-spacing:0.08em;cursor:pointer;">ASK →</button>
-            </div>
-            <div style="text-align:center;font-size:11px;color:#606878;">
-              ✦ Free accounts get <span style="color:#e8a020;">5 questions per day</span> · 30/day with Pro · 100/day with Elite
-            </div>
-          </div>
         </div>
       </div>
     </div>
