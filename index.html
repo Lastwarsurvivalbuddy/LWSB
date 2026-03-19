@@ -342,7 +342,6 @@
       letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold);
       padding: 10px 16px; background: rgba(232,160,32,0.08);
       border: 1px solid rgba(232,160,32,0.2); border-radius: 8px; display: inline-block; }
-    /* ── HONESTY LINE (new) ── */
     .honesty-line { font-size: 13px; color: var(--muted2); line-height: 1.75; font-weight: 300;
       font-style: italic; margin-top: 16px;
       padding-left: 14px; border-left: 2px solid rgba(232,160,32,0.3); }
@@ -379,6 +378,36 @@
       letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer;
       box-shadow: 0 4px 20px rgba(232,160,32,0.3); transition: all 0.2s; }
     .bottom-signup-btn:hover { box-shadow: 0 8px 32px rgba(232,160,32,0.5); transform: translateY(-1px); }
+
+    /* ── FAQ ── */
+    .faq-section { position: relative; z-index: 1; padding: 80px 5%;
+      border-top: 1px solid var(--border);
+      background: linear-gradient(180deg, transparent, rgba(232,160,32,0.02), transparent); }
+    .faq-inner { max-width: 760px; margin: 0 auto; }
+    .faq-heading { font-family: 'Oswald', sans-serif; font-size: clamp(22px, 3vw, 32px);
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--text); text-align: center; margin-bottom: 8px; }
+    .faq-sub { font-size: 13px; color: var(--muted); text-align: center;
+      margin-bottom: 40px; letter-spacing: 0.05em; }
+    .faq-list { display: flex; flex-direction: column; gap: 8px; }
+    .faq-item { background: var(--card); border: 1px solid var(--border);
+      border-radius: 10px; overflow: hidden; transition: border-color 0.2s; }
+    .faq-item:hover { border-color: rgba(232,160,32,0.25); }
+    .faq-item[open] { border-color: rgba(232,160,32,0.3); }
+    .faq-item[open] .faq-question { color: var(--gold); }
+    .faq-question { font-family: 'Rajdhani', sans-serif; font-size: 15px; font-weight: 700;
+      letter-spacing: 0.04em; color: var(--text); padding: 18px 20px;
+      cursor: pointer; list-style: none; display: flex; align-items: center;
+      justify-content: space-between; gap: 12px; transition: color 0.2s; }
+    .faq-question::-webkit-details-marker { display: none; }
+    .faq-question::after { content: '+'; font-family: 'Oswald', sans-serif;
+      font-size: 20px; font-weight: 400; color: var(--gold);
+      flex-shrink: 0; transition: transform 0.2s; }
+    .faq-item[open] .faq-question::after { content: '−'; }
+    .faq-answer { font-size: 13px; color: var(--muted2); line-height: 1.85; font-weight: 300;
+      padding: 0 20px 18px; border-top: 1px solid var(--border); padding-top: 14px; }
+    .faq-answer strong { color: var(--text); font-weight: 600; }
+    .faq-answer .faq-gold { color: var(--gold); font-weight: 600; }
 
     /* ── CONTACT ── */
     .contact-section { position: relative; z-index: 1; padding: 100px 5%;
@@ -898,7 +927,6 @@
           Real data from real commanders. Organized in a way Discord never could be.
         </p>
         <div class="learning-tagline">Your Knowledge. Everyone's Advantage.</div>
-        <!-- ── HONESTY LINE ── -->
         <p class="honesty-line">Buddy will tell you when it doesn't have the answer — and point you to where you can help fill the gap. No guessing. No faking it. That's the deal.</p>
       </div>
       <div class="learning-visual">
@@ -1038,6 +1066,62 @@
         </div>
         <button type="submit" class="bottom-signup-btn">Notify Me at Launch →</button>
       </form>
+    </div>
+  </section>
+
+  <!-- FAQ — OBJECTION HANDLING -->
+  <section class="faq-section">
+    <div class="faq-inner">
+      <div class="section-label" style="text-align:center;margin-bottom:10px;">Common Questions</div>
+      <h2 class="faq-heading">Built Different.</h2>
+      <p class="faq-sub">The questions people ask before they sign up — answered.</p>
+      <div class="faq-list">
+
+        <details class="faq-item">
+          <summary class="faq-question">Why isn't this free?</summary>
+          <p class="faq-answer">
+            Every answer Buddy gives costs real compute. We could slap ads on it — we're not going to.
+            Ads mean sponsors. Sponsors mean incentives to tell you to buy things. That's the opposite of what Buddy is for.<br/><br/>
+            What you're paying for is an AI that has <strong>zero reason to steer you wrong.</strong>
+            No brand deals. No affiliate links. No "featured pack" arrangements. Just the best answer for your specific situation.<br/><br/>
+            The free tier exists so you can see it's real. After that, the math is simple:
+            <span class="faq-gold">one bad pack purchase costs more than a month of Pro.</span>
+          </p>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-question">Why not just use ChatGPT?</summary>
+          <p class="faq-answer">
+            Go ask ChatGPT what you should focus on today in Last War. It'll give you a decent generic answer
+            that applies to roughly nobody.<br/><br/>
+            Buddy knows you're <strong>HQ 28 on Server 2412, Day 83, running Aircraft with T9 troops, and Enemy Buster in 3 days.</strong>
+            ChatGPT doesn't know any of that. It can't. It has no idea what server day it is,
+            what phase Arms Race is in, or what your squad power looks like.<br/><br/>
+            <span class="faq-gold">Generic AI gives generic answers. Buddy gives yours.</span>
+          </p>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-question">Is my game account safe?</summary>
+          <p class="faq-answer">
+            Yes. Buddy never asks for your game login, your account credentials, or any access to your account whatsoever.
+            <strong>Everything is self-reported</strong> — you tell us your HQ level, server day, troop type, and goals.
+            That's it. No scraping. No account linking. No risk.
+          </p>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-question">What if Buddy gets something wrong?</summary>
+          <p class="faq-answer">
+            Buddy will tell you when it doesn't know something rather than guess.
+            That's a design decision, not a disclaimer — the Honesty Doctrine is baked into every response.<br/><br/>
+            When Buddy hits a gap, it flags it and points you to TeachBuddy so you can contribute what you know.
+            <strong>Every gap reported makes the platform smarter for every commander on it.</strong><br/><br/>
+            <span class="faq-gold">We're not building the illusion of omniscience. We're building something that gets better every day.</span>
+          </p>
+        </details>
+
+      </div>
     </div>
   </section>
 
