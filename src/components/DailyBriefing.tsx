@@ -5,6 +5,7 @@
 // Fixed session 18: Top 3 Moves checkbox state persisted to Supabase (briefing_completions table)
 // Fixed session 29: cache key aligned to duel reset (2am UTC)
 // Fixed session 38: getUTCDateString uses duel-offset to match server, forceRefresh error handling improved
+// Fixed session 49: refresh button made visible (was text-zinc-500, invisible on dark bg)
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -301,9 +302,9 @@ export default function DailyBriefing() {
         <button
           onClick={handleRefresh}
           title="Refresh briefing"
-          className="text-zinc-500 hover:text-yellow-400 transition-colors text-xs"
+          className="flex items-center gap-1 text-xs font-semibold text-yellow-500 hover:text-yellow-300 transition-colors border border-yellow-500/40 hover:border-yellow-400 rounded px-2 py-0.5"
         >
-          ↺
+          ↺ Refresh
         </button>
       </div>
 
