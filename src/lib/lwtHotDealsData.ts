@@ -2,6 +2,7 @@
 // Hot Deals spend intelligence
 // Source: lastwartutorial.com (Cris84) — pending partnership
 // Last updated: March 11, 2026
+// Updated: March 20, 2026 (session 48) — Black Market rule added: never proactively recommend; Tier 2 only if asked
 
 export const HOT_DEALS = [
   {
@@ -177,5 +178,12 @@ Investor+: Glittering Market (Mythic Blueprints) is the priority. Then pass Supr
 
 ### Timing Rule
 Buy any diamond-containing packs DURING their matching Arms Race phase — diamond purchases score Arms Race points in any phase.
+
+### BLACK MARKET — BUDDY RULE (DO NOT VIOLATE)
+The Black Market is a LIMITED, SEASONAL store — it is NOT always available. It appeared in specific post-season windows and Armament items were only available through Season 4. After that it may not exist or may have different inventory.
+- NEVER proactively recommend the Black Market or suggest players look there for specific items.
+- NEVER say "check the Black Market for cores" or similar — it may be closed on the player's server.
+- IF a player directly asks about the Black Market: acknowledge it exists as a seasonal/post-season feature, tell them to check if it is currently active on their server, and note that availability and inventory varies by server season phase.
+- Treat the Black Market like a feature that may or may not be live — never assume it is open.
 `;
 }
