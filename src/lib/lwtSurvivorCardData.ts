@@ -2,6 +2,7 @@
 // Survivor recruitment, assignment, upgrade, and Alliance Duel timing data
 // Source: lastwartutorial.com, lastwarhandbook.com, medievalfun.com, in-game research
 // Do not modify confirmed data without Boyd confirming against live game
+// Updated: March 20, 2026 (session 48) — Adventurer Taylor full details added
 
 export const lwtSurvivorCardData = `
 # SURVIVOR CARDS — COMPLETE GUIDE
@@ -14,6 +15,7 @@ Survivors are recruited at the Tavern using Survivor Recruitment Tickets or free
 ---
 
 ## Survivor Rarity Tiers
+
 | Color | Rarity | Upgradeable? |
 |-------|--------|--------------|
 | Gray | Common | No |
@@ -30,14 +32,14 @@ Only Purple and Yellow survivors can be upgraded. Do not invest shard resources 
 
 ### Military Specialists (prioritize for combat power)
 | Type | Primary Bonus | Assign To |
-|------|--------------|-----------|
+|------|--------------|-----------| 
 | **Instructor** | Troop training speed | Barracks / Training grounds |
 | **Officer** | Troop HP / ATK / DEF stats | Military buildings |
 | **Nurse** | Hospital healing speed, hospital capacity | Hospital |
 
 ### Resource Specialists
 | Type | Primary Bonus | Assign To |
-|------|--------------|-----------|
+|------|--------------|-----------| 
 | **Farmer** | Food production rate | Farm |
 | **Miner** | Iron production rate | Iron Mine |
 | **Gold Miner** | Gold/coin production rate | Gold Mine |
@@ -48,7 +50,7 @@ Only Purple and Yellow survivors can be upgraded. Do not invest shard resources 
 
 ### Development Specialists (prioritize for build/research speed)
 | Type | Primary Bonus | Assign To |
-|------|--------------|-----------|
+|------|--------------|-----------| 
 | **Builder** | Construction speed | Construction buildings |
 | **Mechanic** | Vehicle / equipment maintenance speed | Workshop / relevant buildings |
 | **Scientist** | Research speed | Tech Center |
@@ -56,7 +58,7 @@ Only Purple and Yellow survivors can be upgraded. Do not invest shard resources 
 
 ### Support Specialists
 | Type | Primary Bonus | Assign To |
-|------|--------------|-----------|
+|------|--------------|-----------| 
 | **Attendant** | Reduces Tavern free-recruit cooldown | Tavern |
 
 ---
@@ -92,15 +94,49 @@ Only Purple and Yellow survivors can be upgraded. Do not invest shard resources 
 - Available every 48 hours base cooldown
 - Cooldown reduced by Tavern level: each Tavern level = -1 hour cooldown
 - Cooldown further reduced by Attendant survivors assigned to the Tavern
-  - Each Attendant upgrade = -6 minutes per upgrade
-  - 4 Legendary Attendants assigned = up to -24 hours total reduction
-  - Tavern Level 30 + 4 Legendary Attendants can get free recruit near every ~24 hours
+- Each Attendant upgrade = -6 minutes per upgrade
+- 4 Legendary Attendants assigned = up to -24 hours total reduction
+- Tavern Level 30 + 4 Legendary Attendants can get free recruit near every ~24 hours
 - Tavern Level 3 required to unlock survivor recruitment at all
 - Tavern Level 7 unlocks gem-based survivor recruitment
 
 ### VIP-Locked Survivors
 - Agent Shirley and Adventurer Taylor are VIP-exclusive — cannot be obtained with standard tickets
-- Their shards are only available in paid VIP packs
+- Their shards are only available in paid VIP store packs
+
+---
+
+## Adventurer Taylor — VIP Store Survivor
+
+Taylor is a special VIP-exclusive survivor who provides **bonus radar mission boxes daily**. She cannot be recruited via standard tickets — only purchased through the VIP store.
+
+### VIP Store Pricing (Taylor)
+| VIP Level Required | What You Get | Price |
+|-------------------|--------------|-------|
+| VIP 1 | Adventurer Taylor (the survivor herself) | $4.99 |
+| VIP 2 | 25 Taylor shards (1 star upgrade) | $9.99 |
+| VIP 3–4 | 50 Taylor shards per purchase | $19.99 |
+| VIP 5–6 | 110 Taylor shards per purchase | $49.99 |
+| VIP 7 | 230 Taylor shards | $99.99 |
+
+### Taylor's Bonus — Radar Boxes Per Day
+| Taylor Star Level | Bonus Radar Boxes/Day |
+|-------------------|----------------------|
+| 1 star | 5 boxes |
+| 2 stars | 10 boxes |
+| 3 stars | 15 boxes |
+| 4 stars | 20 boxes |
+| 5 stars | 25 boxes |
+
+### Taylor Special Reward
+- One of Taylor's potential daily rewards is the **Warrior's Monument** decoration (B-tier combat deco)
+- This makes Taylor a non-pack acquisition path for Warrior's Monument
+
+### Buddy Rules — Taylor
+- Taylor is only purchasable via VIP store — never suggest standard tickets or recruitment as a source
+- VIP store availability requires having the corresponding VIP level active
+- Taylor's radar boxes are a meaningful passive benefit for players who run radar missions regularly
+- Warrior's Monument via Taylor is worth noting when players ask about deco acquisition options
 
 ---
 
@@ -172,6 +208,7 @@ Only Purple and Yellow survivors can be upgraded. Do not invest shard resources 
 6. **Hero recruitment tickets are different from Survivor Recruitment Tickets** — never conflate them. Hero tickets score on Day 4, Survivor tickets score on Day 2.
 7. **VIP survivors (Shirley, Taylor) cannot be obtained via standard tickets** — do not suggest otherwise.
 8. **Pity system:** Guaranteed Legendary survivor (or equivalent) every 50 Survivor Recruitment Ticket pulls.
+9. **Adventurer Taylor** provides bonus radar boxes daily scaled to her star level (1★=5, 2★=10, 3★=15, 4★=20, 5★=25). VIP store only. One of her daily rewards can be Warrior's Monument decoration.
 `;
 
 export default lwtSurvivorCardData;

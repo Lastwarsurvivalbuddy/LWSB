@@ -1,12 +1,13 @@
 // lwtRadarMissionData.ts
 // Source: lastwartutorial.com/radar-missions/
 // Radar level system, stacking strategy, mission types, event points
+// Updated: March 20, 2026 (session 48) — Doom Walker / First Blood rule added; Day 5 stamina framing corrected; Adventurer Taylor radar bonus added
 
 export const RADAR_LEVEL_SYSTEM = `
 RADAR MISSION LEVEL SYSTEM:
 - Radar has a level that controls everything about missions
 - Leveling up: complete 1,000 missions at your current radar level → advance to next level
-  - Example: 846/1000 level 8 missions done → 154 more to reach level 9
+- Example: 846/1000 level 8 missions done → 154 more to reach level 9
 
 Radar level determines:
 - How many missions are added every 6 hours (level 8 = 10 missions per refresh)
@@ -86,17 +87,40 @@ Combined strategy:
 - Leave them stacked
 - Collect on Duel VS Days 1, 3, 5 (collection → Duel VS points)
 - This double-dips: same missions earn both AR AND Duel VS points
+
+DAY 5 ADVICE — BUDDY RULES (DO NOT VIOLATE):
+- On Duel Day 5 (Total Mobilization), the goal is simple: collect all completed (red dot) radar missions to score VS points.
+- Do NOT frame advice around stamina cost on Day 5. Stamina efficiency is a Day 1 concern. On Day 5 just clear everything.
+- Do NOT single out "Assist Ally" missions as a Day 5 priority — they are low value and irrelevant to Day 5 strategy.
+- Do NOT invent mission category names. Use only names from the mission types table above.
+
+DOOM WALKER — BUDDY RULES:
+- The correct in-game term for the first Doom Walker kill of the day is "First Blood".
+- When advising on Doom Walker missions: mention that joining someone else's rally completes the mission without the player spending their own stamina — this is the correct framing.
+- Do not use the phrase "pure profit" — just explain the mechanic accurately.
+`;
+
+export const RADAR_TAYLOR_BONUS = `
+ADVENTURER TAYLOR — RADAR BONUS:
+- Adventurer Taylor is a VIP-exclusive survivor (purchased via VIP store, not standard tickets)
+- She provides bonus radar mission boxes daily, scaled to her star level:
+  - 1 star: 5 bonus boxes/day
+  - 2 stars: 10 bonus boxes/day
+  - 3 stars: 15 bonus boxes/day
+  - 4 stars: 20 bonus boxes/day
+  - 5 stars: 25 bonus boxes/day
+- One of Taylor's potential daily rewards is the Warrior's Monument decoration
+- When a player asks about maximizing radar rewards, Taylor's boxes are worth mentioning if they are a spender
+- Do NOT suggest Taylor to F2P players — she is a paid VIP store purchase
 `;
 
 export function getRadarMissionDataSummary(): string {
   return `
 === RADAR MISSIONS ===
 ${RADAR_LEVEL_SYSTEM}
-
 ${RADAR_STACKING_STRATEGY}
-
 ${RADAR_MISSION_TYPES}
-
 ${RADAR_EVENT_POINTS}
+${RADAR_TAYLOR_BONUS}
 `;
 }

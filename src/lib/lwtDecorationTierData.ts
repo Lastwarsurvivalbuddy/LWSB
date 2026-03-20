@@ -2,6 +2,7 @@
 // Decoration Tier List & Upgrade Priority Guide
 // Source: ldshop.gg decoration tier list (Jan 2026 community meta)
 // Complements decorationData.ts (which covers upgrade costs/stat values)
+// Updated: March 20, 2026 (session 48) — Warrior's Monument Taylor acquisition note added
 // -----------------------------------------------------------------------
 
 export interface DecorationEntry {
@@ -114,7 +115,10 @@ export const DECORATION_TIERS: DecorationTier[] = [
       'Provides general stat boosts but lacks the multiplicative scaling of higher tiers.',
     decorations: [
       { name: 'Pumpkin Panic', notes: 'General combat stats.' },
-      { name: 'Warrior\'s Monument', notes: 'General combat stats.' },
+      {
+        name: 'Warrior\'s Monument',
+        notes: 'General combat stats. Can be obtained as a daily reward from Adventurer Taylor (VIP store survivor) — a non-pack acquisition path for players who own Taylor.',
+      },
       { name: 'Throne of Blood', notes: 'General combat stats.' },
       { name: 'Golden Missile Vehicle', notes: 'General combat stats.' },
       { name: 'Ferris Wheel', notes: 'General combat stats.' },
@@ -172,6 +176,7 @@ export const DECORATION_META_NOTES = [
   'Economy decorations should never compete with combat decorations for upgrade resources.',
   'Universal Decor Components are the limiting resource — spend them on S and A+ first.',
   'Decorations are permanent and account-wide — they apply in all game modes.',
+  "Warrior's Monument (B-tier) can be obtained as a daily reward from Adventurer Taylor — a VIP store survivor. Worth noting when players ask how to acquire it without buying packs.",
 ];
 
 // -----------------------------------------------------------------------
