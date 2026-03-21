@@ -493,7 +493,7 @@ export default function Dashboard() {
           )}
         </section>
 
-        {/* ── WAR ROOM CARD (Desert Storm + Warzone Duel) ── */}
+        {/* ── WAR ROOM CARD ── */}
         <section className="pt-4">
           <button
             onClick={() => router.push('/war-room')}
@@ -516,12 +516,15 @@ export default function Dashboard() {
                       Build shareable battle plans for your server. Assign roles, write orders, post to alliance chat.
                     </p>
                     {/* Tool pills */}
-                    <div className="flex items-center gap-2 mt-2">
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
                       <span className="text-[10px] text-zinc-500 bg-zinc-800 border border-zinc-700 px-2 py-0.5 rounded-full">
                         🏜️ Desert Storm
                       </span>
                       <span className="text-[10px] text-zinc-500 bg-zinc-800 border border-zinc-700 px-2 py-0.5 rounded-full">
                         ⚔️ Warzone Duel
+                      </span>
+                      <span className="text-[10px] text-zinc-500 bg-zinc-800 border border-zinc-700 px-2 py-0.5 rounded-full">
+                        ⚡ Canyon Storm
                       </span>
                     </div>
                   </div>
