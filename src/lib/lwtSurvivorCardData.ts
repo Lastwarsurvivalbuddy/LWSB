@@ -2,7 +2,7 @@
 // Survivor recruitment, assignment, upgrade, and Alliance Duel timing data
 // Source: lastwartutorial.com, lastwarhandbook.com, medievalfun.com, in-game research
 // Do not modify confirmed data without Boyd confirming against live game
-// Updated: March 20, 2026 (session 48) — Adventurer Taylor full details added
+// Updated: March 21, 2026 (session 55) — Adventurer Taylor corrected from in-game screenshot (Aethernis guide)
 
 export const lwtSurvivorCardData = `
 # SURVIVOR CARDS — COMPLETE GUIDE
@@ -108,25 +108,30 @@ Only Purple and Yellow survivors can be upgraded. Do not invest shard resources 
 
 ## Adventurer Taylor — VIP Store Survivor
 
-Taylor is a special VIP-exclusive survivor who provides **bonus radar mission boxes daily**. She cannot be recruited via standard tickets — only purchased through the VIP store.
+Taylor is a special VIP-exclusive survivor who provides **bonus radar mission chests daily**. She cannot be recruited via standard tickets — only purchased through the VIP store. She is widely considered the best buy in the game for players who plan to play for multiple months. She pays for herself within about a month.
 
-### VIP Store Pricing (Taylor)
-| VIP Level Required | What You Get | Price |
-|-------------------|--------------|-------|
-| VIP 1 | Adventurer Taylor (the survivor herself) | $4.99 |
-| VIP 2 | 25 Taylor shards (1 star upgrade) | $9.99 |
-| VIP 3–4 | 50 Taylor shards per purchase | $19.99 |
-| VIP 5–6 | 110 Taylor shards per purchase | $49.99 |
-| VIP 7 | 230 Taylor shards | $99.99 |
+- **Good at LVL 0** (for low spenders — immediate value from day one)
+- **Extremely valuable at LVL 4** (for higher spenders — chest quality jumps dramatically)
+- **In-game cost:** 44,000 (coins/diamonds as shown on VIP store card)
 
-### Taylor's Bonus — Radar Boxes Per Day
-| Taylor Star Level | Bonus Radar Boxes/Day |
-|-------------------|----------------------|
-| 1 star | 5 boxes |
-| 2 stars | 10 boxes |
-| 3 stars | 15 boxes |
-| 4 stars | 20 boxes |
-| 5 stars | 25 boxes |
+### Taylor's Daily Chest Rewards by Level
+| Taylor LVL | Daily Chests |
+|------------|-------------|
+| LVL 0 | 5 Rare Explorer Chests |
+| LVL 1 | 10 Rare Explorer Chests |
+| LVL 2 | 15 Rare Explorer Chests |
+| LVL 3 | 20 Rare Explorer Chests |
+| LVL 4 | **25 Deluxe Adventurer Chests** ← quality jump |
+| LVL 5 | 30 Deluxe Adventurer Chests |
+
+**Note:** LVL 4 is the major milestone — chest type upgrades from Rare Explorer to Deluxe Adventurer, which have significantly better drop rates for Legendary and Epic items.
+
+### How to Reach LVL 4 — Pack Paths
+Taylor to LVL 4 requires **325 shards**. Recommended pack combinations:
+- **Packs 1–6** = 355 shards (slight overshoot, fine)
+- **Packs 1–4 + Pack 7** = 365 shards
+- **Packs 1 + 6 + 7** = 350 shards
+- **LVL 0 only:** Just buy the VIP1 Pack — Taylor herself, immediate daily chest value
 
 ### Taylor Special Reward
 - One of Taylor's potential daily rewards is the **Warrior's Monument** decoration (B-tier combat deco)
@@ -134,8 +139,10 @@ Taylor is a special VIP-exclusive survivor who provides **bonus radar mission bo
 
 ### Buddy Rules — Taylor
 - Taylor is only purchasable via VIP store — never suggest standard tickets or recruitment as a source
-- VIP store availability requires having the corresponding VIP level active
-- Taylor's radar boxes are a meaningful passive benefit for players who run radar missions regularly
+- LVL 0 is already valuable — recommend VIP1 Pack to any player who runs radar missions regularly
+- LVL 4 is the target for higher spenders — the Deluxe Adventurer Chest quality jump is significant
+- Pack path to LVL 4: Packs 1–6 (355 shards) is the simplest route
+- Taylor pays for herself within about a month — frame as an investment, not a luxury
 - Warrior's Monument via Taylor is worth noting when players ask about deco acquisition options
 
 ---
@@ -208,7 +215,7 @@ Taylor is a special VIP-exclusive survivor who provides **bonus radar mission bo
 6. **Hero recruitment tickets are different from Survivor Recruitment Tickets** — never conflate them. Hero tickets score on Day 4, Survivor tickets score on Day 2.
 7. **VIP survivors (Shirley, Taylor) cannot be obtained via standard tickets** — do not suggest otherwise.
 8. **Pity system:** Guaranteed Legendary survivor (or equivalent) every 50 Survivor Recruitment Ticket pulls.
-9. **Adventurer Taylor** provides bonus radar boxes daily scaled to her star level (1★=5, 2★=10, 3★=15, 4★=20, 5★=25). VIP store only. One of her daily rewards can be Warrior's Monument decoration.
+9. **Adventurer Taylor** provides bonus radar chests daily scaled to her level: LVL 0=5 Rare, LVL 1=10 Rare, LVL 2=15 Rare, LVL 3=20 Rare, LVL 4=25 Deluxe, LVL 5=30 Deluxe. LVL 4 is the big milestone — chest type upgrades to Deluxe Adventurer. VIP store only. Pack path to LVL 4: Packs 1–6 (355 shards). LVL 0 via VIP1 Pack is already worth it. One of her daily rewards can be Warrior's Monument decoration.
 `;
 
 export default lwtSurvivorCardData;
