@@ -243,11 +243,120 @@ export const EXCLUSIVE_WEAPONS = [
   { hero: 'Morrison', season: 5, week: 6, note: 'Third S5 EW. Late S5 specialist.' },
 ];
 
+// ── Squad Skill Priorities by Troop Type ───────────────────────────
+// Source: Community guides by #1210 Aethernis (Air/Tank) and #659 LD9 Taco Legion (Missile)
+// These are the recommended skill max orders for each troop-type squad.
+// General rule: get every skill to level 20 ASAP first, then max in priority order.
+
+export interface SquadSkillPriority {
+  troopType: 'aircraft' | 'tank' | 'missile';
+  heroes: string[]; // squad composition in recommended 5-star order
+  fiveStarNote: string; // guidance on 5-star / level priority
+  skillLevelNote: string; // general leveling rule
+  prio1: string[]; // max these first (after all reach lvl 20)
+  prio2: string[]; // max these second
+  prio3: string[]; // max these last
+  skipToLvl20Exception?: string; // heroes to NOT rush to 20 before maxing
+}
+
+export const SQUAD_SKILL_PRIORITIES: SquadSkillPriority[] = [
+  {
+    troopType: 'aircraft',
+    heroes: ['DVA', 'Morrison', 'Lucius', 'Carlie', 'Schuyler'],
+    fiveStarNote: 'Get everyone to at least 3-star before working on 5-starring any hero.',
+    skillLevelNote: 'Get every skill to level 20 ASAP — except Carlie and Lucius top-left skills. Then max skills in priority order.',
+    skipToLvl20Exception: 'Top-left skills of Carlie and Lucius — bring others to 20 first.',
+    prio1: [
+      'Steel Barrage',
+      "Knight's Spirit",
+      'Silver Armor',
+      'Inferno Blaze',
+      'Armor-Piercing Shot',
+    ],
+    prio2: [
+      'Vortex Missile',
+      'Energy Adaption',
+      'Full-Auto Machine',
+      'Full Firepower',
+      'Blast Frenzy',
+    ],
+    prio3: [
+      'Armament Upgrade',
+      'Lightning Triple Strike',
+      'Dual-string Rocket',
+      'Lightning Chain',
+      'Antimatter Armor',
+    ],
+  },
+  {
+    troopType: 'tank',
+    heroes: ['Kimberly', 'Stetmann', 'Williams', 'Murphy', 'Marshall'],
+    fiveStarNote: '5-star Kimberly is your main focus. After that, get everyone to 4-star before working on your next 5-star units.',
+    skillLevelNote: 'Get every skill to level 20 ASAP — except top-left skills of Williams and Murphy. Then max skills in priority order.',
+    skipToLvl20Exception: 'Top-left skills of Williams and Murphy — bring others to 20 first.',
+    prio1: [
+      'Barrage Strike',
+      'Lightning Rush',
+      'Iron Will',
+      'All-Around Armor',
+      'Ironclad Barrier',
+      'Command Strategy',
+    ],
+    prio2: [
+      'Energy Boost',
+      'Energy Assault',
+      'Critical Charge',
+      'Stand Firm',
+    ],
+    prio3: [
+      'Orb Lightning',
+      'Triad Harmony',
+    ],
+  },
+  {
+    troopType: 'missile',
+    heroes: ['Swift', 'Tesla', 'Adam', 'Fiona', 'McGregor'],
+    fiveStarNote: 'Follow the 5-star order: Swift → Tesla → Adam → Fiona → McGregor.',
+    skillLevelNote: 'Get every skill to level 20 ASAP in order, then max skills in priority order.',
+    prio1: [
+      'Targeted Strike',
+      'Weakness Targeting',
+      'Electric Grid Lockdown',
+      'Spike Armor',
+      'Double Trajectory',
+    ],
+    prio2: [
+      'Lightning Chain',
+      'Counter Defense',
+      'Atomic Blast',
+      'Unyielding Heart',
+      'HP Boost',
+    ],
+    prio3: [
+      'Precise Guidance',
+      'Electric Power Boost',
+      'MK43 Vehicle-Mounted Machine Gun',
+      'Ballistic Boost',
+      'Forward Rush',
+    ],
+  },
+];
+
 // ── Summary for Buddy system prompt ────────────────────────────────
 
 export function getHeroDataSummary(): string {
   const coreHeroes = HEROES.filter(h => h.priority === 'core');
   const ewHeroes = EXCLUSIVE_WEAPONS;
+
+  const squadSkillSection = SQUAD_SKILL_PRIORITIES.map(sq => {
+    const type = sq.troopType.charAt(0).toUpperCase() + sq.troopType.slice(1);
+    return `#### ${type} Squad (${sq.heroes.join(' → ')})
+- **5-Star Priority:** ${sq.fiveStarNote}
+- **Leveling Rule:** ${sq.skillLevelNote}${sq.skipToLvl20Exception ? `\n- **Exception:** ${sq.skipToLvl20Exception}` : ''}
+- **Prio 1 (max first):** ${sq.prio1.join(', ')}
+- **Prio 2:** ${sq.prio2.join(', ')}
+- **Prio 3:** ${sq.prio3.join(', ')}`;
+  }).join('\n\n');
 
   return `## Hero System
 
@@ -281,5 +390,10 @@ ${ewHeroes.map(ew => `- **${ew.hero}**: Season ${ew.season} Week ${ew.week} — 
 - **Fighter:** Core = ${HERO_BY_PLAYSTYLE.fighter.core.join(', ')}. ${HERO_BY_PLAYSTYLE.fighter.note}
 - **Developer:** Core = ${HERO_BY_PLAYSTYLE.developer.core.join(', ')}. ${HERO_BY_PLAYSTYLE.developer.note}
 - **Commander:** Core = ${HERO_BY_PLAYSTYLE.commander.core.join(', ')}. ${HERO_BY_PLAYSTYLE.commander.note}
-- **Scout:** Core = ${HERO_BY_PLAYSTYLE.scout.core.join(', ')}. ${HERO_BY_PLAYSTYLE.scout.note}`;
+- **Scout:** Core = ${HERO_BY_PLAYSTYLE.scout.core.join(', ')}. ${HERO_BY_PLAYSTYLE.scout.note}
+
+### Squad Skill Priority by Troop Type
+These are the recommended skill max orders per squad. General rule: get all skills to level 20 first, then max in priority order below.
+
+${squadSkillSection}`;
 }
