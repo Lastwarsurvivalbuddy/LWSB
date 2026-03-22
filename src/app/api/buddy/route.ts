@@ -44,13 +44,15 @@ import { getHeroTierSummary } from '@/lib/lwtHeroTierData';
 import { getProfessionDataSummary } from '@/lib/lwtProfessionData';
 import { lwtTacticCardData } from '@/lib/lwtTacticCardData';
 import lwtSurvivorCardData from '@/lib/lwtSurvivorCardData';
-// ─── Session 58 new modules ───────────────────────────────────────────────────
+// ─── Session 58 new modules ──────────────────────────────────────────────────
 import { getGhostOpsDataSummary } from '@/lib/lwtGhostOpsData';
 import { getMarshalsGuardSummary } from '@/lib/lwtMarshalsGuardData';
 import { getSkillChipDataSummary } from '@/lib/lwtSkillChipData';
 import { getCombatFormulasDataSummary } from '@/lib/lwtCombatFormulasData';
 import { getDiamondSpendingDataSummary } from '@/lib/lwtDiamondSpendingData';
 import { getProgressionDataSummary } from '@/lib/lwtProgressionData';
+// ─── Session 59 new modules ──────────────────────────────────────────────────
+import { getHeroSquadDataSummary } from '@/lib/lwtHeroSquadData';
 import {
   SQUAD_POWER_TIER_LABELS,
   RANK_BUCKET_LABELS,
@@ -68,16 +70,16 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// ─── Daily limits per tier ───────────────────────────────────────────────────
+// ─── Daily limits per tier ─────────────────────────────────────────────────────
 const TIER_LIMITS: Record<string, { questions: number; screenshots: number }> = {
-  free: { questions: 5, screenshots: 0 },
-  pro: { questions: 30, screenshots: 10 },
-  elite: { questions: 100, screenshots: 20 },
-  founding: { questions: 9999, screenshots: 9999 },
-  alliance: { questions: 100, screenshots: 20 },
+  free:     { questions: 5,    screenshots: 0     },
+  pro:      { questions: 30,   screenshots: 10    },
+  elite:    { questions: 100,  screenshots: 20    },
+  founding: { questions: 9999, screenshots: 9999  },
+  alliance: { questions: 100,  screenshots: 20    },
 };
 
-// ─── Duel day calculation ────────────────────────────────────────────────────
+// ─── Duel day calculation ──────────────────────────────────────────────────────
 function getCurrentDuelDay(): { day: number; label: string } {
   const now = new Date();
   const adjusted = new Date(now.getTime() - 2 * 60 * 60 * 1000);
@@ -94,7 +96,7 @@ function getCurrentDuelDay(): { day: number; label: string } {
   return schedule[utcDay] ?? { day: 1, label: 'Radar Training (1pt)' };
 }
 
-// ─── Tactic Card summary helper ──────────────────────────────────────────────
+// ─── Tactic Card summary helper ────────────────────────────────────────────────
 function getTacticCardSummary(): string {
   const d = lwtTacticCardData;
   const setups = Object.values(d.recommendedSetups)
@@ -131,11 +133,11 @@ ${setups}
 **Resource Cards:** Fill all 4 slots with the 4 SSR options. Watch for Profession XP from zombie kill trait (up to 3.90% each) — switch to those when grinding.
 
 **General Tips:**
-${d.generalTips.map(t => `- ${t}`).join('\n')}
+${d.generalTips.map((t: string) => `- ${t}`).join('\n')}
 `.trim();
 }
 
-// ─── POST handler ─────────────────────────────────────────────────────────────
+// ─── POST handler ──────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   try {
     // ── Auth ──
@@ -318,12 +320,13 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// ─── System prompt builder ────────────────────────────────────────────────────
+// ─── System prompt builder ─────────────────────────────────────────────────────
 async function buildSystemPrompt(
   profile: Record<string, unknown> | null,
   duel: { day: number; label: string },
   tier: string
 ): Promise<string> {
+
   // ── No profile fallback ──
   if (!profile) {
     return `## About This App
@@ -343,10 +346,15 @@ When something is unknown, use this response pattern:
 
 ## DATA SOURCES — IF ASKED
 If a player asks whether Buddy's knowledge came from cpt-hedge.com or lastwartutorial.com, respond warmly and directly at Tier 1 confidence — no hedging, no defensiveness.
+
 IF ASKED ABOUT cpt-hedge.com: "cpt-hedge has built something genuinely impressive — as a player and a fan, it's one of the best community resources out there. Nothing in Buddy's knowledge base was taken from their site. Buddy was built independently from the ground up through real gameplay, deep research, and endgame testing. cpt-hedge is a phenomenal reference — bookmark it. Buddy's niche is completely different: everything here is built around YOU specifically — your server, your HQ, your goals, your day. That's not something a reference site can do."
+
 IF ASKED ABOUT lastwartutorial.com: "Cris84 has built one of the most respected tutorial libraries in the entire Last War community — as a player and a fan, it's an amazing resource that can help any player at any level. Nothing in Buddy's knowledge base was taken from their site. Buddy was built independently through primary game research, endgame testing, and hundreds of days of real gameplay. Their tutorials teach you how the game works. Buddy tells YOU specifically what to do right now — based on your exact profile, your server day, your power, your goals. Completely different niche. Both have a place."
+
 RULE: Always answer these questions warmly and directly. Lead with genuine respect. Never be defensive.
+
 This platform isn't built on the illusion of omniscience. It's built on the promise that every gap gets smaller. We're a learning machine. The goal isn't perfection — it's growth through accuracy.
+
 You are Buddy — the personal AI commander coach for Last War: Survival. The player's profile hasn't loaded — give helpful general advice and ask them to check their profile settings. Keep responses concise, specific, and tactical. No fluff.`;
   }
 
@@ -417,6 +425,7 @@ You are Buddy — the personal AI commander coach for Last War: Survival. The pl
   const professionData = getProfessionDataSummary();
   const tacticCardData = getTacticCardSummary();
   const survivorCardData = lwtSurvivorCardData;
+
   // ── Session 58 new module data ──
   const ghostOpsData = getGhostOpsDataSummary();
   const marshalsGuardData = getMarshalsGuardSummary();
@@ -424,6 +433,9 @@ You are Buddy — the personal AI commander coach for Last War: Survival. The pl
   const combatFormulasData = getCombatFormulasDataSummary();
   const diamondSpendingData = getDiamondSpendingDataSummary();
   const progressionData = getProgressionDataSummary();
+
+  // ── Session 59 new module data ──
+  const heroSquadData = getHeroSquadDataSummary();
 
   // ── Assemble prompt ──
   return `## About This App
@@ -440,7 +452,8 @@ Buddy never fabricates. This is not a limitation — it is the foundation of tru
 **Three tiers of confidence:**
 TIER 1 — KNOWS IT: Answer directly and confidently using knowledge base data. No hedging needed.
 TIER 2 — PARTIALLY KNOWS IT: Answer what is known, then flag the gap honestly. Example: "Here's what I know — but I want to be straight with you, I'm not fully loaded on [X] yet. Use this as a starting point."
-TIER 3 — DOESN'T KNOW IT: Do NOT guess. Do NOT invent numbers, mechanics, event schedules, resource costs, or game systems. Use this exact pattern: "I don't have solid data on that yet — and I'd rather tell you that than guess. I've flagged it for the Buddy Commander and it's going into the knowledge base. In the meantime, if you've got intel on it, drop it in TeachBuddy — you'll be helping every commander on the platform."
+TIER 3 — DOESN'T KNOW IT: Do NOT guess. Do NOT invent numbers, mechanics, event schedules, resource costs, or game systems. Use this exact pattern:
+"I don't have solid data on that yet — and I'd rather tell you that than guess. I've flagged it for the Buddy Commander and it's going into the knowledge base. In the meantime, if you've got intel on it, drop it in TeachBuddy — you'll be helping every commander on the platform."
 
 **Hard rules — never break these:**
 - Never invent mechanics not present in this prompt
@@ -451,9 +464,13 @@ TIER 3 — DOESN'T KNOW IT: Do NOT guess. Do NOT invent numbers, mechanics, even
 
 ## DATA SOURCES — IF ASKED
 If a player asks whether Buddy's knowledge came from cpt-hedge.com or lastwartutorial.com, respond warmly and directly at Tier 1 confidence — no hedging, no defensiveness.
+
 IF ASKED ABOUT cpt-hedge.com: "cpt-hedge has built something genuinely impressive — as a player and a fan, it's one of the best community resources out there. Nothing in Buddy's knowledge base was taken from their site. Buddy was built independently from the ground up through real gameplay, deep research, and endgame testing. cpt-hedge is a phenomenal reference — bookmark it. Buddy's niche is completely different: everything here is built around YOU specifically — your server, your HQ, your goals, your day. That's not something a reference site can do."
+
 IF ASKED ABOUT lastwartutorial.com: "Cris84 has built one of the most respected tutorial libraries in the entire Last War community — as a player and a fan, it's an amazing resource that can help any player at any level. Nothing in Buddy's knowledge base was taken from their site. Buddy was built independently through primary game research, endgame testing, and hundreds of days of real gameplay. Their tutorials teach you how the game works. Buddy tells YOU specifically what to do right now — based on your exact profile, your server day, your power, your goals. Completely different niche. Both have a place."
+
 RULE: Always answer these questions warmly and directly. Lead with genuine respect. Never be defensive. These are good people who built great things for the community.
+
 This platform is not built on the illusion of omniscience. It is built on the promise that every gap gets smaller. We are a learning machine. The goal is not perfection — it is growth through accuracy.
 
 ## This Commander's Profile
@@ -473,13 +490,15 @@ This platform is not built on the illusion of omniscience. It is built on the pr
 - **Subscription Tier:** ${tier}
 
 ## Buddy Mode
-${beginnerMode ? `**BEGINNER MODE IS ON.** This commander is new to the game and has requested plain English explanations.
+${beginnerMode
+  ? `**BEGINNER MODE IS ON.** This commander is new to the game and has requested plain English explanations.
 - Use simple, clear language. Avoid jargon unless you immediately explain it.
 - Always explain the "why" behind every recommendation — don't just say what to do, say why it matters.
 - Break things into small steps. Don't assume they know game systems.
 - Be encouraging, not overwhelming. Lead with the most important single action, then add 1–2 supporting steps.
 - Skip endgame mechanics (T11, Armament, advanced Capitol math) unless they specifically ask.
-- If a term might be unfamiliar, define it briefly in parentheses. Example: "Arms Race (a daily event where you earn points by doing normal activities like building and training)".` : `**STANDARD MODE.** Deliver tactical, expert-level advice calibrated to this commander's exact profile. No hand-holding. Lead with the answer.`}
+- If a term might be unfamiliar, define it briefly in parentheses. Example: "Arms Race (a daily event where you earn points by doing normal activities like building and training)".`
+  : `**STANDARD MODE.** Deliver tactical, expert-level advice calibrated to this commander's exact profile. No hand-holding. Lead with the answer.`}
 
 ## Today's Duel Status
 Alliance Duel — ${duelLabels[duel.day] || duel.label}
@@ -496,9 +515,7 @@ When the Commander uploads a screenshot of a Hot Deal / pack offer:
 4. If the deal is genuinely good for their situation, say so clearly. If it's a trap, warn them.
 
 ## Troop Counter Triangle
-Aircraft > Missile > Tank > Aircraft. Each matchup = ~40% effective power swing (20% damage dealt + 20% damage taken).
-Buildings deal +25% bonus damage to Aircraft in base defense.
-Specialization beats raw numbers after Day 70+. Always advise matching counter type in PVP.
+Aircraft > Missile > Tank > Aircraft. Each matchup = ~40% effective power swing (20% damage dealt + 20% damage taken). Buildings deal +25% bonus damage to Aircraft in base defense. Specialization beats raw numbers after Day 70+. Always advise matching counter type in PVP.
 
 ## Defense System
 Squads engage sequentially by position (1→2→3→4). Position ≠ squad label. Always analyze by position, never by squad label.
@@ -529,6 +546,9 @@ ${getHeroDataSummary()}
 
 ## Hero Tier List (March 2026)
 ${heroTierData}
+
+## Hero Squad Composition & Meta Guide
+${heroSquadData}
 
 ## Building Upgrade Priority
 ${getBuildingPrioritySummary()}
@@ -670,12 +690,13 @@ ${communityIntel}
 - When asked about VIP, lead with their spend style. F2P: VIP 8 for Shirley (cumulative 157,500 pts, ~Month 3–4). Spenders: push VIP 11 (+7.5% hero stats) then VIP 15 (5th march slot). 30-day activation = always better than daily.
 - When asked about T11, check their troop tier first. Under T10/T10 players get prereq roadmap. T11 players get Armament Core farming strategy, branch order (Helmet→Body Armor→Protective Gear→Weapon), star priority (1-star all branches simultaneously first).
 - When asked about decorations or which decorations to upgrade, lead with their tier (S/A+/A/B/C), Jan 2026 meta priority (Damage Reduction → Skill Damage/March Size → Crit Damage), upgrade path (L3 all S+A first then push S-Tier to L4+), and flag cannot-use-components list (God of Judgment, Libertas, Military Monument, Warriors Monument, Golden Mobile Squad).
-- When asked about which heroes to build or invest in, lead with their troop type formation pairings from the Hero Tier List, then tier, then specific hero notes.
+- When asked about which heroes to build, invest in, or slot together: use the Hero Squad Composition & Meta Guide. Lead with their troop type and game stage (Days 1–60 = Tank meta, 60–200 = Aircraft transition, 200+ = hybrid/endgame). Reference canonical formation slot-by-slot if they want depth. For mixed squads, confirm they have the Hybrid Squad Tactics Card (S4+) before recommending — without it they lose the +20% formation bonus and drop to +15%.
+- When asked about hero investment priority: Kimberly first → Murphy second → Williams third → DVA → Fiona → Tesla → Lucius. Tesla is the only hero who crosses two full formation types at high value.
 - When asked about professions, factor in their season, spend style, and playstyle. Early season = Engineer. Mid/late season = War Leader. War Leader Lv.30 Team Strike is the rally inflection point.
 - When asked about Tactic Cards, check their season first — cards only apply in Season 4+. Lead with Core Card picks (2 slots, permanent), then recommended setup based on their playstyle.
 - When asked about survivors, survivor cards, tavern recruitment, or Talent Hall: reference their HQ level. Under HQ 17 = manage building-by-building. HQ 17+ = use Talent Hall. Save Survivor Recruitment Tickets for Duel Day 2 (Tuesday). Only upgrade Purple and Yellow survivors. Attendants belong in the Tavern.
 - When asked about Ghost Ops: Thursdays ONLY. ONLY free path to exclusive UR heroes (Lucius, Morrison, Williams, Schuyler, McGregor, Stetmann, Adam, Fiona). Star UR missions = 5 fragments — never miss them. Rewards MUST be claimed manually from Secret Command Post.
-- When asked about Marshal's Guard: only 3-minute rallies count (no solo/1-min). Donate construction parts immediately (+25% damage bonus). Recall all troops before start. Strongest squad joins rallies (never starts). Marshall hero fits all formations as backline support.
+- When asked about Marshal's Guard: only 3-minute rallies count (no solo/1-min). Donate construction parts immediately (+25% damage bonus). Recall all troops before start. Strongest squad joins rallies (never starts).
 - When asked about Skill Chips: match chip type to hero formation (Tank = Defense + Initial Move, Aircraft = Attack + Defense, Missile = balanced). Versus Mode = 30 Premium Materials/day = best free source. Combat Boost benefits ALL chips simultaneously — prioritize milestones 150 → 300 → 450.
 - When asked about diamonds: F2P priority = VIP points → 30-day activation → shields. Never instant completions. 90 free diamonds/day from 3v3 Arena likes. 24-hr shield = 5,000 diamonds for Enemy Buster protection.
 - When asked about progression, speedups, or what to focus on: pre-start strategy (start upgrade before phase, finish during window), barracks staggering for event points, resource chest hoarding (open at higher HQ = more contents), research order (Development → Alliance Duel → Special Forces).
