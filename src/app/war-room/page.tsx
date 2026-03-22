@@ -36,22 +36,26 @@ Hold until cap shows 100%`;
 // ─── CANYON STORM DATA ───────────────────────────────────────────────────────
 
 const CS_TIPS = [
-  'Stick to your zone. Don\'t waste teleports — not everyone in 1 spot.',
-  'Lower power = capture structures first. Higher power = attack enemy bases.',
-  'Subs: standby at 5 min to fill a vacant primary slot. Stick to the squad assigned.',
-  'Power Tower (#1) is the anchor. Hold it until Virus Lab opens at 12 min.',
-  'Virus Lab (#7) at 12 min is the win condition. Push immediately — don\'t hesitate.',
-  'No casualties — all troops recover after battle. Play aggressive. Don\'t shield up.',
-  'Occupied buildings overflow points over time. Attack capped enemy buildings to plunder excess.',
-  'Use idle troops to gather scattered Power Stations — free points, don\'t leave them.',
-  'Individual Points charge your battle skills. Fight, heal, take wounds — stay active.',
+  'Virus Lab (#7) opens at exactly 12 min — it\'s the win condition. Push immediately, no hesitation.',
+  'Power Tower (#1) is the anchor in Phase 1. Hold it until Virus Lab opens. Don\'t abandon it for side fights.',
+  'Rulebringers: Judicator does 5,000 durability dmg per teleport. Enemy bases have 6,000 total — 2 hits = destroyed.',
+  'Rulebringers: Save Judicator (300s CD) for the Virus Lab contest window at 12 min — max disruption, max value.',
+  'Dawnbreakers: SPREAD OUT near the Judicator player. Adjacency damage only hits bases near the teleporting player.',
+  'Dawnbreakers: Assign one task force to Virus Lab assault, the other to holding mid-tier structures. No duplicated effort.',
+  'No casualties — all troops recover after battle. Play aggressive. Don\'t waste your Judicator window being cautious.',
+  'Sample Warehouses (#4a–4d) are lowest yield (+15/s). Only hold them if uncontested — don\'t fight over them.',
+  'Individual Points charge your battle skills (energy). Fight, heal, take wounds, garrison buildings — stay active.',
+  'In the final minutes: holding Virus Lab beats attacking a side base. Don\'t leave the Lab to chase kills.',
+  'Lower power = capture structures first. Higher power = attack enemy bases to plunder points.',
   'Voice chat is strongly recommended. Variable situations need real-time calls.',
 ];
 
 const CS_ORDERS_PLACEHOLDER = `WEST: Hit #2 + 4a/4b immediately. Low power = structures. High power = bases. Push 5a at 5 min, 6a at 8 min.
-MIDDLE: Hold Power Tower #1. * players push to Virus Lab #7 at 12 min. Everyone else holds #1.
-EAST: Mirror of West. 3, 4c, 4d → 5b at 5 min → 6b at 8 min.
-ALL: Stick to zones. Subs standby — fill vacant primary at 5 min.
+MIDDLE: Hold Power Tower #1 — do NOT abandon for side fights. Push Virus Lab #7 at exactly 12 min. Everyone available commits.
+EAST: Mirror of West. #3 + 4c/4d → 5b at 5 min → 6b at 8 min.
+RULEBRINGERS: [Name] holds Judicator. Save it for 12 min Virus Lab contest. Do NOT blow it on side skirmishes.
+DAWNBREAKERS: Spread near Judicator player — don't cluster. Team A = Virus Lab assault at 12 min. Team B = hold mid structures.
+ALL: Stick to zones. Subs standby — fill vacant primary slot at 5 min.
 ⚠️ List any unassigned players and their roles here.`;
 
 type CSFaction = 'rulebringers' | 'dawnbreakers' | null;
@@ -854,7 +858,7 @@ function CanyonStormTool() {
         </label>
         <div className="bg-gray-900 border border-gray-800 rounded-xl divide-y divide-gray-800">
           {faction === 'rulebringers' && <>
-            <SpecialRoleRow icon="⚖️" label="Judicator" desc="Judgment Day — teleports deal 5000 dmg. Blast = −30s your CD, +60s enemy CD. 1M energy · 120s · 300s CD." value={judicator} onChange={setJudicator} />
+            <SpecialRoleRow icon="⚖️" label="Judicator" desc="5,000 durability dmg per teleport. 2 hits = destroyed base (6,000 total). Chain: −30s your CD, +60s enemy CD. 1M energy · 120s · 300s CD. Save for 12 min Virus Lab." value={judicator} onChange={setJudicator} />
             <SpecialRoleRow icon="🌩️" label="Seismic Tower" desc="1000 durability dmg on land + 300 every 3s + 60 severely wounded. 500k energy · 30s · 300s CD." value={seismicTower} onChange={setSeismicTower} />
             <SpecialRoleRow icon="🏥" label="Field Hospital" desc="300 durability + 150 wounded healed every 3s to nearby allies. 500k energy · 30s · 300s CD." value={fieldHospital} onChange={setFieldHospital} />
           </>}
