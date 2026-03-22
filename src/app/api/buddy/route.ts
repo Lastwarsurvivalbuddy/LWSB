@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import '@/lib/env';
 import { getSkillMedalSummary } from '@/lib/skillMedals';
 import { getVIPSummary } from '@/lib/vipData';
 import { getGearSummary } from '@/lib/gearData';

@@ -10,6 +10,7 @@ import TeachBuddy from '@/components/TeachBuddy'
 import ServerPulse from '@/components/ServerPulse'
 import BattleReportAnalyzer from '@/components/BattleReportAnalyzer'
 import WarfighterBanner from '@/components/WarfighterBanner'
+import ErrorBoundary from '@/components/ErrorBoundary'
 import {
   RANK_BUCKET_LABELS,
   SQUAD_POWER_TIER_LABELS,
@@ -254,7 +255,9 @@ export default function Dashboard() {
     <div className="min-h-screen bg-zinc-950 text-white">
 
       {/* ── Warfighter mode banner ── */}
-      <WarfighterBanner />
+      <ErrorBoundary label="Warfighter Banner">
+        <WarfighterBanner />
+      </ErrorBoundary>
 
       {/* ── Top nav bar ── */}
       <header className="border-b border-zinc-800/80 bg-zinc-950/95 sticky top-0 z-20 backdrop-blur-sm">
@@ -372,125 +375,129 @@ export default function Dashboard() {
 
         {/* ── Daily Briefing ── */}
         <section className="pt-6">
-          <DailyBriefing />
+          <ErrorBoundary label="Daily Briefing">
+            <DailyBriefing />
+          </ErrorBoundary>
         </section>
 
         {/* ── BATTLE REPORT ANALYZER CARD ── */}
         <section className="pt-4">
-          {isFree ? (
-            <button
-              onClick={() => router.push('/upgrade')}
-              className="w-full group"
-            >
-              <div className="bg-zinc-900/50 border border-zinc-800 hover:border-zinc-700 rounded-2xl p-5 transition-colors">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-red-900/30 border border-red-800/40 flex items-center justify-center flex-shrink-0">
-                      <span className="text-xl">⚔️</span>
-                    </div>
-                    <div className="text-left">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm font-bold text-white">Battle Report Analyzer</span>
-                        <span className="text-[10px] font-bold bg-yellow-500/20 border border-yellow-500/40 text-yellow-400 px-1.5 py-0.5 rounded tracking-wider">
-                          PRO
-                        </span>
+          <ErrorBoundary label="Battle Report Analyzer">
+            {isFree ? (
+              <button
+                onClick={() => router.push('/upgrade')}
+                className="w-full group"
+              >
+                <div className="bg-zinc-900/50 border border-zinc-800 hover:border-zinc-700 rounded-2xl p-5 transition-colors">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-red-900/30 border border-red-800/40 flex items-center justify-center flex-shrink-0">
+                        <span className="text-xl">⚔️</span>
                       </div>
-                      <p className="text-xs text-zinc-500 leading-relaxed">
-                        Upload battle screenshots. Get an expert breakdown — type counter, morale cascade, stat gap, rematch verdict.
-                      </p>
-                    </div>
-                  </div>
-                  <span className="text-zinc-600 group-hover:text-zinc-400 transition-colors flex-shrink-0 mt-1">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16">
-                      <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </span>
-                </div>
-                <div className="mt-4 pt-3 border-t border-zinc-800/60">
-                  <p className="text-[11px] text-amber-600 font-semibold group-hover:text-amber-500 transition-colors">
-                    Unlock with Pro → $9.99/mo
-                  </p>
-                </div>
-              </div>
-            </button>
-          ) : (
-            <button
-              onClick={() => setBattleReportOpen(true)}
-              className="w-full group"
-            >
-              <div className={`
-                border rounded-2xl p-5 transition-all
-                ${battleReportQuota.can_analyze
-                  ? 'bg-gradient-to-br from-red-950/40 to-zinc-900/60 border-red-800/50 hover:border-red-700/70 hover:from-red-950/60'
-                  : 'bg-zinc-900/50 border-zinc-800 opacity-60'
-                }
-              `}>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <div className={`
-                      w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors
-                      ${battleReportQuota.can_analyze
-                        ? 'bg-red-900/50 border border-red-700/50 group-hover:bg-red-900/70'
-                        : 'bg-zinc-800 border border-zinc-700'
-                      }
-                    `}>
-                      <span className="text-xl">⚔️</span>
-                    </div>
-                    <div className="text-left">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm font-bold text-white">Battle Report Analyzer</span>
-                        {isFounding && (
-                          <span className="text-[10px] font-bold bg-purple-500/20 border border-purple-500/40 text-purple-400 px-1.5 py-0.5 rounded tracking-wider">
-                            UNLIMITED
+                      <div className="text-left">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm font-bold text-white">Battle Report Analyzer</span>
+                          <span className="text-[10px] font-bold bg-yellow-500/20 border border-yellow-500/40 text-yellow-400 px-1.5 py-0.5 rounded tracking-wider">
+                            PRO
                           </span>
-                        )}
+                        </div>
+                        <p className="text-xs text-zinc-500 leading-relaxed">
+                          Upload battle screenshots. Get an expert breakdown — type counter, morale cascade, stat gap, rematch verdict.
+                        </p>
                       </div>
-                      <p className="text-xs text-zinc-400 leading-relaxed">
-                        Upload your battle report screenshots. Get expert coaching on exactly why you won or lost.
-                      </p>
                     </div>
+                    <span className="text-zinc-600 group-hover:text-zinc-400 transition-colors flex-shrink-0 mt-1">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16">
+                        <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </span>
                   </div>
-                  <div className="flex-shrink-0 flex flex-col items-end gap-1">
-                    <svg className="w-4 h-4 text-zinc-500 group-hover:text-zinc-300 transition-colors mt-1" fill="none" viewBox="0 0 16 16">
-                      <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
+                  <div className="mt-4 pt-3 border-t border-zinc-800/60">
+                    <p className="text-[11px] text-amber-600 font-semibold group-hover:text-amber-500 transition-colors">
+                      Unlock with Pro → $9.99/mo
+                    </p>
                   </div>
                 </div>
+              </button>
+            ) : (
+              <button
+                onClick={() => setBattleReportOpen(true)}
+                className="w-full group"
+              >
+                <div className={`
+                  border rounded-2xl p-5 transition-all
+                  ${battleReportQuota.can_analyze
+                    ? 'bg-gradient-to-br from-red-950/40 to-zinc-900/60 border-red-800/50 hover:border-red-700/70 hover:from-red-950/60'
+                    : 'bg-zinc-900/50 border-zinc-800 opacity-60'
+                  }
+                `}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className={`
+                        w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors
+                        ${battleReportQuota.can_analyze
+                          ? 'bg-red-900/50 border border-red-700/50 group-hover:bg-red-900/70'
+                          : 'bg-zinc-800 border border-zinc-700'
+                        }
+                      `}>
+                        <span className="text-xl">⚔️</span>
+                      </div>
+                      <div className="text-left">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm font-bold text-white">Battle Report Analyzer</span>
+                          {isFounding && (
+                            <span className="text-[10px] font-bold bg-purple-500/20 border border-purple-500/40 text-purple-400 px-1.5 py-0.5 rounded tracking-wider">
+                              UNLIMITED
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-zinc-400 leading-relaxed">
+                          Upload your battle report screenshots. Get expert coaching on exactly why you won or lost.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex-shrink-0 flex flex-col items-end gap-1">
+                      <svg className="w-4 h-4 text-zinc-500 group-hover:text-zinc-300 transition-colors mt-1" fill="none" viewBox="0 0 16 16">
+                        <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                  </div>
 
-                {/* Quota bar */}
-                <div className="mt-4 pt-3 border-t border-zinc-800/40">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[11px] text-zinc-500 font-mono">
-                      {isFounding
-                        ? 'Founding Member — Unlimited'
-                        : `${battleReportQuota.used_today} of ${battleReportQuota.limit} used today`
-                      }
-                    </span>
-                    <span className={`text-[11px] font-bold ${battleReportQuota.can_analyze ? 'text-red-400' : 'text-zinc-600'}`}>
-                      {battleReportQuota.can_analyze
-                        ? isFounding ? 'Analyze →' : `${battleReportQuota.remaining} left →`
-                        : 'Resets midnight UTC'
-                      }
-                    </span>
-                  </div>
-                  {!isFounding && (
-                    <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all ${
-                          battleReportQuota.used_today >= battleReportQuota.limit
-                            ? 'bg-zinc-600'
-                            : 'bg-red-500'
-                        }`}
-                        style={{
-                          width: `${Math.min(100, (battleReportQuota.used_today / Math.max(battleReportQuota.limit, 1)) * 100)}%`
-                        }}
-                      />
+                  {/* Quota bar */}
+                  <div className="mt-4 pt-3 border-t border-zinc-800/40">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[11px] text-zinc-500 font-mono">
+                        {isFounding
+                          ? 'Founding Member — Unlimited'
+                          : `${battleReportQuota.used_today} of ${battleReportQuota.limit} used today`
+                        }
+                      </span>
+                      <span className={`text-[11px] font-bold ${battleReportQuota.can_analyze ? 'text-red-400' : 'text-zinc-600'}`}>
+                        {battleReportQuota.can_analyze
+                          ? isFounding ? 'Analyze →' : `${battleReportQuota.remaining} left →`
+                          : 'Resets midnight UTC'
+                        }
+                      </span>
                     </div>
-                  )}
+                    {!isFounding && (
+                      <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            battleReportQuota.used_today >= battleReportQuota.limit
+                              ? 'bg-zinc-600'
+                              : 'bg-red-500'
+                          }`}
+                          style={{
+                            width: `${Math.min(100, (battleReportQuota.used_today / Math.max(battleReportQuota.limit, 1)) * 100)}%`
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </button>
-          )}
+              </button>
+            )}
+          </ErrorBoundary>
         </section>
 
         {/* ── WAR ROOM CARD ── */}
@@ -541,18 +548,26 @@ export default function Dashboard() {
 
         {/* ── Pack Scanner ── */}
         <section className="pt-4">
-          <PackScanner subscriptionTier={subscriptionTier} />
+          <ErrorBoundary label="Pack Scanner">
+            <PackScanner subscriptionTier={subscriptionTier} />
+          </ErrorBoundary>
         </section>
 
         {/* ── Daily Action Plan ── */}
         <section className="pt-4 pb-2">
-          <DailyActionPlan profile={profile} />
-          <TeachBuddy serverNumber={Number(profile.server_number)} />
+          <ErrorBoundary label="Daily Action Plan">
+            <DailyActionPlan profile={profile} />
+          </ErrorBoundary>
+          <ErrorBoundary label="TeachBuddy">
+            <TeachBuddy serverNumber={Number(profile.server_number)} />
+          </ErrorBoundary>
         </section>
 
         {/* ── Server Pulse ── */}
         <section className="mt-6">
-          <ServerPulse serverNumber={Number(profile.server_number ?? 1032)} />
+          <ErrorBoundary label="Server Pulse">
+            <ServerPulse serverNumber={Number(profile.server_number ?? 1032)} />
+          </ErrorBoundary>
         </section>
 
         {/* Divider */}
@@ -654,14 +669,16 @@ export default function Dashboard() {
       </main>
 
       {/* ── Battle Report Analyzer Modal ── */}
-      <BattleReportAnalyzer
-        isOpen={battleReportOpen}
-        onClose={() => setBattleReportOpen(false)}
-        userTier={subscriptionTier}
-        reportsUsedToday={battleReportQuota.used_today}
-        reportsLimitToday={battleReportQuota.limit}
-        onReportComplete={handleReportComplete}
-      />
+      <ErrorBoundary label="Battle Report Modal">
+        <BattleReportAnalyzer
+          isOpen={battleReportOpen}
+          onClose={() => setBattleReportOpen(false)}
+          userTier={subscriptionTier}
+          reportsUsedToday={battleReportQuota.used_today}
+          reportsLimitToday={battleReportQuota.limit}
+          onReportComplete={handleReportComplete}
+        />
+      </ErrorBoundary>
 
       {/* ── Floating Buddy button ── */}
       <div className="fixed bottom-6 right-4 z-30">
