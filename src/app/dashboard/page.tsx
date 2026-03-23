@@ -301,6 +301,19 @@ export default function Dashboard() {
               <span>{streak}</span>
             </div>
 
+            {/* How to Use — ? icon */}
+            <button
+              onClick={() => router.push('/how-to')}
+              className="text-zinc-500 hover:text-zinc-300 transition-colors"
+              title="How to use Buddy"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16">
+                <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.4"/>
+                <path d="M6.5 6.5C6.5 5.67 7.17 5 8 5s1.5.67 1.5 1.5c0 .67-.4 1.23-1 1.46V9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                <circle cx="8" cy="11" r="0.6" fill="currentColor"/>
+              </svg>
+            </button>
+
             {/* Commander Card */}
             <button
               onClick={() => router.push('/card')}
@@ -631,8 +644,8 @@ export default function Dashboard() {
               ))}
             </div>
 
-            {/* Edit profile + Commander Card + Contact links */}
-            <div className="pt-1 border-t border-zinc-800 flex items-center justify-between">
+            {/* Edit profile + Commander Card + Contact + How to Use links */}
+            <div className="pt-1 border-t border-zinc-800 flex items-center justify-between flex-wrap gap-y-2">
               <button
                 onClick={() => router.push('/profile/edit')}
                 className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1"
@@ -644,6 +657,17 @@ export default function Dashboard() {
                 Edit profile
               </button>
               <button
+                onClick={() => router.push('/how-to')}
+                className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1"
+              >
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
+                  <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.2"/>
+                  <path d="M5 5c0-.55.45-1 1-1s1 .45 1 1c0 .42-.27.78-.67.92V8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                  <circle cx="6" cy="9.5" r="0.5" fill="currentColor"/>
+                </svg>
+                How to use
+              </button>
+              <button
                 onClick={() => router.push('/contact')}
                 className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1"
               >
@@ -653,7 +677,7 @@ export default function Dashboard() {
                   <path d="M1 3l5 4 5-4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
                 </svg>
                 Contact
-          </button>
+              </button>
               <button
                 onClick={() => router.push('/card')}
                 className="text-xs text-amber-700 hover:text-amber-500 transition-colors flex items-center gap-1"
