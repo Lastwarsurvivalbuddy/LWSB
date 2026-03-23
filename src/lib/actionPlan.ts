@@ -13,6 +13,10 @@
 //                           server_day removed from dutyReport (not auto-incremented)
 // Updated: March 23, 2026 — Day 1: drone skill chip chests added to advanced plan (always);
 //                           beginner plan gates chip chests to server_day >= 82
+// Updated: March 23, 2026 — Audit fixes: removed dead killTitle + nextHeroMilestone;
+//                           Ghost Ops detail improved; T11 Armament Research → critical priority;
+//                           T11 Armament Research gated to troop_tier === 't10' && season >= 4
+//                           (T11 unlocks end of S4; t11 players are already past the research phase)
 
 import type { SquadPowerTier, RankBucket, PowerBucket, KillTier } from '@/lib/profileTypes'
 import { SQUAD_POWER_TIER_LABELS, RANK_BUCKET_LABELS, KILL_TIER_TITLES } from '@/lib/profileTypes'
@@ -150,11 +154,6 @@ function squadPowerLabel(tier?: SquadPowerTier): string {
 function rankLabel(bucket?: RankBucket): string {
   if (!bucket) return 'unknown rank'
   return RANK_BUCKET_LABELS[bucket] ?? bucket
-}
-
-function killTitle(tier?: KillTier): string {
-  if (!tier) return ''
-  return KILL_TIER_TITLES[tier] ?? tier
 }
 
 function getGreeting(profile: CommanderProfile): string {
@@ -361,8 +360,9 @@ function getBeginnerStrategicInsight(day: number, hq: number): string {
 // - Gather runs: Day 1 and Day 7
 // - Drone/drone chests: Day 1 (drone + chip chests), Day 3 (component chests)
 // - Survivor tickets: Day 2 only
-// - T11 Armament Training: fires EVERY DAY — no gate
-// - T11 Armament Research (troop upgrade): Day 2 only alongside building upgrades
+// - T11 Armament Training: fires EVERY DAY for t11 players — no gate
+// - T11 Armament Research: Day 2 only, gated to troop_tier === 't10' && season >= 4
+//   (T11 unlocks end of S4; t11 players are already past the research phase)
 // - T10 path / hot deals: ONLY on Days 1–5 — NOT on Day 6 or Day 7
 
 export function generateActionPlan(profile: CommanderProfile): ActionPlanResult {
@@ -377,16 +377,15 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
   const isDroneDay = day === 1
   const isResetDay = day === 7
 
-  // T10 path and hot deals only fire on Days 1–5
-  // T11 Armament Training is exempt — fires every day
   const allowTierActions = day >= 1 && day <= 5
 
   const hq = profile.hq_level || 1
+  const season = Number(profile.season ?? 0)
   const isT11 = profile.troop_tier === 't11'
+  const isT10WorkingTowardT11 = profile.troop_tier === 't10' && season >= 4
   const isBelowT10 = profile.troop_tier === 'under_t10'
   const isSpender = ['investor', 'whale', 'mega_whale'].includes(profile.spend_style)
   const maxHeroLevel = getMaxHeroLevelForHQ(hq)
-  const nextHeroMilestone = getNextHeroMilestone(hq)
   const nextBreakpoint = getNextExpBreakpoint(maxHeroLevel)
 
   // ── Day 1: Radar Training ─────────────────────────────────────────────────────
@@ -480,7 +479,7 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
     actions.push({
       id: 'day4_ghost_ops', category: 'general', priority: 'high',
       title: '👻 Complete Ghost Ops',
-      detail: 'Complete your Ghost Ops today.',
+      detail: 'Thursdays only. 4 time windows. Claim rewards manually or they\'re lost.',
       buddyPrompt: `Today is Day 4. HQ ${hq}. What Ghost Ops should I be running at my level?`,
     })
   }
@@ -501,7 +500,7 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
     })
   }
 
-  // ── Day 2: survivor tickets + T11 Armament Research (troop upgrade) ───────────
+  // ── Day 2: survivor tickets + gold tasks + T11 Armament Research ──────────────
   if (day === 2) {
     actions.push({
       id: 'day2_survivors_adv', category: 'general', priority: 'high',
@@ -515,12 +514,14 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
       detail: 'Only use gold tasks and gold trucks today. Skip silver and bronze. Save radar tasks — not a scoring day.',
       buddyPrompt: `Today is Day 2. HQ ${hq}. How do I maximize VS points from tasks today?`,
     })
-    if (isT11) {
+    // T11 Armament Research — only for T10 players in S4+ working toward T11
+    // T11 players are already past this research phase
+    if (isT10WorkingTowardT11) {
       actions.push({
-        id: 'day2_t11_research', category: 'troops', priority: 'high',
-        title: '⚙️ T11 Armament Training & Research — Upgrade Troops Today',
-        detail: 'Today is Base Expansion — building upgrades and T11 Armament Research both score. Queue troop upgrades in the Armament Institute. Use Secretary of Science to cut research time.',
-        buddyPrompt: `Today is Day 2 — Base Expansion. T11 Armament Training & Research. Troop type ${profile.troop_type}, HQ ${hq}. Which armament upgrades should I queue today?`,
+        id: 'day2_t11_research', category: 'troops', priority: 'critical',
+        title: '⚙️ T11 Armament Research — Queue Upgrades Today',
+        detail: 'Today is Base Expansion — T11 Armament Research scores on building day. Queue troop upgrades in the Armament Institute. Use Secretary of Science to cut research time.',
+        buddyPrompt: `Today is Day 2 — Base Expansion. I'm working toward T11 Armament upgrades. Troop type ${profile.troop_type}, HQ ${hq}, Season ${season}. Which armament research should I queue today?`,
       })
     }
   }
@@ -535,7 +536,7 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
     })
   }
 
-  // ── T11 Armament Training — fires EVERY DAY ───────────────────────────────────
+  // ── T11 Armament Training — fires EVERY DAY for T11 players ──────────────────
   if (isT11) {
     actions.push({
       id: 't11_armament_training', category: 'troops', priority: 'high',
