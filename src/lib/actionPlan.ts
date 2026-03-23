@@ -16,7 +16,11 @@
 // Updated: March 23, 2026 — Audit fixes: removed dead killTitle + nextHeroMilestone;
 //                           Ghost Ops detail improved; T11 Armament Research → critical priority;
 //                           T11 Armament Research gated to troop_tier === 't10' && season >= 4
-//                           (T11 unlocks end of S4; t11 players are already past the research phase)
+// Updated: March 23, 2026 — Priority audit pass:
+//                           Day 1 adv: drone → high, chip chests → medium;
+//                           Day 2 adv: survivors → low, gold tasks → high, Sec Sci reminder added;
+//                           Day 5 adv: removed T11 Armament Training, added Fill Drill Grounds (critical),
+//                           radar → medium, Overlord upgrades added (high, gated server_day >= 200)
 
 import type { SquadPowerTier, RankBucket, PowerBucket, KillTier } from '@/lib/profileTypes'
 import { SQUAD_POWER_TIER_LABELS, RANK_BUCKET_LABELS, KILL_TIER_TITLES } from '@/lib/profileTypes'
@@ -364,6 +368,9 @@ function getBeginnerStrategicInsight(day: number, hq: number): string {
 // - T11 Armament Research: Day 2 only, gated to troop_tier === 't10' && season >= 4
 //   (T11 unlocks end of S4; t11 players are already past the research phase)
 // - T10 path / hot deals: ONLY on Days 1–5 — NOT on Day 6 or Day 7
+// - Overlord upgrades: Day 5 only, gated to server_day >= 200
+// - Fill Drill Grounds: Day 5 only (highest available troop tier)
+// - Sec of Science role switch: Day 2 reminder (before reset tonight)
 
 export function generateActionPlan(profile: CommanderProfile): ActionPlanResult {
   if (profile.beginner_mode) {
@@ -381,24 +388,26 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
 
   const hq = profile.hq_level || 1
   const season = Number(profile.season ?? 0)
+  const serverDay = profile.server_day ?? 0
   const isT11 = profile.troop_tier === 't11'
   const isT10WorkingTowardT11 = profile.troop_tier === 't10' && season >= 4
   const isBelowT10 = profile.troop_tier === 'under_t10'
   const isSpender = ['investor', 'whale', 'mega_whale'].includes(profile.spend_style)
+  const hasOverlord = serverDay >= 200
   const maxHeroLevel = getMaxHeroLevelForHQ(hq)
   const nextBreakpoint = getNextExpBreakpoint(maxHeroLevel)
 
   // ── Day 1: Radar Training ─────────────────────────────────────────────────────
   if (isDroneDay) {
     actions.push({
-      id: 'day1_drone_adv', category: 'general', priority: 'medium',
+      id: 'day1_drone_adv', category: 'general', priority: 'high',
       title: '🚁 Radar Training — Upgrade Drone Data & Parts',
       detail: 'Lowest-value Duel day (1 pt). Upgrade drone data and drone parts today. Clear radar tasks — they score VS points on Days 1, 3, and 5.',
       buddyPrompt: `Today is Alliance Duel Day 1 — Radar Training (1 pt). I'm at HQ ${hq}, troop tier ${profile.troop_tier}. How do I efficiently upgrade my drone and clear radar tasks today?`,
       points: 1,
     })
     actions.push({
-      id: 'day1_chip_chests_adv', category: 'general', priority: 'high',
+      id: 'day1_chip_chests_adv', category: 'general', priority: 'medium',
       title: '🎲 Open Drone Skill Chip Chests — Scores Today',
       detail: 'Drone skill chip chests score VS points on Day 1. Open any chip chests you have saved — check your inventory and the Chip Lab.',
       buddyPrompt: `Today is Day 1 — drone skill chip chests score today. HQ ${hq}, troop tier ${profile.troop_tier}. Which chip chests should I open and what chips should I prioritize for my build?`,
@@ -500,22 +509,27 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
     })
   }
 
-  // ── Day 2: survivor tickets + gold tasks + T11 Armament Research ──────────────
+  // ── Day 2: survivor tickets + gold tasks + Sec of Science reminder + T11 research ──
   if (day === 2) {
     actions.push({
-      id: 'day2_survivors_adv', category: 'general', priority: 'high',
+      id: 'day2_survivors_adv', category: 'general', priority: 'low',
       title: '🃏 Open Survivor Recruitment Tickets — Scores Today',
       detail: 'Survivor Recruitment Tickets score VS points on Day 2 only. Open all tickets now.',
       buddyPrompt: `Today is Day 2 — survivor tickets score today. HQ ${hq}. How do I maximize value from survivor tickets at my level?`,
     })
     actions.push({
-      id: 'day2_tasks_adv', category: 'general', priority: 'medium',
+      id: 'day2_tasks_adv', category: 'general', priority: 'high',
       title: '✅ Deploy Gold Tasks & Gold Trucks Only',
       detail: 'Only use gold tasks and gold trucks today. Skip silver and bronze. Save radar tasks — not a scoring day.',
       buddyPrompt: `Today is Day 2. HQ ${hq}. How do I maximize VS points from tasks today?`,
     })
+    actions.push({
+      id: 'day2_sec_sci', category: 'research', priority: 'medium',
+      title: '🔬 Switch to Secretary of Science Before Reset Tonight',
+      detail: 'Before the 2am UTC reset, switch your Secretary role to Science. Research keeps ticking overnight into Day 3 (Age of Science) — you want every possible research completion counting toward tomorrow\'s scoring window.',
+      buddyPrompt: `Today is Day 2. I want to maximize Day 3 research scoring. HQ ${hq}, troop tier ${profile.troop_tier}. What research should I queue tonight before the reset and how do I use the Secretary of Science role effectively?`,
+    })
     // T11 Armament Research — only for T10 players in S4+ working toward T11
-    // T11 players are already past this research phase
     if (isT10WorkingTowardT11) {
       actions.push({
         id: 'day2_t11_research', category: 'troops', priority: 'critical',
@@ -526,10 +540,25 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
     }
   }
 
-  // ── Day 5 radar ───────────────────────────────────────────────────────────────
+  // ── Day 5: Fill Drill Grounds + radar + Overlord ──────────────────────────────
   if (day === 5) {
     actions.push({
-      id: 'day5_radar_adv', category: 'general', priority: 'high',
+      id: 'day5_drill_grounds', category: 'troops', priority: 'critical',
+      title: '🪖 Fill Drill Grounds — Highest Available Troop Tier',
+      detail: `Today is Total Mobilization — fill your Drill Grounds with the highest tier troops available to you. Every troop trained scores Alliance Duel AND Arms Race simultaneously. Keep barracks running all day.`,
+      buddyPrompt: `Today is Alliance Duel Day 5 — Total Mobilization. HQ ${hq}, troop type ${profile.troop_type}, troop tier ${profile.troop_tier}. How do I fill my Drill Grounds most efficiently with my highest available troops?`,
+      points: 2,
+    })
+    if (hasOverlord) {
+      actions.push({
+        id: 'day5_overlord', category: 'heroes', priority: 'high',
+        title: '👑 Upgrade Overlord Skills',
+        detail: 'Total Mobilization day is the right time to invest in Overlord upgrades alongside troop training. Priority order: Brutal Roar → Overlord\'s Armor → Furious Hunt → Riot Shot → Expert Overlord.',
+        buddyPrompt: `Today is Day 5. I have the Overlord unlocked. HQ ${hq}, server day ${serverDay}. Which Overlord skills should I upgrade next and what materials do I need?`,
+      })
+    }
+    actions.push({
+      id: 'day5_radar_adv', category: 'general', priority: 'medium',
       title: '📡 Open Radar Tasks — Scores Today',
       detail: 'Today is one of three radar scoring days (Days 1, 3, 5). Open and complete radar tasks alongside troop training.',
       buddyPrompt: `Today is Day 5 — radar tasks score today. HQ ${hq}, troop tier ${profile.troop_tier}. Which tasks give the best return?`,
@@ -588,7 +617,7 @@ function getDuelFocusDetail(day: number, profile: CommanderProfile): string {
     case 2: return 'complete building upgrades — every completion scores both Duel + Arms Race'
     case 3: return 'complete research — finish queued research for double points. Use Secretary of Science to cut time'
     case 4: return 'level up heroes — every hero level scores Duel + Arms Race simultaneously'
-    case 5: return `train and promote all troops to highest tier — every troop trained scores Duel + Arms Race`
+    case 5: return `fill Drill Grounds with highest available troops — every troop trained scores Duel + Arms Race`
     default: return 'check alliance duel requirements'
   }
 }
@@ -603,6 +632,7 @@ function getAdvancedStrategicInsight(
 ): string {
   if (isDoubleDay) {
     if (day === 4) return `Train Heroes Day — the ONLY day to spend Hero EXP items. Every hero level scores Alliance Duel AND Arms Race simultaneously. Save EXP every other day.`
+    if (day === 5) return `Total Mobilization — fill Drill Grounds with highest available troops. Every troop trained scores Alliance Duel AND Arms Race simultaneously.`
     return `Double-dip day — every action for Alliance Duel Day ${day} (${label}) simultaneously scores Arms Race points. Highest efficiency play in the game.`
   }
   if (day === 6) return `Enemy Buster Day — 4 Alliance Duel points, highest of the week. Coordinate with leadership. Gold tasks and trucks only.`
