@@ -8,10 +8,10 @@
 // Updated: March 18, 2026 (session 39) — server_day removed entirely (not auto-incremented, irrelevant to advice)
 // Updated: March 18, 2026 (session 39) — Sec Sci queue timing tip moved from Day 3 to Day 2 (reset hasn't hit yet)
 // Updated: March 20, 2026 (session 48) — troop type stripped from training advice; hard rule added to never name troop type in training recs
-// Updated: March 21, 2026 (session 52) — Day 6 wall defense advice fixed: "Remove wall defense or shield" → contextual awareness tip
-// Updated: March 23, 2026 (session 60) — TOP 3 MOVES removed. Briefing is situation awareness only. Today's Orders owns all action items.
-// Updated: March 23, 2026 (session 61) — Day 1 advice: "Save drone chip chests" → "Open drone chip chests today — they score"
-// Updated: March 23, 2026 (session 61) — KEY CONTEXT third bullet: playstyle note prohibited on non-combat days
+// Updated: March 21, 2026 (session 52) — Day 6 wall defense advice fixed
+// Updated: March 23, 2026 (session 60) — TOP 3 MOVES removed. Briefing is situation awareness only.
+// Updated: March 23, 2026 (session 61) — Day 1 chip chest advice corrected; playstyle rule added
+// Updated: March 23, 2026 (session 61) — KEY CONTEXT removed entirely. Briefing = SITUATION + WATCH OUT only.
 
 // ─── Duel day — aligned to duel reset ────────────────────────────────────────
 function getDuelDay(): { day: number; name: string } {
@@ -35,13 +35,13 @@ function getDuelDay(): { day: number; name: string } {
 // ─── Duel day advice ──────────────────────────────────────────────────────────
 function getDuelAdvice(day: number): string {
   const advice: Record<number, string> = {
-    1: 'Duel Day 1 (Radar Training) — radar tasks score VS points today: run them. Open drone skill chip chests today — they score. Align stamina use with Drone Boost Arms Race phase if active. Don\'t let radar tasks hit cap or you stop accruing. Advanced Scoring Tips to maximize Alliance Duel: review your alliance duel scoring theme. If you sent gathering squads out before reset, call them back now for Day 1 gathering points. Don\'t let your radar task queue fill up or accrual stops.',
-    2: 'Duel Day 2 (Base Expansion) — open pre-wrapped buildings, use Legendary Trade Truck if available (200K pts), align construction with City Building Arms Race phase. Save radar tasks — they score on Day 3, not today. Advanced Scoring Tips to maximize Alliance Duel: review your alliance duel scoring theme. Save Survivor cards all week and open them today — they score on Day 2. Use the Secretary of Development queue whenever you kick off a build — it fills up fast on Day 2, so get in early after reset. Get into the Secretary of Science queue before reset tonight — missing the timing means losing your prime research chain position for tomorrow\'s Day 3 scoring window.',
-    3: 'Duel Day 3 (Age of Science) — radar tasks score VS points today: run them. Use research speedups, click to collect pre-staged research, use Valor Badges. Align with Tech Research Arms Race phase if active. Advanced Scoring Tips to maximize Alliance Duel: review your alliance duel scoring theme. Open drone component chests today — they score. Use Valor points today — they score big. Research speedups and research completions also score. Clear completions, then chain new research using Valor points.',
-    4: 'Duel Day 4 (Train Heroes) — use hero recruit tickets, spend UR/SSR shards if available, use Hero EXP, align with Hero Advancement Arms Race phase. Save radar tasks — they score on Day 5, not today. Advanced Scoring Tips to maximize Alliance Duel: review your alliance duel scoring theme. Use skill medals today — everyone has them, use them. Exclusive weapons and hero gear upgrades also score today. Don\'t sit on these resources.',
-    5: 'Duel Day 5 (Total Mobilization) — train troops: fill your drill grounds, this is the primary scoring action today. Best triple-dip day: construction + research + training all overlap Arms Race. Stack everything. Advanced Scoring Tips to maximize Alliance Duel: review your alliance duel scoring theme. All speedups score today. Overlord skill upgrades score — use them. Complete all radar tasks — easy points today.',
-    6: 'Duel Day 6 (Enemy Buster) — war day, 4 alliance pts. Use healing speedups today (only day they score). Coordinate kills on opponent server. Be conscious of wall defense — know how your defense stacks up against potential attackers today. Radar tasks don\'t score VS today — no need to save them either. Advanced Scoring Tips to maximize Alliance Duel: review your alliance duel scoring theme. Speedups score independently today. Kill as many enemy troops as possible — that is the primary scoring action.',
-    7: 'Duel Day 7 (Reset) — no duel today. Claim rewards, queue upgrades, prep for Monday. Save radar tasks — they score VS points on Day 1 tomorrow. Advanced Scoring Tips to maximize Alliance Duel: review your alliance duel scoring theme. Send gathering squads out before reset on long tasks and call them back after reset — you\'ll get Day 1 gathering points.',
+    1: 'Duel Day 1 (Radar Training) — radar tasks score VS points today: run them. Open drone skill chip chests today — they score. Align stamina use with Drone Boost Arms Race phase if active. Don\'t let radar tasks hit cap or you stop accruing. If you sent gathering squads out before reset, call them back now for Day 1 gathering points.',
+    2: 'Duel Day 2 (Base Expansion) — open pre-wrapped buildings, use Legendary Trade Truck if available (200K pts), align construction with City Building Arms Race phase. Save radar tasks — they score on Day 3, not today. Save Survivor cards all week and open them today — they score on Day 2. Use the Secretary of Development queue whenever you kick off a build — it fills up fast on Day 2, so get in early after reset. Get into the Secretary of Science queue before reset tonight — missing the timing means losing your prime research chain position for tomorrow\'s Day 3 scoring window.',
+    3: 'Duel Day 3 (Age of Science) — radar tasks score VS points today: run them. Use research speedups, click to collect pre-staged research, use Valor Badges. Align with Tech Research Arms Race phase if active. Open drone component chests today — they score. Use Valor points today — they score big. Research speedups and research completions also score. Clear completions, then chain new research using Valor points.',
+    4: 'Duel Day 4 (Train Heroes) — use hero recruit tickets, spend UR/SSR shards if available, use Hero EXP, align with Hero Advancement Arms Race phase. Save radar tasks — they score on Day 5, not today. Use skill medals today — everyone has them, use them. Exclusive weapons and hero gear upgrades also score today. Don\'t sit on these resources.',
+    5: 'Duel Day 5 (Total Mobilization) — train troops: fill your drill grounds, this is the primary scoring action today. Best triple-dip day: construction + research + training all overlap Arms Race. Stack everything. All speedups score today. Overlord skill upgrades score — use them. Complete all radar tasks — easy points today.',
+    6: 'Duel Day 6 (Enemy Buster) — war day, 4 alliance pts. Use healing speedups today (only day they score). Coordinate kills on opponent server. Be conscious of wall defense — know how your defense stacks up against potential attackers today. Radar tasks don\'t score VS today. Speedups score independently today. Kill as many enemy troops as possible — that is the primary scoring action.',
+    7: 'Duel Day 7 (Reset) — no duel today. Claim rewards, queue upgrades, prep for Monday. Save radar tasks — they score VS points on Day 1 tomorrow. Send gathering squads out before reset on long tasks and call them back after reset — you\'ll get Day 1 gathering points.',
   }
   return advice[day] ?? "Check in-game calendar for today's duel day."
 }
@@ -49,13 +49,13 @@ function getDuelAdvice(day: number): string {
 // ─── Beginner duel advice ─────────────────────────────────────────────────────
 function getDuelAdviceBeginner(day: number): string {
   const advice: Record<number, string> = {
-    1: 'Today is Radar Training day — radar missions score alliance points today, so run them. The radar tower is in your base. Don\'t let your radar tasks fill up or you\'ll stop getting new ones. Tip: open any drone skill chip chests you have saved — they score today too. If you sent troops out gathering before reset, call them back now to get gathering points for today.',
-    2: 'Today is Base Expansion day — you earn points by upgrading buildings. If you have buildings ready to upgrade, today is the day to do it. Save your radar missions for tomorrow (Day 3) — they score points then, not today. Tip: open any Survivor cards you\'ve been saving all week — they score today. Use the Secretary of Development feature when you start a build — it speeds things up, but the queue fills fast today so get in early. Before reset tonight, get into the Secretary of Science queue — that way you\'re first in line to chain research tomorrow on Day 3 when research scores points.',
-    3: 'Today is Age of Science day — you earn points by doing research (the research lab in your base). Queue up research and use speedups today. Radar missions also score today, so run those too. Tip: open any drone component chests you have — they score today. Use your Valor points today if you have them — they score big points.',
-    4: 'Today is Train Heroes day — you earn points by leveling up your heroes. Use any hero XP items or recruit tickets you\'ve been saving. Save your radar missions for tomorrow (Day 5) — they score points then, not today. Tip: use your skill medals today — everyone has them and they score points. Don\'t leave them sitting there.',
+    1: 'Today is Radar Training day — radar missions score alliance points today, so run them. The radar tower is in your base. Don\'t let your radar tasks fill up or you\'ll stop getting new ones. Open any drone skill chip chests you have saved — they score today too. If you sent troops out gathering before reset, call them back now to get gathering points for today.',
+    2: 'Today is Base Expansion day — you earn points by upgrading buildings. If you have buildings ready to upgrade, today is the day to do it. Save your radar missions for tomorrow (Day 3) — they score points then, not today. Open any Survivor cards you\'ve been saving all week — they score today. Use the Secretary of Development feature when you start a build — it speeds things up, but the queue fills fast today so get in early. Before reset tonight, get into the Secretary of Science queue — that way you\'re first in line to chain research tomorrow on Day 3 when research scores points.',
+    3: 'Today is Age of Science day — you earn points by doing research (the research lab in your base). Queue up research and use speedups today. Radar missions also score today, so run those too. Open any drone component chests you have — they score today. Use your Valor points today if you have them — they score big points.',
+    4: 'Today is Train Heroes day — you earn points by leveling up your heroes. Use any hero XP items or recruit tickets you\'ve been saving. Save your radar missions for tomorrow (Day 5) — they score points then, not today. Use your skill medals today — everyone has them and they score points. Don\'t leave them sitting there.',
     5: 'Today is Total Mobilization day — the best day of the week. Train troops first: fill your drill grounds, that\'s the main event today. Building upgrades and research also earn points, so stack everything. Complete all radar tasks too — easy points today. All speedups score today so use them.',
-    6: 'Today is Enemy Buster day — you earn points by fighting enemies. Attack infected zones and enemy bases. Be aware of your wall defense today — think about how your base looks to attackers and whether you\'re comfortable with incoming fights. Radar missions don\'t score today, but you don\'t need to save them either. Tip: review your alliance duel scoring theme so you know exactly what counts today. Speedups also score today independently.',
-    7: 'Today is the weekly reset — no alliance duel today. Collect your weekly rewards and get ready for next week. Save your radar missions for tomorrow (Day 1) — they\'ll score points then. Tip: send your troops out gathering before reset on long tasks and call them back after reset — you\'ll get Day 1 gathering points.',
+    6: 'Today is Enemy Buster day — you earn points by fighting enemies. Attack infected zones and enemy bases. Be aware of your wall defense today — think about how your base looks to attackers and whether you\'re comfortable with incoming fights. Radar missions don\'t score today, but you don\'t need to save them either. Speedups also score today independently.',
+    7: 'Today is the weekly reset — no alliance duel today. Collect your weekly rewards and get ready for next week. Save your radar missions for tomorrow (Day 1) — they\'ll score points then. Send your troops out gathering before reset on long tasks and call them back after reset — you\'ll get Day 1 gathering points.',
   }
   return advice[day] ?? "Check your in-game calendar for today's event."
 }
@@ -115,25 +115,19 @@ STRICT RULES — violations destroy the product:
 - Do NOT reference any game mechanic, event, or feature not explicitly mentioned in the player profile or context below.
 - Do NOT invent scenarios, guess at what events are happening, or infer things not in the data.
 - Do NOT fabricate timers, countdowns, or phase names.
+- Do NOT make assumptions about what resources, items, or chests the player has.
 - Do NOT output action items, task lists, or bullet-point recommendations. Today's Orders owns all action items. The briefing is situation awareness ONLY.
-- Arms Race: tell the player to check their in-game calendar for today's phase and align Duel actions accordingly. That is all.
-- Keep advice grounded: HQ level, troop tier, troop type, duel day, spend tier, rank, kill tier. These are your only inputs.
-- Be direct, specific, and honest. If you don't have data for something, don't say it.
-- TROOP TRAINING RULE: When referencing troop training, NEVER name the troop type (aircraft, tank, missile). Always say "T[tier] troops". The player knows their type.
-- PLAYSTYLE RULE: Only reference playstyle on Day 6 (Enemy Buster / combat day). On all other days, playstyle is irrelevant — do not mention it.
+- Keep the SITUATION grounded in hard profile facts only: HQ level, troop tier, rank bucket, kill tier, duel day. No inferences.
+- TROOP TRAINING RULE: When referencing troop training, NEVER name the troop type. Always say "T[tier] troops".
+- WATCH OUT must be a genuine risk supported by today's duel day data — not a generic tip.
 
 OUTPUT FORMAT — use exactly this structure, no deviations:
 
 SITUATION
-[2–3 sentences. What day it is and what that means for this player specifically. One honest observation about their current position — rank, HQ, troop tier, kill tier — whatever is most relevant today. No action items.]
-
-KEY CONTEXT
-• [One timing or sequencing note relevant to today's duel day — e.g. what scores, what to save, what resets tonight]
-• [One note grounded in this player's profile — HQ level, troop tier, rank bucket, or kill tier]
-• [One spend-tier note relevant to today — only if the player's spend level genuinely changes what they should know today. If not relevant, use a second timing or profile note instead.]
+[2–3 sentences. What duel day it is, what that means today, and one grounded observation about this player's position based strictly on their HQ, troop tier, rank, or kill tier. No inferences. No action items.]
 
 WATCH OUT
-[One genuine risk or timing note for today — only if you can support it from the data provided. No action items — just awareness.]
+[One genuine timing risk or awareness note for today — must be directly supported by today's duel day context. No action items. No assumptions about what the player has.]
 
 Tone: direct, no fluff, no hype. Coach voice.`
 
@@ -145,33 +139,27 @@ STRICT RULES — violations destroy the product:
 - Do NOT reference any game mechanic, event, or feature not explicitly mentioned in the player profile or context below.
 - Do NOT invent scenarios, guess at what events are happening, or infer things not in the data.
 - Do NOT fabricate timers, countdowns, or phase names.
+- Do NOT make assumptions about what resources, items, or chests the player has.
 - Do NOT output action items, task lists, or bullet-point to-do steps. Today's Orders owns all action items. The briefing is situation awareness ONLY.
-- Keep advice grounded: HQ level, troop tier, troop type, duel day, spend tier. These are your only inputs.
-- Be honest. If you don't have data for something, don't say it.
-- TROOP TRAINING RULE: When referencing troop training, NEVER name the troop type (aircraft, tank, missile). Always say "T[tier] troops". The player knows their type.
-- PLAYSTYLE RULE: Only reference playstyle on Day 6 (Enemy Buster / combat day). On all other days, playstyle is irrelevant — do not mention it.
+- Keep the SITUATION grounded in hard profile facts only: HQ level, troop tier, duel day. No inferences.
+- TROOP TRAINING RULE: When referencing troop training, NEVER name the troop type. Always say "T[tier] troops".
 
 BEGINNER TONE RULES:
 - Write like you're texting a friend who just started the game, not briefing a general.
 - Use plain English. No jargon without explanation.
-- When you use a game term, immediately explain it in parentheses. Example: "research (upgrading your tech tree in the lab)".
-- Explain WHY things matter today, not what to do about them — Today's Orders handles the what.
-- Be encouraging. This player is learning. Make them feel informed, not overwhelmed.
+- When you use a game term, immediately explain it in parentheses.
+- Explain WHY things matter today — Today's Orders handles the what.
+- Be encouraging. Make them feel informed, not overwhelmed.
 
 OUTPUT FORMAT — use exactly this structure, no deviations:
 
 SITUATION
-[2–3 friendly sentences. What day it is, what's happening today in the duel, and one encouraging observation about where this player is in the game. No action items.]
-
-KEY CONTEXT
-• [One plain-English note about what scores today and why it matters — no instructions, just context]
-• [One note grounded in their HQ level or troop tier — explain what it means for them today]
-• [One note about timing or awareness — something worth knowing going into today. Not playstyle unless it's Day 6.]
+[2–3 friendly sentences. What day it is, what's happening in the duel today, and one encouraging observation grounded strictly in their HQ level or troop tier. No inferences. No action items.]
 
 WATCH OUT
-[One simple heads-up for today — written as friendly awareness, not a task. Explain any terms used. No action items.]
+[One simple heads-up for today — written as friendly awareness, not a task. Must be grounded in today's duel day context. Explain any terms used. No action items.]
 
-Tone: friendly, clear, encouraging. Like a helpful teammate giving you the lay of the land before you jump in.`
+Tone: friendly, clear, encouraging. Like a helpful teammate giving you the lay of the land.`
 
   const systemPrompt = beginnerMode ? beginnerSystemPrompt : standardSystemPrompt
 
@@ -190,11 +178,11 @@ TODAY'S DUEL CONTEXT:
 - ${duelAdvice}
 - Arms Race: 6 phases, random daily order. ${
     beginnerMode
-      ? 'Tell the player what Arms Race is (a parallel event with its own scoring phases) and that they should open their in-game calendar to see which phase is active today — it affects what scores double today.'
+      ? 'Tell the player what Arms Race is (a parallel event with its own scoring phases) and that they should open their in-game calendar to see which phase is active today.'
       : 'Player checks in-game calendar. 1 swap per day. Double-dip Duel actions with matching Arms Race phase.'
   }
 
-Generate the briefing card now. Stay strictly within the data provided above. Do NOT output action items or task lists — that is Today\'s Orders\' job. Briefing = situation awareness only. Do NOT mention playstyle unless today is Day 6 (Enemy Buster).`
+Generate the briefing now. Output SITUATION and WATCH OUT only. No action items. No assumptions about what the player has. Grounded facts only.`
 
   return { systemPrompt, userPrompt }
 }

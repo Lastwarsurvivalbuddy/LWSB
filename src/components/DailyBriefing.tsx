@@ -1,23 +1,22 @@
 'use client';
 // src/components/DailyBriefing.tsx
 // Daily Briefing Card — pre-generated morning summary
-// Built: March 11, 2026 (session 11) — fixed session 14: UTC date validation on client
-// Fixed session 18: Top 3 Moves checkbox state persisted to Supabase (briefing_completions table)
+// Built: March 11, 2026 (session 11)
+// Fixed session 14: UTC date validation on client
 // Fixed session 29: cache key aligned to duel reset (2am UTC)
-// Fixed session 38: getUTCDateString uses duel-offset to match server, forceRefresh error handling improved
-// Fixed session 49: refresh button made visible (was text-zinc-500, invisible on dark bg)
-// Fixed session 61: parseBriefing updated to handle KEY CONTEXT section (replaced TOP 3 MOVES)
+// Fixed session 38: getUTCDateString uses duel-offset to match server
+// Fixed session 49: refresh button made visible
+// Fixed session 61: parse KEY CONTEXT section
+// Fixed session 61: KEY CONTEXT removed — briefing is SITUATION + WATCH OUT only
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 
 interface BriefingSection {
   situation: string;
-  keyContext: string[];
   watchOut: string;
 }
 
-// Must match server's getDuelDateString() exactly — subtract 2 hours to align with 2am UTC duel reset
 function getDuelDateString(): string {
   const now = new Date();
   const adjusted = new Date(now.getTime() - 2 * 60 * 60 * 1000);
@@ -29,24 +28,15 @@ function getDuelDateString(): string {
 
 function parseBriefing(text: string): BriefingSection | null {
   try {
-    const situationMatch = text.match(/\*{0,2}SITUATION\*{0,2}\s*\n([\s\S]*?)(?=\*{0,2}KEY CONTEXT|\*{0,2}WATCH OUT|$)/i);
-    const keyContextMatch = text.match(/\*{0,2}KEY CONTEXT\*{0,2}\s*\n([\s\S]*?)(?=\*{0,2}WATCH OUT|$)/i);
+    const situationMatch = text.match(/\*{0,2}SITUATION\*{0,2}\s*\n([\s\S]*?)(?=\*{0,2}WATCH OUT|$)/i);
     const watchMatch = text.match(/\*{0,2}WATCH OUT\*{0,2}\s*\n([\s\S]*?)$/i);
 
     if (!situationMatch) return null;
 
     const situation = situationMatch?.[1]?.trim() ?? '';
-
-    const keyContextRaw = keyContextMatch?.[1]?.trim() ?? '';
-    const keyContext = keyContextRaw
-      .split('\n')
-      .map(l => l.replace(/^[•\-\*]\s*/, '').trim())
-      .filter(l => l.length > 0)
-      .slice(0, 3);
-
     const watchOut = watchMatch?.[1]?.replace(/^⚠\s*/, '').trim() ?? '';
 
-    return { situation, keyContext, watchOut };
+    return { situation, watchOut };
   } catch {
     return null;
   }
@@ -61,13 +51,6 @@ export default function DailyBriefing() {
   const [isCached, setIsCached] = useState(false);
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const userIdRef = useRef<string | null>(null);
-
-  const loadCompletions = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-    userIdRef.current = session.user.id;
-  }, []);
 
   // ── Internal force-refresh ─────────────────────────────────────────────────
   const forceRefresh = useCallback(async (accessToken: string): Promise<boolean> => {
@@ -169,8 +152,7 @@ export default function DailyBriefing() {
 
   useEffect(() => {
     fetchBriefing();
-    loadCompletions();
-  }, [fetchBriefing, loadCompletions]);
+  }, [fetchBriefing]);
 
   useEffect(() => {
     return () => {
@@ -206,7 +188,6 @@ export default function DailyBriefing() {
           <span className="text-yellow-400 text-sm font-bold tracking-widest uppercase">Daily Briefing</span>
           <button
             onClick={handleRefresh}
-            title="Refresh briefing"
             className="flex items-center gap-1 text-xs font-semibold text-yellow-500 hover:text-yellow-300 transition-colors border border-yellow-500/40 hover:border-yellow-400 rounded px-2 py-0.5"
           >
             ↺ Refresh
@@ -225,7 +206,6 @@ export default function DailyBriefing() {
           <span className="text-yellow-400 text-sm font-bold tracking-widest uppercase">Daily Briefing</span>
           <button
             onClick={handleRefresh}
-            title="Refresh briefing"
             className="flex items-center gap-1 text-xs font-semibold text-yellow-500 hover:text-yellow-300 transition-colors border border-yellow-500/40 hover:border-yellow-400 rounded px-2 py-0.5"
           >
             ↺ Refresh
@@ -258,27 +238,12 @@ export default function DailyBriefing() {
         </button>
       </div>
 
-      <div className="p-5 space-y-5">
+      <div className="p-5 space-y-4">
         {/* Situation */}
         {parsed.situation && (
           <div>
             <p className="text-zinc-500 text-xs font-semibold uppercase tracking-wider mb-1">Situation</p>
             <p className="text-zinc-200 text-sm leading-relaxed">{parsed.situation}</p>
-          </div>
-        )}
-
-        {/* Key Context */}
-        {parsed.keyContext.length > 0 && (
-          <div>
-            <p className="text-zinc-500 text-xs font-semibold uppercase tracking-wider mb-2">Key Context</p>
-            <ul className="space-y-2">
-              {parsed.keyContext.map((item, i) => (
-                <li key={i} className="flex items-start gap-2">
-                  <span className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-yellow-500/60 mt-1.5" />
-                  <span className="text-zinc-300 text-sm leading-relaxed">{item}</span>
-                </li>
-              ))}
-            </ul>
           </div>
         )}
 
