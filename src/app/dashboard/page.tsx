@@ -189,7 +189,7 @@ export default function Dashboard() {
   }
 
   function handleReportComplete() {
-    setBattleReportQuota(prev => ({
+    setBattleReportQuota((prev: BattleReportQuota) => ({
       ...prev,
       used_today: prev.used_today + 1,
       remaining: typeof prev.remaining === 'number' ? Math.max(0, prev.remaining - 1) : prev.remaining,
@@ -373,11 +373,16 @@ export default function Dashboard() {
           </button>
         )}
 
-        {/* ── Daily Briefing ── */}
+        {/* ── Today's Orders + Watch Out ── */}
         <section className="pt-6">
-          <ErrorBoundary label="Daily Briefing">
-            <DailyBriefing />
+          <ErrorBoundary label="Daily Action Plan">
+            <DailyActionPlan profile={profile} />
           </ErrorBoundary>
+          <div className="mt-3">
+            <ErrorBoundary label="Watch Out">
+              <DailyBriefing />
+            </ErrorBoundary>
+          </div>
         </section>
 
         {/* ── BATTLE REPORT ANALYZER CARD ── */}
@@ -553,11 +558,8 @@ export default function Dashboard() {
           </ErrorBoundary>
         </section>
 
-        {/* ── Daily Action Plan ── */}
+        {/* ── TeachBuddy ── */}
         <section className="pt-4 pb-2">
-          <ErrorBoundary label="Daily Action Plan">
-            <DailyActionPlan profile={profile} />
-          </ErrorBoundary>
           <ErrorBoundary label="TeachBuddy">
             <TeachBuddy serverNumber={Number(profile.server_number)} />
           </ErrorBoundary>
@@ -651,7 +653,7 @@ export default function Dashboard() {
                   <path d="M1 3l5 4 5-4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
                 </svg>
                 Contact
-              </button>
+          </button>
               <button
                 onClick={() => router.push('/card')}
                 className="text-xs text-amber-700 hover:text-amber-500 transition-colors flex items-center gap-1"
