@@ -6,19 +6,18 @@
 // Fixed session 29: cache key aligned to duel reset (2am UTC)
 // Fixed session 38: getUTCDateString uses duel-offset to match server, forceRefresh error handling improved
 // Fixed session 49: refresh button made visible (was text-zinc-500, invisible on dark bg)
+// Fixed session 61: parseBriefing updated to handle KEY CONTEXT section (replaced TOP 3 MOVES)
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 
 interface BriefingSection {
   situation: string;
-  moves: string[];
+  keyContext: string[];
   watchOut: string;
 }
 
 // Must match server's getDuelDateString() exactly — subtract 2 hours to align with 2am UTC duel reset
-// Example: 1:30am UTC Tuesday → returns Monday's date (still in Monday's duel period)
-// Example: 2:01am UTC Tuesday → returns Tuesday's date (new duel period started)
 function getDuelDateString(): string {
   const now = new Date();
   const adjusted = new Date(now.getTime() - 2 * 60 * 60 * 1000);
@@ -30,22 +29,24 @@ function getDuelDateString(): string {
 
 function parseBriefing(text: string): BriefingSection | null {
   try {
-    const situationMatch = text.match(/\*{0,2}SITUATION\*{0,2}\s*\n([\s\S]*?)(?=\*{0,2}TOP 3 MOVES|$)/i);
-    const movesMatch = text.match(/\*{0,2}TOP 3 MOVES\*{0,2}\s*\n([\s\S]*?)(?=\*{0,2}WATCH OUT|$)/i);
+    const situationMatch = text.match(/\*{0,2}SITUATION\*{0,2}\s*\n([\s\S]*?)(?=\*{0,2}KEY CONTEXT|\*{0,2}WATCH OUT|$)/i);
+    const keyContextMatch = text.match(/\*{0,2}KEY CONTEXT\*{0,2}\s*\n([\s\S]*?)(?=\*{0,2}WATCH OUT|$)/i);
     const watchMatch = text.match(/\*{0,2}WATCH OUT\*{0,2}\s*\n([\s\S]*?)$/i);
 
-    if (!situationMatch && !movesMatch) return null;
+    if (!situationMatch) return null;
 
     const situation = situationMatch?.[1]?.trim() ?? '';
-    const movesRaw = movesMatch?.[1]?.trim() ?? '';
-    const moves = movesRaw
+
+    const keyContextRaw = keyContextMatch?.[1]?.trim() ?? '';
+    const keyContext = keyContextRaw
       .split('\n')
-      .map(l => l.replace(/^[\d]+[\.\)]\s*/, '').replace(/^[•\-\*]\s*/, '').trim())
+      .map(l => l.replace(/^[•\-\*]\s*/, '').trim())
       .filter(l => l.length > 0)
       .slice(0, 3);
+
     const watchOut = watchMatch?.[1]?.replace(/^⚠\s*/, '').trim() ?? '';
 
-    return { situation, moves, watchOut };
+    return { situation, keyContext, watchOut };
   } catch {
     return null;
   }
@@ -59,8 +60,6 @@ export default function DailyBriefing() {
   const [generatedAt, setGeneratedAt] = useState<string | null>(null);
   const [isCached, setIsCached] = useState(false);
 
-  // ── Completion state ───────────────────────────────────────────────────────
-  const [completedMoves, setCompletedMoves] = useState<Set<number>>(new Set());
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const userIdRef = useRef<string | null>(null);
 
@@ -68,67 +67,19 @@ export default function DailyBriefing() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
     userIdRef.current = session.user.id;
-    const today = getDuelDateString();
-    const { data } = await supabase
-      .from('briefing_completions')
-      .select('completed_indices')
-      .eq('user_id', session.user.id)
-      .eq('briefing_date', today)
-      .maybeSingle();
-    if (data?.completed_indices?.length) {
-      setCompletedMoves(new Set(data.completed_indices));
-    }
   }, []);
-
-  const persistCompletions = useCallback((updated: Set<number>) => {
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(async () => {
-      const userId = userIdRef.current;
-      if (!userId) return;
-      const today = getDuelDateString();
-      await supabase
-        .from('briefing_completions')
-        .upsert(
-          {
-            user_id: userId,
-            briefing_date: today,
-            completed_indices: Array.from(updated),
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'user_id,briefing_date' }
-        );
-    }, 600);
-  }, []);
-
-  const toggleMove = useCallback((index: number) => {
-    setCompletedMoves(prev => {
-      const next = new Set(prev);
-      if (next.has(index)) {
-        next.delete(index);
-      } else {
-        next.add(index);
-      }
-      persistCompletions(next);
-      return next;
-    });
-  }, [persistCompletions]);
 
   // ── Internal force-refresh ─────────────────────────────────────────────────
-  // Deletes stale cache row then re-fetches a fresh briefing.
-  // Returns true on success, false on failure — caller handles error state.
   const forceRefresh = useCallback(async (accessToken: string): Promise<boolean> => {
     try {
-      // Delete the cached row
       const deleteRes = await fetch('/api/briefing', {
         method: 'POST',
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       if (!deleteRes.ok) {
         console.error('Failed to clear briefing cache:', await deleteRes.text());
-        // Continue anyway — attempt regen even if delete failed
       }
 
-      // Re-fetch fresh session token in case it rotated
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return false;
 
@@ -177,9 +128,6 @@ export default function DailyBriefing() {
 
       const data = await res.json();
 
-      // ── Client-side date guard ─────────────────────────────────────────────
-      // Both client and server now use the same duel-offset logic, so this
-      // should never mismatch in normal operation. Guard kept as safety net.
       const todayDuel = getDuelDateString();
       if (data.briefingDate && data.briefingDate !== todayDuel) {
         console.warn(`Briefing date mismatch: got ${data.briefingDate}, expected ${todayDuel}. Force refreshing.`);
@@ -208,7 +156,6 @@ export default function DailyBriefing() {
       if (!session) return;
       setLoading(true);
       setError(null);
-      setCompletedMoves(new Set());
       const ok = await forceRefresh(session.access_token);
       if (!ok) {
         setError('Refresh failed — try again in a moment.');
@@ -276,6 +223,13 @@ export default function DailyBriefing() {
       <div className="rounded-xl border border-yellow-500/20 bg-zinc-900/80 p-5">
         <div className="flex items-center justify-between mb-3">
           <span className="text-yellow-400 text-sm font-bold tracking-widest uppercase">Daily Briefing</span>
+          <button
+            onClick={handleRefresh}
+            title="Refresh briefing"
+            className="flex items-center gap-1 text-xs font-semibold text-yellow-500 hover:text-yellow-300 transition-colors border border-yellow-500/40 hover:border-yellow-400 rounded px-2 py-0.5"
+          >
+            ↺ Refresh
+          </button>
         </div>
         <p className="text-zinc-300 text-sm whitespace-pre-wrap leading-relaxed">{briefing}</p>
       </div>
@@ -283,8 +237,6 @@ export default function DailyBriefing() {
   }
 
   if (!parsed) return null;
-
-  const allDone = parsed.moves.length > 0 && completedMoves.size === parsed.moves.length;
 
   // ── Main card ──────────────────────────────────────────────────────────────
   return (
@@ -295,9 +247,6 @@ export default function DailyBriefing() {
           <span className="text-yellow-400 text-xs font-bold tracking-widest uppercase">⚡ Daily Briefing</span>
           {isCached && formattedTime && (
             <span className="text-zinc-500 text-xs">· generated {formattedTime}</span>
-          )}
-          {allDone && (
-            <span className="text-green-400 text-xs font-semibold">· ✓ All done</span>
           )}
         </div>
         <button
@@ -318,43 +267,18 @@ export default function DailyBriefing() {
           </div>
         )}
 
-        {/* Top 3 Moves */}
-        {parsed.moves.length > 0 && (
+        {/* Key Context */}
+        {parsed.keyContext.length > 0 && (
           <div>
-            <p className="text-zinc-500 text-xs font-semibold uppercase tracking-wider mb-2">Top 3 Moves</p>
-            <ol className="space-y-2">
-              {parsed.moves.map((move, i) => {
-                const done = completedMoves.has(i);
-                return (
-                  <li
-                    key={i}
-                    className="flex items-start gap-3 cursor-pointer group"
-                    onClick={() => toggleMove(i)}
-                  >
-                    <span
-                      className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 transition-colors ${
-                        done
-                          ? 'bg-green-500/30 border-green-500 text-green-400'
-                          : 'border-yellow-500/40 text-transparent group-hover:border-yellow-400'
-                      }`}
-                    >
-                      {done && (
-                        <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={2.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M2 6l3 3 5-5" />
-                        </svg>
-                      )}
-                    </span>
-                    <span
-                      className={`text-sm leading-relaxed transition-colors ${
-                        done ? 'text-zinc-500 line-through' : 'text-zinc-200'
-                      }`}
-                    >
-                      {move}
-                    </span>
-                  </li>
-                );
-              })}
-            </ol>
+            <p className="text-zinc-500 text-xs font-semibold uppercase tracking-wider mb-2">Key Context</p>
+            <ul className="space-y-2">
+              {parsed.keyContext.map((item, i) => (
+                <li key={i} className="flex items-start gap-2">
+                  <span className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-yellow-500/60 mt-1.5" />
+                  <span className="text-zinc-300 text-sm leading-relaxed">{item}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 

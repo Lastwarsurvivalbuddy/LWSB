@@ -11,6 +11,7 @@
 // Updated: March 21, 2026 (session 52) — Day 6 wall defense advice fixed: "Remove wall defense or shield" → contextual awareness tip
 // Updated: March 23, 2026 (session 60) — TOP 3 MOVES removed. Briefing is situation awareness only. Today's Orders owns all action items.
 // Updated: March 23, 2026 (session 61) — Day 1 advice: "Save drone chip chests" → "Open drone chip chests today — they score"
+// Updated: March 23, 2026 (session 61) — KEY CONTEXT third bullet: playstyle note prohibited on non-combat days
 
 // ─── Duel day — aligned to duel reset ────────────────────────────────────────
 function getDuelDay(): { day: number; name: string } {
@@ -119,6 +120,7 @@ STRICT RULES — violations destroy the product:
 - Keep advice grounded: HQ level, troop tier, troop type, duel day, spend tier, rank, kill tier. These are your only inputs.
 - Be direct, specific, and honest. If you don't have data for something, don't say it.
 - TROOP TRAINING RULE: When referencing troop training, NEVER name the troop type (aircraft, tank, missile). Always say "T[tier] troops". The player knows their type.
+- PLAYSTYLE RULE: Only reference playstyle on Day 6 (Enemy Buster / combat day). On all other days, playstyle is irrelevant — do not mention it.
 
 OUTPUT FORMAT — use exactly this structure, no deviations:
 
@@ -128,7 +130,7 @@ SITUATION
 KEY CONTEXT
 • [One timing or sequencing note relevant to today's duel day — e.g. what scores, what to save, what resets tonight]
 • [One note grounded in this player's profile — HQ level, troop tier, rank bucket, or kill tier]
-• [One spend-tier or playstyle note — only if genuinely relevant today]
+• [One spend-tier note relevant to today — only if the player's spend level genuinely changes what they should know today. If not relevant, use a second timing or profile note instead.]
 
 WATCH OUT
 [One genuine risk or timing note for today — only if you can support it from the data provided. No action items — just awareness.]
@@ -147,6 +149,7 @@ STRICT RULES — violations destroy the product:
 - Keep advice grounded: HQ level, troop tier, troop type, duel day, spend tier. These are your only inputs.
 - Be honest. If you don't have data for something, don't say it.
 - TROOP TRAINING RULE: When referencing troop training, NEVER name the troop type (aircraft, tank, missile). Always say "T[tier] troops". The player knows their type.
+- PLAYSTYLE RULE: Only reference playstyle on Day 6 (Enemy Buster / combat day). On all other days, playstyle is irrelevant — do not mention it.
 
 BEGINNER TONE RULES:
 - Write like you're texting a friend who just started the game, not briefing a general.
@@ -163,7 +166,7 @@ SITUATION
 KEY CONTEXT
 • [One plain-English note about what scores today and why it matters — no instructions, just context]
 • [One note grounded in their HQ level or troop tier — explain what it means for them today]
-• [One note about timing or awareness — something worth knowing going into today]
+• [One note about timing or awareness — something worth knowing going into today. Not playstyle unless it's Day 6.]
 
 WATCH OUT
 [One simple heads-up for today — written as friendly awareness, not a task. Explain any terms used. No action items.]
@@ -191,7 +194,7 @@ TODAY'S DUEL CONTEXT:
       : 'Player checks in-game calendar. 1 swap per day. Double-dip Duel actions with matching Arms Race phase.'
   }
 
-Generate the briefing card now. Stay strictly within the data provided above. Do NOT output action items or task lists — that is Today\'s Orders\' job. Briefing = situation awareness only.`
+Generate the briefing card now. Stay strictly within the data provided above. Do NOT output action items or task lists — that is Today\'s Orders\' job. Briefing = situation awareness only. Do NOT mention playstyle unless today is Day 6 (Enemy Buster).`
 
   return { systemPrompt, userPrompt }
 }
