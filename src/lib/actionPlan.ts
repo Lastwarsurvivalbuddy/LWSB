@@ -11,6 +11,8 @@
 //                           Day 5 troop copy generalized; defense review removed;
 //                           research copy fixed; Sec Sci added;
 //                           server_day removed from dutyReport (not auto-incremented)
+// Updated: March 23, 2026 — Day 1: drone skill chip chests added to advanced plan (always);
+//                           beginner plan gates chip chests to server_day >= 82
 
 import type { SquadPowerTier, RankBucket, PowerBucket, KillTier } from '@/lib/profileTypes'
 import { SQUAD_POWER_TIER_LABELS, RANK_BUCKET_LABELS, KILL_TIER_TITLES } from '@/lib/profileTypes'
@@ -169,11 +171,14 @@ function getGreeting(profile: CommanderProfile): string {
 // - Survivor cards: open Day 2 only — never mention saving
 // - Gold tasks/trucks: Day 2 and Day 6 only
 // - Never mention starting builds or saving survivors
+// - Drone skill chip chests: Day 1 only, gated to server_day >= 82
+//   (Chip Lab unlocks HQ 15 but chips don't become relevant until ~day 82 / Combat Boost 10)
 
 function generateBeginnerActionPlan(profile: CommanderProfile): ActionPlanResult {
   const actions: DailyAction[] = []
   const { day, label, points } = getDuelDay()
   const hq = profile.hq_level || 1
+  const serverDay = profile.server_day ?? 0
   const maxHeroLevel = getMaxHeroLevelForHQ(hq)
   const nextBreakpoint = getNextExpBreakpoint(maxHeroLevel)
 
@@ -192,6 +197,15 @@ function generateBeginnerActionPlan(profile: CommanderProfile): ActionPlanResult
         detail: 'Today is one of three days this week where radar tasks score VS points (Days 1, 3, 5). Open and complete your radar tasks now.',
         buddyPrompt: `Today is Day 1 — radar tasks score today. I'm at HQ ${hq}. Which radar tasks should I prioritize?`,
       })
+      // Drone skill chip chests — only relevant after server day 82 (Combat Boost 10 unlock)
+      if (serverDay >= 82) {
+        actions.push({
+          id: 'day1_chip_chests', category: 'general', priority: 'high',
+          title: '🎲 Open Drone Skill Chip Chests — Scores Today',
+          detail: 'Drone skill chip chests score VS points on Day 1. Open any chip chests you have saved. Check your inventory and the Chip Lab.',
+          buddyPrompt: `Today is Day 1 — drone skill chip chests score today. I'm at HQ ${hq}, server day ${serverDay}. Which chip chests should I open and what chips should I prioritize?`,
+        })
+      }
       actions.push({
         id: 'day1_gather', category: 'general', priority: 'medium',
         title: '🌾 Send Out Gatherers',
@@ -345,7 +359,7 @@ function getBeginnerStrategicInsight(day: number, hq: number): string {
 // - Radar tasks: open Days 1, 3, 5. Save all other days.
 // - Gold tasks/trucks: Day 2 and Day 6 only
 // - Gather runs: Day 1 and Day 7
-// - Drone/drone chests: Day 1 (drone), Day 3 (chests)
+// - Drone/drone chests: Day 1 (drone + chip chests), Day 3 (component chests)
 // - Survivor tickets: Day 2 only
 // - T11 Armament Training: fires EVERY DAY — no gate
 // - T11 Armament Research (troop upgrade): Day 2 only alongside building upgrades
@@ -383,6 +397,12 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
       detail: 'Lowest-value Duel day (1 pt). Upgrade drone data and drone parts today. Clear radar tasks — they score VS points on Days 1, 3, and 5.',
       buddyPrompt: `Today is Alliance Duel Day 1 — Radar Training (1 pt). I'm at HQ ${hq}, troop tier ${profile.troop_tier}. How do I efficiently upgrade my drone and clear radar tasks today?`,
       points: 1,
+    })
+    actions.push({
+      id: 'day1_chip_chests_adv', category: 'general', priority: 'high',
+      title: '🎲 Open Drone Skill Chip Chests — Scores Today',
+      detail: 'Drone skill chip chests score VS points on Day 1. Open any chip chests you have saved — check your inventory and the Chip Lab.',
+      buddyPrompt: `Today is Day 1 — drone skill chip chests score today. HQ ${hq}, troop tier ${profile.troop_tier}. Which chip chests should I open and what chips should I prioritize for my build?`,
     })
     actions.push({
       id: 'day1_radar_adv', category: 'general', priority: 'medium',
@@ -443,8 +463,6 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
   }
 
   // ── Hero — Day 4 ONLY ─────────────────────────────────────────────────────────
-  // HARD RULE: Hero EXP, skills, exclusive weapons, ghost ops — Day 4 only.
-  // Never recommend hero upgrades on any other day.
   if (day === 4) {
     actions.push({
       id: 'hero_exp_duel', category: 'heroes', priority: 'critical',
@@ -467,7 +485,7 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
     })
   }
 
-  // ── Day 3 radar + drone chests ────────────────────────────────────────────────
+  // ── Day 3 radar + drone component chests ─────────────────────────────────────
   if (day === 3) {
     actions.push({
       id: 'day3_drone_chests_adv', category: 'general', priority: 'high',
@@ -518,7 +536,6 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
   }
 
   // ── T11 Armament Training — fires EVERY DAY ───────────────────────────────────
-  // No gate — always a valid daily action for T11 players
   if (isT11) {
     actions.push({
       id: 't11_armament_training', category: 'troops', priority: 'high',
@@ -529,7 +546,6 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
   }
 
   // ── Tier-conditional actions — Days 1–5 ONLY ─────────────────────────────────
-  // T10 unlock path — non-double days only
   if (isBelowT10 && allowTierActions && !isDoubleDay) {
     actions.push({
       id: 't10_path', category: 'troops', priority: 'high',
@@ -590,7 +606,7 @@ function getAdvancedStrategicInsight(
   }
   if (day === 6) return `Enemy Buster Day — 4 Alliance Duel points, highest of the week. Coordinate with leadership. Gold tasks and trucks only.`
   if (day === 7) return `Reset day — no scoring. Start gather runs before the 2am UTC reset and save radar tasks for tomorrow.`
-  if (day === 1) return `Radar Training — lowest-value Duel day (1 point). Upgrade drones, clear radar tasks, gather resources.`
+  if (day === 1) return `Radar Training — lowest-value Duel day (1 point). Upgrade drones, open chip chests, clear radar tasks, gather resources.`
   const nextMilestone = getNextHeroMilestone(profile.hq_level)
   return nextMilestone
     ? `HQ ${profile.hq_level} unlocks hero level ${maxHeroLevel}. Reach HQ ${nextMilestone.targetHQ} to unlock hero level ${nextMilestone.heroLevel}.`
