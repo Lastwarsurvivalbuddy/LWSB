@@ -29,6 +29,7 @@ interface Submission {
   status: string
   screenshot_path: string | null
   created_at: string
+  submitter_ign: string
 }
 
 interface ModItem {
@@ -588,9 +589,14 @@ export default function MissionControlPage() {
                       {sub.scope === 'global' ? '🌐 Global' : `🎯 Server ${sub.server_number}`}
                     </span>
                   )}
-                  <span className="ml-auto text-[11px] text-zinc-600 font-mono">
-                    {new Date(sub.created_at).toLocaleDateString()}
-                  </span>
+                  <div className="ml-auto flex items-center gap-2">
+                    {sub.submitter_ign && sub.submitter_ign !== '—' && (
+                      <span className="text-[11px] text-zinc-500 font-mono">{sub.submitter_ign}</span>
+                    )}
+                    <span className="text-[11px] text-zinc-600 font-mono">
+                      {new Date(sub.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
                 </div>
 
                 {editingId === sub.id ? (

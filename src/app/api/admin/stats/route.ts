@@ -1,3 +1,4 @@
+import '@/lib/env'
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -7,13 +8,11 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 const BOYD_EMAIL = process.env.BOYD_EMAIL!
 
 export async function GET(req: NextRequest) {
-  // Verify session from Authorization header or cookie
   const authHeader = req.headers.get('authorization') || ''
   const token = authHeader.replace('Bearer ', '')
 
   const anonClient = createClient(supabaseUrl, supabaseAnonKey)
 
-  // Get user from token if present, otherwise fall back to cookie-based session
   let userEmail: string | null = null
 
   if (token) {
@@ -22,9 +21,7 @@ export async function GET(req: NextRequest) {
   }
 
   if (!userEmail) {
-    // Try reading the cookie-based session
     const cookieHeader = req.headers.get('cookie') || ''
-    // Extract sb-access-token from cookies
     const match = cookieHeader.match(/sb-[^=]+-auth-token=([^;]+)/)
     if (match) {
       try {
@@ -44,15 +41,137 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
   }
 
-  // Use service role for unrestricted data access
   const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-  // --- Total users ---
+  const { searchParams } = new URL(req.url)
+  const mode = searchParams.get('mode') ?? 'overview'
+
+  // ── USERS MODE ────────────────────────────────────────────────────────────
+  if (mode === 'users') {
+    const tierFilter = searchParams.get('tier') ?? 'all'
+    const flaggedOnly = searchParams.get('flagged') === 'true'
+    const page = Math.max(0, parseInt(searchParams.get('page') ?? '0'))
+    const pageSize = 50
+
+    const { data: profiles, error: profileErr } = await supabase
+      .from('commander_profile')
+      .select('id, created_at, email, ign, server_number, hq_level')
+      .order('created_at', { ascending: false })
+      .range(page * pageSize, (page + 1) * pageSize - 1)
+
+    if (profileErr) {
+      return NextResponse.json({ error: profileErr.message }, { status: 500 })
+    }
+
+    const profileIds = (profiles ?? []).map(p => p.id)
+
+    const { data: subs } = await supabase
+      .from('subscriptions')
+      .select('user_id, tier, banned, flagged_for_review')
+      .in('user_id', profileIds)
+
+    const subMap: Record<string, { tier: string; banned: boolean; flagged: boolean }> = {}
+    for (const s of (subs ?? [])) {
+      subMap[s.user_id] = {
+        tier: s.tier ?? 'free',
+        banned: s.banned ?? false,
+        flagged: s.flagged_for_review ?? false,
+      }
+    }
+
+    const { data: usageDates } = await supabase
+      .from('daily_usage')
+      .select('user_id, date')
+      .in('user_id', profileIds)
+      .order('date', { ascending: false })
+
+    const lastActiveMap: Record<string, string> = {}
+    for (const u of (usageDates ?? [])) {
+      if (!lastActiveMap[u.user_id]) lastActiveMap[u.user_id] = u.date
+    }
+
+    const { data: usageTotals } = await supabase
+      .from('daily_usage')
+      .select('user_id, question_count')
+      .in('user_id', profileIds)
+
+    const questionTotals: Record<string, number> = {}
+    for (const u of (usageTotals ?? [])) {
+      questionTotals[u.user_id] = (questionTotals[u.user_id] ?? 0) + (u.question_count ?? 0)
+    }
+
+    const { data: conversions } = await supabase
+      .from('affiliate_conversions')
+      .select('referred_user_id, affiliate_id')
+      .in('referred_user_id', profileIds)
+
+    const referralMap: Record<string, string> = {}
+    for (const c of (conversions ?? [])) {
+      referralMap[c.referred_user_id] = c.affiliate_id
+    }
+
+    const affiliateIds = [...new Set(Object.values(referralMap))]
+    const affiliateCodeMap: Record<string, string> = {}
+    if (affiliateIds.length > 0) {
+      const { data: affs } = await supabase
+        .from('affiliates')
+        .select('id, referral_code, name')
+        .in('id', affiliateIds)
+      for (const a of (affs ?? [])) {
+        affiliateCodeMap[a.id] = `${a.referral_code} (${a.name})`
+      }
+    }
+
+    const { data: paymentRows } = await supabase
+      .from('payments')
+      .select('user_id, amount_usd')
+      .in('user_id', profileIds)
+
+    const revenueMap: Record<string, number> = {}
+    for (const p of (paymentRows ?? [])) {
+      revenueMap[p.user_id] = (revenueMap[p.user_id] ?? 0) + Number(p.amount_usd)
+    }
+
+    let users = (profiles ?? []).map(p => {
+      const sub = subMap[p.id] ?? { tier: 'free', banned: false, flagged: false }
+      const affiliateId = referralMap[p.id]
+      return {
+        id: p.id,
+        email: p.email ?? '—',
+        ign: p.ign ?? '—',
+        server: p.server_number ?? '—',
+        hq: p.hq_level ?? '—',
+        tier: sub.tier,
+        banned: sub.banned,
+        flagged: sub.flagged,
+        joined: p.created_at,
+        lastActive: lastActiveMap[p.id] ?? null,
+        totalQuestions: questionTotals[p.id] ?? 0,
+        lifetimeRevenue: Math.round((revenueMap[p.id] ?? 0) * 100) / 100,
+        referredBy: affiliateId ? (affiliateCodeMap[affiliateId] ?? affiliateId) : null,
+      }
+    })
+
+    if (tierFilter !== 'all') {
+      users = users.filter(u => u.tier.toLowerCase() === tierFilter.toLowerCase())
+    }
+    if (flaggedOnly) {
+      users = users.filter(u => u.flagged || u.banned)
+    }
+
+    const { count: totalCount } = await supabase
+      .from('commander_profile')
+      .select('*', { count: 'exact', head: true })
+
+    return NextResponse.json({ users, page, pageSize, total: totalCount ?? 0 })
+  }
+
+  // ── OVERVIEW MODE ─────────────────────────────────────────────────────────
+
   const { count: totalUsers } = await supabase
     .from('commander_profile')
     .select('*', { count: 'exact', head: true })
 
-  // --- Signups last 30 days ---
   const thirtyDaysAgo = new Date()
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
@@ -62,7 +181,6 @@ export async function GET(req: NextRequest) {
     .gte('created_at', thirtyDaysAgo.toISOString())
     .order('created_at', { ascending: true })
 
-  // --- Subscription tier counts ---
   const { data: subRows } = await supabase
     .from('subscriptions')
     .select('tier')
@@ -76,14 +194,12 @@ export async function GET(req: NextRequest) {
   const subscribedCount = (subRows || []).length
   tierCounts['free'] = Math.max(0, (totalUsers || 0) - subscribedCount + tierCounts['free'])
 
-  // --- MRR ---
   const MRR_MAP: Record<string, number> = { pro: 9.99, elite: 19.99, alliance: 19.99, founding: 0, free: 0 }
   const mrr = Object.entries(tierCounts).reduce((sum, [tier, count]) => {
     return sum + (MRR_MAP[tier] || 0) * count
   }, 0)
   const foundingLtm = tierCounts['founding'] * 99
 
-  // --- DAU last 7 days ---
   const sevenDaysAgo = new Date()
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
@@ -105,7 +221,6 @@ export async function GET(req: NextRequest) {
   const todayStr = new Date().toISOString().split('T')[0]
   const todayDau = dauByDay[todayStr]?.size || 0
 
-  // --- API usage this month ---
   const thisMonthStart = new Date()
   thisMonthStart.setDate(1)
   thisMonthStart.setHours(0, 0, 0, 0)
@@ -127,7 +242,6 @@ export async function GET(req: NextRequest) {
   const COST_PER_BR = 0.012
   const apiCost = (totalQuestions * COST_PER_Q) + (totalScreenshots * COST_PER_SS) + (totalBattleReports * COST_PER_BR)
 
-  // --- Signups by day ---
   const signupsByDay: Record<string, number> = {}
   for (const p of (recentProfiles || [])) {
     const d = p.created_at.split('T')[0]
@@ -144,12 +258,31 @@ export async function GET(req: NextRequest) {
 
   const signupsThisWeek = signupSeries.slice(-7).reduce((s, r) => s + r.count, 0)
 
-  // --- Community submissions ---
+  // ── Submissions — pending only, with submitter IGN ──
   const { data: submissions } = await supabase
     .from('community_submissions')
     .select('*')
+    .eq('status', 'pending')
     .order('created_at', { ascending: false })
     .limit(50)
+
+  // Enrich with submitter IGN from commander_profile
+  const submitterIds = [...new Set((submissions ?? []).map(s => s.user_id).filter(Boolean))]
+  const submitterIgnMap: Record<string, string> = {}
+  if (submitterIds.length > 0) {
+    const { data: submitterProfiles } = await supabase
+      .from('commander_profile')
+      .select('id, ign, server_number')
+      .in('id', submitterIds)
+    for (const p of (submitterProfiles ?? [])) {
+      submitterIgnMap[p.id] = p.ign ? `${p.ign} (S${p.server_number})` : `S${p.server_number}`
+    }
+  }
+
+  const enrichedSubmissions = (submissions ?? []).map(s => ({
+    ...s,
+    submitter_ign: submitterIgnMap[s.user_id] ?? '—',
+  }))
 
   const { data: modQueue } = await supabase
     .from('admin_moderation')
@@ -172,7 +305,7 @@ export async function GET(req: NextRequest) {
       screenshots: totalScreenshots,
       battleReports: totalBattleReports,
     },
-    submissions: submissions || [],
+    submissions: enrichedSubmissions,
     modQueue: modQueue || [],
   })
 }
