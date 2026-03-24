@@ -44,7 +44,8 @@ export async function POST(req: NextRequest) {
         if (!userId || !tier) break
 
         if (session.mode === 'payment') {
-          await upsertSubscription(userId, tier, 'active', null, session.id)
+          // Founding Member — one-time payment, no billing period
+          await upsertSubscription(userId, tier, 'active', null, session.id, null, null)
         }
 
         // Record affiliate conversion if ref_code present
@@ -66,6 +67,15 @@ export async function POST(req: NextRequest) {
         const tier = subscription.metadata?.tier
         const refCode = subscription.metadata?.ref_code ?? null
 
+        // Extract billing period — cast to any because field names vary across Stripe SDK versions
+        const subAny = subscription as any
+        const periodStart: string | null = subAny.current_period_start
+          ? new Date(subAny.current_period_start * 1000).toISOString()
+          : null
+        const periodEnd: string | null = subAny.current_period_end
+          ? new Date(subAny.current_period_end * 1000).toISOString()
+          : null
+
         if (!userId) {
           const customerId = typeof subscription.customer === 'string'
             ? subscription.customer
@@ -77,13 +87,19 @@ export async function POST(req: NextRequest) {
               .eq('stripe_customer_id', customerId)
               .single()
             if (profile) {
-              await upsertSubscription(profile.user_id, tier || 'pro', 'active', subscriptionId)
+              await upsertSubscription(
+                profile.user_id, tier || 'pro', 'active',
+                subscriptionId, undefined, periodStart, periodEnd
+              )
             }
           }
           break
         }
 
-        await upsertSubscription(userId, tier || 'pro', 'active', subscriptionId)
+        await upsertSubscription(
+          userId, tier || 'pro', 'active',
+          subscriptionId, undefined, periodStart, periodEnd
+        )
 
         // Record affiliate conversion on first invoice only
         // (avoid duplicate conversions on recurring renewals)
@@ -107,7 +123,13 @@ export async function POST(req: NextRequest) {
         if (sub) {
           await supabaseAdmin
             .from('subscriptions')
-            .update({ tier: 'free', status: 'cancelled', updated_at: new Date().toISOString() })
+            .update({
+              tier: 'free',
+              status: 'cancelled',
+              period_start: null,
+              period_end: null,
+              updated_at: new Date().toISOString(),
+            })
             .eq('user_id', sub.user_id)
         }
         break
@@ -115,6 +137,13 @@ export async function POST(req: NextRequest) {
 
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription
+        const subUpdatedAny = subscription as any
+        const periodStart: string | null = subUpdatedAny.current_period_start
+          ? new Date(subUpdatedAny.current_period_start * 1000).toISOString()
+          : null
+        const periodEnd: string | null = subUpdatedAny.current_period_end
+          ? new Date(subUpdatedAny.current_period_end * 1000).toISOString()
+          : null
         const { data: sub } = await supabaseAdmin
           .from('subscriptions')
           .select('user_id')
@@ -123,7 +152,12 @@ export async function POST(req: NextRequest) {
         if (sub) {
           await supabaseAdmin
             .from('subscriptions')
-            .update({ status: subscription.status, updated_at: new Date().toISOString() })
+            .update({
+              status: subscription.status,
+              period_start: periodStart,
+              period_end: periodEnd,
+              updated_at: new Date().toISOString(),
+            })
             .eq('user_id', sub.user_id)
         }
         break
@@ -144,7 +178,9 @@ async function upsertSubscription(
   tier: string,
   status: string,
   stripeSubscriptionId: string | null,
-  stripeSessionId?: string
+  stripeSessionId?: string,
+  periodStart?: string | null,
+  periodEnd?: string | null,
 ) {
   const payload: Record<string, unknown> = {
     user_id: userId,
@@ -154,6 +190,8 @@ async function upsertSubscription(
   }
   if (stripeSubscriptionId) payload.stripe_subscription_id = stripeSubscriptionId
   if (stripeSessionId) payload.stripe_session_id = stripeSessionId
+  if (periodStart !== undefined) payload.period_start = periodStart
+  if (periodEnd !== undefined) payload.period_end = periodEnd
 
   const { error } = await supabaseAdmin
     .from('subscriptions')

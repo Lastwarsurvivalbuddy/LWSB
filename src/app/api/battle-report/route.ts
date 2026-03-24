@@ -9,7 +9,7 @@ import { buildBattleReportSystemPrompt, BATTLE_REPORT_QUOTAS } from '@/lib/lwtBa
 interface IntakeAnswers {
   report_type: string;
   squad_type: string;
-  tactics_cards: string[]; // multi-select — empty array is valid
+  tactics_cards: string[];
 }
 
 interface ImagePayload {
@@ -24,6 +24,8 @@ interface BattleReportRequest {
 
 interface SubscriptionRow {
   tier: string;
+  period_start: string | null;
+  period_end: string | null;
 }
 
 interface ProfileRow {
@@ -37,35 +39,108 @@ interface ProfileRow {
   beginner_mode: boolean | null;
 }
 
-interface DailyUsageRow {
-  battle_report_count: number | null;
+interface UsageCountRow {
+  count: number;
 }
 
 // ─────────────────────────────────────────────────────────────
 // TIER LIMIT HELPER
 // ─────────────────────────────────────────────────────────────
-function getDailyLimit(tier: string): number {
+function getMonthlyLimit(tier: string): number {
   switch (tier) {
-    case 'pro':      return BATTLE_REPORT_QUOTAS.pro.daily_limit;
-    case 'elite':    return BATTLE_REPORT_QUOTAS.elite.daily_limit;
-    case 'alliance': return BATTLE_REPORT_QUOTAS.alliance.daily_limit;
-    case 'founding': return BATTLE_REPORT_QUOTAS.founding.daily_limit; // soft cap
+    case 'pro':      return BATTLE_REPORT_QUOTAS.pro.monthly_limit;
+    case 'elite':    return BATTLE_REPORT_QUOTAS.elite.monthly_limit;
+    case 'alliance': return BATTLE_REPORT_QUOTAS.alliance.monthly_limit;
+    case 'founding': return BATTLE_REPORT_QUOTAS.founding.monthly_limit;
     case 'free':
-    default:         return BATTLE_REPORT_QUOTAS.free.daily_limit;
+    default:         return BATTLE_REPORT_QUOTAS.free.monthly_limit;
   }
 }
 
 function getDisplayLimit(tier: string): string {
-  if (tier === 'founding') return 'Unlimited';
-  const limit = getDailyLimit(tier);
-  return limit === 0 ? '0' : `${limit}/day`;
+  const limit = getMonthlyLimit(tier);
+  return limit === 0 ? '0' : `${limit}/month`;
 }
 
 // ─────────────────────────────────────────────────────────────
-// DATE HELPER (UTC — matches rest of app)
+// BILLING PERIOD HELPERS
 // ─────────────────────────────────────────────────────────────
-function getUTCDateString(): string {
-  return new Date().toISOString().split('T')[0];
+
+// Returns the start/end of the current calendar month in UTC.
+// Used as fallback when no Stripe billing period is available
+// (Founding Members, pre-webhook legacy rows).
+function getCalendarMonthBounds(): { periodStart: string; periodEnd: string } {
+  const now = new Date();
+  const periodStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+  const periodEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toISOString();
+  return { periodStart, periodEnd };
+}
+
+// Returns the billing window to count reports against.
+// Priority order:
+//   1. Stripe period_start/period_end — set on every invoice.paid for Pro/Elite
+//   2. Signup-date anchor — used for Founding Members (one-time payment, no Stripe period)
+//      e.g. signed up April 12 → window is the 12th of each month to the 12th of next month
+//   3. Calendar month fallback — safety net for legacy rows with no data
+function getBillingWindow(
+  sub: SubscriptionRow,
+  signupDate?: string | null
+): { periodStart: string; periodEnd: string; source: string } {
+  // Stripe billing period — Pro and Elite after first invoice
+  if (sub.period_start && sub.period_end) {
+    return { periodStart: sub.period_start, periodEnd: sub.period_end, source: 'stripe' };
+  }
+
+  // Founding Member — anchor to signup date day-of-month
+  if (signupDate) {
+    const signup = new Date(signupDate);
+    const anchorDay = signup.getUTCDate(); // e.g. 12 for April 12
+    const now = new Date();
+    const nowYear = now.getUTCFullYear();
+    const nowMonth = now.getUTCMonth();
+    const nowDay = now.getUTCDate();
+
+    // If we're on or after the anchor day this month, period started this month
+    // If we're before the anchor day, period started last month
+    let periodStartYear = nowYear;
+    let periodStartMonth = nowMonth;
+    if (nowDay < anchorDay) {
+      // Before anchor day — current period started last month
+      periodStartMonth = nowMonth - 1;
+      if (periodStartMonth < 0) {
+        periodStartMonth = 11;
+        periodStartYear = nowYear - 1;
+      }
+    }
+
+    // Clamp anchor day to valid days in the start month (e.g. Feb 30 → Feb 28)
+    const daysInStartMonth = new Date(Date.UTC(periodStartYear, periodStartMonth + 1, 0)).getUTCDate();
+    const clampedStart = Math.min(anchorDay, daysInStartMonth);
+    const periodStart = new Date(Date.UTC(periodStartYear, periodStartMonth, clampedStart)).toISOString();
+
+    // Period end = same anchor day next month
+    let periodEndYear = periodStartYear;
+    let periodEndMonth = periodStartMonth + 1;
+    if (periodEndMonth > 11) {
+      periodEndMonth = 0;
+      periodEndYear = periodStartYear + 1;
+    }
+    const daysInEndMonth = new Date(Date.UTC(periodEndYear, periodEndMonth + 1, 0)).getUTCDate();
+    const clampedEnd = Math.min(anchorDay, daysInEndMonth);
+    const periodEnd = new Date(Date.UTC(periodEndYear, periodEndMonth, clampedEnd)).toISOString();
+
+    return { periodStart, periodEnd, source: 'signup_anchor' };
+  }
+
+  // Fallback — calendar month
+  return { ...getCalendarMonthBounds(), source: 'calendar' };
+}
+
+// Human-readable reset date for error messages
+function formatResetDate(periodEnd: string): string {
+  return new Date(periodEnd).toLocaleDateString('en-US', {
+    month: 'long', day: 'numeric', timeZone: 'UTC',
+  });
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -98,17 +173,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Intake answers required' }, { status: 400 });
     }
 
-    // ── 3. Subscription tier ──────────────────────────────────
+    // ── 3. Subscription tier + billing period ─────────────────
     const { data: subData } = await supabase
       .from('subscriptions')
-      .select('tier')
+      .select('tier, period_start, period_end')
       .eq('user_id', user.id)
       .single() as { data: SubscriptionRow | null };
 
     const tier = subData?.tier ?? 'free';
-    const dailyLimit = getDailyLimit(tier);
+    const monthlyLimit = getMonthlyLimit(tier);
 
-    if (dailyLimit === 0) {
+    if (monthlyLimit === 0) {
       return NextResponse.json({
         error: 'upgrade_required',
         message: 'Battle Report Analyzer is a Pro feature. Upgrade to analyze your battle reports.',
@@ -116,31 +191,41 @@ export async function POST(req: NextRequest) {
       }, { status: 403 });
     }
 
-    // ── 4. Daily quota check ──────────────────────────────────
-    const today = getUTCDateString();
-    const { data: usageData } = await supabase
-      .from('daily_usage')
-      .select('battle_report_count')
-      .eq('user_id', user.id)
-      .eq('date', today)
-      .single() as { data: DailyUsageRow | null };
+    // ── 4. Monthly quota check (billing period aware) ─────────
+    const { periodStart, periodEnd } = getBillingWindow(
+      subData ?? { tier: 'free', period_start: null, period_end: null },
+      user.created_at
+    );
 
-    const currentCount = usageData?.battle_report_count ?? 0;
-    if (currentCount >= dailyLimit) {
+    // Count reports submitted within the current billing period
+    const { count: periodCount, error: countError } = await supabase
+      .from('battle_reports')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .gte('created_at', periodStart)
+      .lt('created_at', periodEnd);
+
+    const currentCount = periodCount ?? 0;
+
+    if (countError) {
+      console.error('Battle report count error:', countError);
+      return NextResponse.json({ error: 'Failed to check quota' }, { status: 500 });
+    }
+
+    if (currentCount >= monthlyLimit) {
+      const resetDate = formatResetDate(periodEnd);
       return NextResponse.json({
         error: 'quota_exceeded',
-        message: tier === 'founding'
-          ? 'Daily soft limit reached. Come back tomorrow.'
-          : `You've used all ${dailyLimit} Battle Report analyses today. Resets at midnight UTC.`,
+        message: `You've used all ${monthlyLimit} Battle Report analyses this billing period. Resets on ${resetDate}.`,
         current: currentCount,
-        limit: dailyLimit,
+        limit: monthlyLimit,
         display_limit: getDisplayLimit(tier),
-        resets_at: `${today}T00:00:00Z`,
+        resets_on: resetDate,
+        resets_at: periodEnd,
       }, { status: 429 });
     }
 
     // ── 5. Load player profile ────────────────────────────────
-    // FIX: query by id (not user_id) — matches commander_profile table schema
     const { data: profileData } = await supabase
       .from('commander_profile')
       .select('hq_level, troop_type, troop_tier, squad_power, server_day, spend_style, hero_power, beginner_mode')
@@ -242,26 +327,8 @@ Return ONLY valid JSON matching the schema in your instructions. No markdown, no
       }, { status: 422 });
     }
 
-    // ── 10. Increment quota ───────────────────────────────────
-    if (usageData) {
-      await supabase
-        .from('daily_usage')
-        .update({ battle_report_count: currentCount + 1 })
-        .eq('user_id', user.id)
-        .eq('date', today);
-    } else {
-      await supabase
-        .from('daily_usage')
-        .upsert({
-          user_id:             user.id,
-          date:                today,
-          question_count:      0,
-          screenshot_count:    0,
-          battle_report_count: 1,
-        });
-    }
-
-    // ── 11. Save report to battle_reports table ───────────────
+    // ── 10. Save report to battle_reports table ───────────────
+    // Quota is now derived from battle_reports directly — no daily_usage update needed
     const outcome       = (analysis.outcome       as string) ?? 'Unknown';
     const verdict       = (analysis.verdict       as string) ?? 'Analysis complete';
     const reportType    = (analysis.report_type   as string) ?? intake.report_type;
@@ -284,16 +351,17 @@ Return ONLY valid JSON matching the schema in your instructions. No markdown, no
         },
       });
 
-    // ── 12. Return success ────────────────────────────────────
+    // ── 11. Return success ────────────────────────────────────
+    const resetDate = formatResetDate(periodEnd);
     return NextResponse.json({
       success: true,
       analysis,
       meta: {
-        images_analyzed:        images.length,
-        reports_used_today:     currentCount + 1,
-        reports_remaining_today:
-          tier === 'founding' ? 'unlimited' : Math.max(0, dailyLimit - (currentCount + 1)),
-        display_limit: getDisplayLimit(tier),
+        images_analyzed:           images.length,
+        reports_used_this_period:  currentCount + 1,
+        reports_remaining:         Math.max(0, monthlyLimit - (currentCount + 1)),
+        display_limit:             getDisplayLimit(tier),
+        resets_on:                 resetDate,
         tier,
       },
     });
@@ -351,33 +419,41 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    const today = getUTCDateString();
-    const { data: usageData } = await supabase
-      .from('daily_usage')
-      .select('battle_report_count')
-      .eq('user_id', user.id)
-      .eq('date', today)
-      .single() as { data: DailyUsageRow | null };
-
+    // ── Quota summary ─────────────────────────────────────────
     const { data: subData } = await supabase
       .from('subscriptions')
-      .select('tier')
+      .select('tier, period_start, period_end')
       .eq('user_id', user.id)
       .single() as { data: SubscriptionRow | null };
 
     const tier = subData?.tier ?? 'free';
-    const dailyLimit = getDailyLimit(tier);
-    const usedToday = usageData?.battle_report_count ?? 0;
+    const monthlyLimit = getMonthlyLimit(tier);
+    const { periodStart, periodEnd } = getBillingWindow(
+      subData ?? { tier: 'free', period_start: null, period_end: null },
+      user.created_at
+    );
+
+    const { count: periodCount } = await supabase
+      .from('battle_reports')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .gte('created_at', periodStart)
+      .lt('created_at', periodEnd);
+
+    const usedThisPeriod = periodCount ?? 0;
+    const resetDate = formatResetDate(periodEnd);
 
     return NextResponse.json({
       reports: normalizedReports,
       quota: {
         tier,
-        used_today:    usedToday,
-        limit:         dailyLimit,
-        display_limit: getDisplayLimit(tier),
-        remaining:     tier === 'founding' ? 'unlimited' : Math.max(0, dailyLimit - usedToday),
-        can_analyze:   tier !== 'free' && usedToday < dailyLimit,
+        used_this_period: usedThisPeriod,
+        limit:            monthlyLimit,
+        display_limit:    getDisplayLimit(tier),
+        remaining:        Math.max(0, monthlyLimit - usedThisPeriod),
+        can_analyze:      tier !== 'free' && usedThisPeriod < monthlyLimit,
+        resets_on:        resetDate,
+        resets_at:        periodEnd,
       },
     });
   } catch (error) {

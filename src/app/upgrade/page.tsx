@@ -12,15 +12,15 @@ const TIERS = [
     period: '/mo',
     questions: 30,
     screenshots: 10,
-    battle_reports: 3,
-    battle_reports_label: '3/day',
+    battle_reports: 10,
+    battle_reports_label: '10/mo',
     color: 'sky',
     badge: null,
     description: 'For active players who want daily guidance.',
     features: [
       '30 questions per day',
       '10 screenshot analyses per day',
-      '3 Battle Report analyses per day',
+      '10 Battle Report analyses per month',
       'Full Buddy AI with profile context',
       'Pack Scanner',
       'Daily Briefing + Action Plan',
@@ -35,15 +35,15 @@ const TIERS = [
     period: '/mo',
     questions: 100,
     screenshots: 20,
-    battle_reports: 5,
-    battle_reports_label: '5/day',
+    battle_reports: 20,
+    battle_reports_label: '20/mo',
     color: 'amber',
     badge: 'MOST POPULAR',
     description: 'For serious commanders who play to win.',
     features: [
       '100 questions per day',
       '20 screenshot analyses per day',
-      '5 Battle Report analyses per day',
+      '20 Battle Report analyses per month',
       'Full Buddy AI with profile context',
       'Pack Scanner',
       'Daily Briefing + Action Plan',
@@ -60,14 +60,14 @@ const TIERS = [
     questions: 999,
     screenshots: 999,
     battle_reports: 999,
-    battle_reports_label: 'Unlimited',
+    battle_reports_label: '15/mo',
     color: 'purple',
     badge: 'LIMITED — 500 SPOTS',
     description: 'Lock in lifetime access before launch.',
     features: [
       'Unlimited questions per day',
       'Unlimited screenshot analyses',
-      'Unlimited Battle Report analyses',
+      '15 Battle Report analyses per month',
       'Full Buddy AI with profile context',
       'Pack Scanner',
       'Daily Briefing + Action Plan',
@@ -84,15 +84,15 @@ const TIERS = [
     period: '/mo',
     questions: 100,
     screenshots: 20,
-    battle_reports: 5,
-    battle_reports_label: '5/day',
+    battle_reports: 20,
+    battle_reports_label: '20/mo',
     color: 'green',
     badge: 'FOR ALLIANCE LEADERS',
     description: 'Give your whole alliance daily AI guidance.',
     features: [
       '100 questions per day',
       '20 screenshot analyses per day',
-      '5 Battle Report analyses per day',
+      '20 Battle Report analyses per month',
       'Full Buddy AI with profile context',
       'Pack Scanner',
       'Daily Briefing + Action Plan',
@@ -248,7 +248,7 @@ export default function UpgradePage() {
               <p className="text-sm text-zinc-400 leading-relaxed mb-3">
                 Upload your battle report screenshots. Get a full expert breakdown — troop type counter diagnosis,
                 morale cascade analysis, decoration gap, Exclusive Weapon gap, hero performance, and a
-                rematch verdict. No other Last War tool does this.
+                rematch verdict. Use it on the fights you genuinely don&apos;t understand. No other Last War tool does this.
               </p>
               <div className="grid grid-cols-3 gap-2 text-center">
                 {[
@@ -408,7 +408,7 @@ export default function UpgradePage() {
             {[
               { feature: 'Buddy AI Chat', free: '5/day', pro: '30/day', elite: '100/day', founding: 'Unlimited' },
               { feature: 'Screenshot Analysis', free: '—', pro: '10/day', elite: '20/day', founding: 'Unlimited' },
-              { feature: '⚔️ Battle Report Analyzer', free: '—', pro: '3/day', elite: '5/day', founding: 'Unlimited' },
+              { feature: '⚔️ Battle Report Analyzer', free: '—', pro: '10/mo', elite: '20/mo', founding: '15/mo' },
               { feature: 'Pack Scanner', free: '—', pro: '✓', elite: '✓', founding: '✓' },
               { feature: 'Daily Briefing', free: '✓', pro: '✓', elite: '✓', founding: '✓' },
               { feature: 'Daily Action Plan', free: '✓', pro: '✓', elite: '✓', founding: '✓' },
@@ -444,6 +444,9 @@ export default function UpgradePage() {
             >
               Stay on free
             </button>
+          </p>
+          <p className="text-xs text-zinc-700">
+            Battle Reports reset on your billing date, not calendar month. Use them on the fights that matter.
           </p>
           <p className="text-xs text-zinc-700">
             Payments processed securely by Stripe. Cancel subscriptions anytime.

@@ -822,42 +822,48 @@ Respond ONLY with a JSON object. No markdown, no preamble. Structure:
 // ─────────────────────────────────────────────────────────────
 export const BATTLE_REPORT_QUOTAS = {
   free: {
-    daily_limit: 0,
+    monthly_limit: 0,
     gate: 'hard',
     cta: 'Upgrade to Pro to unlock Battle Report Analyzer',
   },
   pro: {
-    daily_limit: 3,
-    gate: 'soft',
-    cost_per_report_usd: 0.043,
-    monthly_max_cost_usd: 3.87,
+    monthly_limit: 10,
+    gate: 'hard',
+    cost_per_report_usd: 0.10,
+    monthly_max_cost_usd: 1.00,
     monthly_revenue_usd: 9.99,
-    margin_usd: 6.12,
+    net_after_hedge_usd: 8.49,   // 15% licensing fee
+    margin_usd: 7.49,
+    note: 'Use it for the fights that matter. 10 deep-dive analyses per month.',
   },
   elite: {
-    daily_limit: 5,
-    gate: 'soft',
-    cost_per_report_usd: 0.043,
-    monthly_max_cost_usd: 6.45,
+    monthly_limit: 20,
+    gate: 'hard',
+    cost_per_report_usd: 0.10,
+    monthly_max_cost_usd: 2.00,
     monthly_revenue_usd: 19.99,
-    margin_usd: 13.54,
+    net_after_hedge_usd: 16.99,  // 15% licensing fee
+    margin_usd: 14.99,
+    note: '20 analyses per month. More than enough for active PvP players.',
   },
   alliance: {
-    daily_limit: 5,
-    gate: 'soft',
-    cost_per_report_usd: 0.043,
-    monthly_max_cost_usd: 6.45,
+    monthly_limit: 20,
+    gate: 'hard',
+    cost_per_report_usd: 0.10,
+    monthly_max_cost_usd: 2.00,
     monthly_revenue_usd: 19.99,
-    margin_usd: 13.54,
+    net_after_hedge_usd: 16.99,
+    margin_usd: 14.99,
   },
   founding: {
-    daily_limit: 10,
-    displayed_as: 'Unlimited',
-    gate: 'soft_invisible',
-    cost_per_report_usd: 0.043,
-    monthly_max_cost_usd: 12.90,
-    monthly_revenue_equiv_usd: 2.06,
-    note: 'Accept the cost. Founding Members are your advocates. Soft cap at 10/day is invisible.',
+    monthly_limit: 15,
+    gate: 'hard',
+    displayed_as: '15/month — resets on signup anniversary date each month',
+    cost_per_report_usd: 0.10,
+    monthly_max_cost_usd: 1.50,
+    revenue_one_time_usd: 99,
+    net_after_hedge_usd: 84.15,
+    note: 'Hard cap at 15/mo. Resets on day-of-month matching signup date. Break-even at max usage ~56 months.',
   },
 };
 
@@ -879,6 +885,7 @@ Troop Losses: High killed = hospital full = permanent loss.
 PvE: Virus resistance gate in Season 1. Purgator card required. AoE heroes for Zombie Siege.
 Screens: 6 screens per report. Screen 2 (troop breakdown) is most critical.
 Opponent: Name and power extracted from Screen 1. Stored as opponent_name / opponent_power.
-Quotas: Free=0, Pro=3/day, Elite=5/day, Founding=10/day (shown as unlimited).
+Quotas: Free=0, Pro=10/mo, Elite=20/mo, Founding=15/mo (resets on signup anniversary date).
+Framing: Battle Report is a teaching tool — use it on the fights you genuinely don't understand.
   `.trim();
 }
