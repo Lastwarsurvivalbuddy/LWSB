@@ -39,16 +39,24 @@ export async function POST(req: NextRequest) {
         const session = event.data.object as Stripe.Checkout.Session
         const userId = session.metadata?.user_id
         const tier = session.metadata?.tier
+        const refCode = session.metadata?.ref_code ?? null
+
         if (!userId || !tier) break
+
         if (session.mode === 'payment') {
           await upsertSubscription(userId, tier, 'active', null, session.id)
         }
+
+        // Record affiliate conversion if ref_code present
+        if (refCode) {
+          await recordAffiliateConversion(userId, tier, refCode, session.id)
+        }
+
         break
       }
 
       case 'invoice.paid': {
         const invoice = event.data.object as Stripe.Invoice
-        // In newer Stripe SDK, parent contains subscription info
         const subscriptionId = (invoice as any).subscription
           ?? (invoice as any).parent?.subscription_details?.subscription
         if (!subscriptionId) break
@@ -56,6 +64,7 @@ export async function POST(req: NextRequest) {
         const subscription = await stripe.subscriptions.retrieve(subscriptionId)
         const userId = subscription.metadata?.user_id
         const tier = subscription.metadata?.tier
+        const refCode = subscription.metadata?.ref_code ?? null
 
         if (!userId) {
           const customerId = typeof subscription.customer === 'string'
@@ -75,6 +84,16 @@ export async function POST(req: NextRequest) {
         }
 
         await upsertSubscription(userId, tier || 'pro', 'active', subscriptionId)
+
+        // Record affiliate conversion on first invoice only
+        // (avoid duplicate conversions on recurring renewals)
+        if (refCode) {
+          const isFirstInvoice = (invoice as any).billing_reason === 'subscription_create'
+          if (isFirstInvoice) {
+            await recordAffiliateConversion(userId, tier || 'pro', refCode, subscriptionId)
+          }
+        }
+
         break
       }
 
@@ -143,5 +162,58 @@ async function upsertSubscription(
   if (error) {
     console.error('Supabase upsert error:', error)
     throw error
+  }
+}
+
+async function recordAffiliateConversion(
+  referredUserId: string,
+  tier: string,
+  refCode: string,
+  stripeRef: string
+) {
+  try {
+    // Look up affiliate by referral_code — must be approved
+    const { data: affiliate } = await supabaseAdmin
+      .from('affiliates')
+      .select('id')
+      .eq('referral_code', refCode)
+      .eq('status', 'approved')
+      .single()
+
+    if (!affiliate) {
+      console.warn(`Affiliate conversion: no approved affiliate found for ref_code ${refCode}`)
+      return
+    }
+
+    // Prevent duplicate conversions for the same user
+    const { data: existing } = await supabaseAdmin
+      .from('affiliate_conversions')
+      .select('id')
+      .eq('affiliate_id', affiliate.id)
+      .eq('referred_user_id', referredUserId)
+      .single()
+
+    if (existing) {
+      console.log(`Affiliate conversion: duplicate skipped for user ${referredUserId}`)
+      return
+    }
+
+    const { error } = await supabaseAdmin
+      .from('affiliate_conversions')
+      .insert({
+        affiliate_id: affiliate.id,
+        referred_user_id: referredUserId,
+        subscription_tier: tier,
+        stripe_subscription_id: stripeRef,
+      })
+
+    if (error) {
+      console.error('Affiliate conversion insert error:', error)
+    } else {
+      console.log(`Affiliate conversion recorded: ${refCode} → ${tier} (user ${referredUserId})`)
+    }
+  } catch (err) {
+    // Non-fatal — never block the main webhook flow
+    console.error('recordAffiliateConversion error:', err)
   }
 }

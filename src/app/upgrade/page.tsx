@@ -138,6 +138,15 @@ const COLOR_MAP: Record<string, Record<string, string>> = {
   },
 }
 
+// ── Read referral cookie ──────────────────────────────────────
+function getRefCookie(): string | null {
+  if (typeof document === 'undefined') return null
+  const match = document.cookie
+    .split('; ')
+    .find(row => row.startsWith('lwsb_ref='))
+  return match ? decodeURIComponent(match.split('=')[1]) : null
+}
+
 export default function UpgradePage() {
   const router = useRouter()
   const [loading, setLoading] = useState<string | null>(null)
@@ -164,13 +173,19 @@ export default function UpgradePage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/signin'); return }
 
+      // Read referral cookie — pass to checkout if present
+      const ref_code = getRefCookie()
+
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ tier: tierId }),
+        body: JSON.stringify({
+          tier: tierId,
+          ...(ref_code ? { ref_code } : {}),
+        }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Checkout failed')
@@ -313,7 +328,6 @@ export default function UpgradePage() {
                   </div>
                 )}
 
-                {/* Name + price */}
                 <div className="mb-4 mt-1">
                   <h2 className="text-sm font-bold text-zinc-300 uppercase tracking-wide mb-2">
                     {tier.name}
@@ -327,7 +341,6 @@ export default function UpgradePage() {
                   </p>
                 </div>
 
-                {/* Stat boxes */}
                 <div className="grid grid-cols-3 gap-1.5 mb-4">
                   <div className="bg-zinc-800/60 rounded-lg px-1.5 py-2 text-center">
                     <div className="text-sm font-bold text-white">
@@ -349,7 +362,6 @@ export default function UpgradePage() {
                   </div>
                 </div>
 
-                {/* Features */}
                 <ul className="space-y-2 mb-6 flex-1">
                   {tier.features.map(f => (
                     <li key={f} className="flex items-start gap-2 text-xs text-zinc-400">
@@ -359,7 +371,6 @@ export default function UpgradePage() {
                   ))}
                 </ul>
 
-                {/* CTA */}
                 <button
                   onClick={() => handleUpgrade(tier.id)}
                   disabled={!!loading || isCurrentTier}

@@ -37,12 +37,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { tier } = await req.json()
+    const { tier, ref_code } = await req.json()
     if (!tier || !PRICE_MAP[tier]) {
       return NextResponse.json({ error: 'Invalid tier' }, { status: 400 })
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://lwsb.vercel.app'
+
+    // Build metadata — include ref_code if present and valid
+    const metadata: Record<string, string> = {
+      user_id: user.id,
+      tier,
+    }
+    if (ref_code && /^[a-zA-Z0-9-_]{3,32}$/.test(ref_code)) {
+      metadata.ref_code = ref_code
+    }
 
     const session = await stripe.checkout.sessions.create({
       mode: MODE_MAP[tier],
@@ -50,10 +59,7 @@ export async function POST(req: NextRequest) {
       success_url: `${appUrl}/upgrade/success?tier=${tier}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/upgrade`,
       customer_email: user.email,
-      metadata: {
-        user_id: user.id,
-        tier,
-      },
+      metadata,
       allow_promotion_codes: true,
     })
 

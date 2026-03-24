@@ -1,7 +1,7 @@
 // lwtCapitolData.ts
 // Sources: lastwartutorial.com/the-capitol/, lastwarhandbook.com/guides/capitol-conquest-guide
 // Capitol conquest, ministries (hats), boosts, how to request and assign titles
-// Updated: March 22, 2026 (session 58)
+// Updated: March 24, 2026 (session 64) — confirmed position buffs + application rules from in-game screenshots
 
 export const CAPITOL_OVERVIEW = `
 THE CAPITOL — OVERVIEW:
@@ -25,7 +25,8 @@ ELIGIBILITY RULES:
 - Can only hold ONE position at a time
 - 30-minute cooldown between position applications
 - Each position accepts max 50 applications; applications expire after 24 hours if not approved
-- Auto-appointment list: max 50 commanders; ~5-minute interval between appointments
+- Auto-appointment list: max 50 commanders; each appointment interval is exactly 4 minutes 40 seconds
+- VP can appoint 1 official directly (in addition to queue management)
 - When Capitol Conquest starts: all applications are wiped — reapply after new President takes office
 `;
 
@@ -37,7 +38,7 @@ PRESIDENT (alliance that captured Capitol):
   Conqueror Bonus: same + Enemy Unit Casualty Rate +5%
 
 VICE PRESIDENT (appointed by President):
-  Normal: Construction Speed +20% · Research Speed +20% · Training Speed +10%
+  Normal: Construction Speed +20% · Research Speed +20% · Training Speed +10% · Can appoint 1 official
   Conqueror Bonus: Construction +25% · Research +25% · Training +12.5%
 
 SECRETARY OF DEVELOPMENT:
@@ -59,7 +60,7 @@ SECRETARY OF STRATEGY:
   Normal: Hospital Capacity +20% · Unit Healing Rate +20%
   Conqueror Bonus: Hospital Capacity +25% · Unit Healing Rate +25%
 
-SECRETARY OF SECURITY:
+SECRETARY OF DEFENSE:
   Normal: Unit Training Cap +20% · Training Speed +20%
   Conqueror Bonus: Unit Training Cap +25% · Training Speed +25%
 
@@ -107,7 +108,7 @@ CAPITOL — HOW TO REQUEST A HAT:
    Example: "I would like the Secretary of Development hat please"
 3. Share your map coordinates: go to your base → map mode → click your base → Share button → share with VP
 4. VP will add you to the queue and notify you when it's your turn
-5. Hat duration: 10 minutes per player (VP rotates through the queue — ~5-min interval between appointments)
+5. Hat duration: 4 minutes 40 seconds per appointment slot (VP rotates through the queue)
 6. You'll know you have the hat when:
    - VP sends you a message confirming
    - Hat symbol appears above your base on map
@@ -116,7 +117,7 @@ CAPITOL — HOW TO REQUEST A HAT:
    - You receive a mail with the assignment
 
 WHAT TO DO WHEN YOU GET THE HAT:
-- Speed hats (Development, Science, Security, VP): immediately START a construction, research, or training
+- Speed hats (Development, Science, Defense, VP): immediately START a construction, research, or training
   The reduced time is locked in the moment you start — you can then release the hat for the next person
 - Interior hat: must collect resources WHILE holding the hat — wait for mines to be FULL before your turn
   Interior boosts BASE PRODUCTION ONLY — not world map gathering tiles
@@ -135,6 +136,7 @@ SHIELD RULES DURING CAPITOL:
 AUTO-APPOINTMENT QUEUE STRATEGY:
 - Always have an application pending — dead time in queues = wasted opportunity
 - If not on cooldown, you should be in a queue for a hat
+- Each appointment interval is exactly 4 minutes 40 seconds — plan your upgrade queue accordingly
 - Principle: maximize hat (especially Administrative Commander during Conqueror window) around your longest pending upgrades
 `;
 
