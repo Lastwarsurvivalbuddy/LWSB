@@ -50,6 +50,9 @@ interface Affiliate {
   payout_rate: number
   referral_code: string
   notes: string | null
+  payout_method: string | null
+  payout_account: string | null
+  payout_country: string | null
   created_at: string
   approved_at: string | null
   rejected_at: string | null
@@ -83,6 +86,14 @@ interface UserRow {
   referredBy: string | null
 }
 
+const PAYOUT_METHOD_LABELS: Record<string, string> = {
+  paypal: 'PayPal',
+  wise: 'Wise',
+  venmo: 'Venmo',
+  cashapp: 'Cash App',
+  other: 'Other',
+}
+
 export default function MissionControlPage() {
   const router = useRouter()
   const [authorized, setAuthorized] = useState(false)
@@ -106,7 +117,6 @@ export default function MissionControlPage() {
   const [payoutInputs, setPayoutInputs] = useState<Record<string, string>>({})
   const [notesInputs, setNotesInputs] = useState<Record<string, string>>({})
   const [affiliateFilter, setAffiliateFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending')
-  // Payout panel state per approved affiliate
   const [payoutPanelId, setPayoutPanelId] = useState<string | null>(null)
   const [payoutData, setPayoutData] = useState<Record<string, AffiliatePayoutData>>({})
   const [payoutDataLoading, setPayoutDataLoading] = useState<string | null>(null)
@@ -182,7 +192,6 @@ export default function MissionControlPage() {
     if (res.ok) {
       const data = await res.json()
       setPayoutData(prev => ({ ...prev, [affiliateId]: data }))
-      // Pre-fill mark paid inputs
       const today = new Date().toISOString().split('T')[0]
       setMarkPaidInputs(prev => ({
         ...prev,
@@ -291,9 +300,7 @@ export default function MissionControlPage() {
       }),
     })
     if (res.ok) {
-      // Re-fetch payout data to update balances
       await fetchPayoutData(affiliateId, token)
-      // Reset amount input
       setMarkPaidInputs(prev => ({ ...prev, [affiliateId]: { ...prev[affiliateId], amount: '', note: '' } }))
     }
     setMarkPaidActing(null)
@@ -730,7 +737,7 @@ export default function MissionControlPage() {
                     <p className="text-sm text-zinc-300 leading-relaxed">{aff.promo_method}</p>
                   </div>
 
-                  {/* Approved: referral code + payout panel */}
+                  {/* Approved */}
                   {aff.status === 'approved' && (
                     <>
                       <div className="flex items-center gap-3 mb-3 bg-zinc-950/40 rounded-xl p-3">
@@ -744,7 +751,6 @@ export default function MissionControlPage() {
                         </div>
                       </div>
 
-                      {/* Payout toggle button */}
                       <button
                         onClick={() => togglePayoutPanel(aff.id)}
                         className={`w-full py-2 rounded-xl border text-sm font-bold transition-colors mb-0 ${
@@ -756,7 +762,6 @@ export default function MissionControlPage() {
                         {payoutPanelId === aff.id ? '▲ Hide Payouts' : '💰 Manage Payouts'}
                       </button>
 
-                      {/* Payout panel */}
                       {payoutPanelId === aff.id && (
                         <div className="mt-3 border border-zinc-700/60 rounded-xl p-4 bg-zinc-950/40">
                           {payoutDataLoading === aff.id && (
@@ -767,6 +772,27 @@ export default function MissionControlPage() {
 
                           {pd && payoutDataLoading !== aff.id && (
                             <>
+                              {/* ── Send payment to ── */}
+                              <div className="mb-4">
+                                <p className="text-[10px] text-zinc-600 font-mono uppercase tracking-wide mb-2">Send Payment To</p>
+                                {aff.payout_method ? (
+                                  <div className="flex items-center gap-3 bg-zinc-900/60 rounded-lg px-3 py-2.5">
+                                    <span className="text-xs font-bold text-zinc-300 bg-zinc-800 rounded px-2 py-0.5">
+                                      {PAYOUT_METHOD_LABELS[aff.payout_method] ?? aff.payout_method}
+                                    </span>
+                                    <span className="text-sm font-mono text-green-400">{aff.payout_account}</span>
+                                    {aff.payout_country && (
+                                      <span className="text-[11px] text-zinc-600 ml-auto">{aff.payout_country}</span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-2 bg-amber-500/5 border border-amber-500/20 rounded-lg px-3 py-2.5">
+                                    <span className="text-amber-500 text-xs">⚠</span>
+                                    <span className="text-[12px] text-amber-500/80">Affiliate has not set a payout method yet.</span>
+                                  </div>
+                                )}
+                              </div>
+
                               {/* Balance summary */}
                               <div className="grid grid-cols-3 gap-3 mb-4">
                                 {[
@@ -833,7 +859,6 @@ export default function MissionControlPage() {
                                 </button>
                               </div>
 
-                              {/* Payout history */}
                               {pd.payouts.length > 0 && (
                                 <div>
                                   <p className="text-[11px] text-zinc-500 font-mono uppercase tracking-wide mb-2">Payout History</p>
@@ -860,7 +885,7 @@ export default function MissionControlPage() {
                     </>
                   )}
 
-                  {/* Pending: approve / reject controls */}
+                  {/* Pending */}
                   {aff.status === 'pending' && (
                     <div className="border-t border-zinc-800 pt-4 mt-2">
                       <div className="grid grid-cols-2 gap-3 mb-3">
@@ -931,7 +956,6 @@ export default function MissionControlPage() {
               </button>
             </div>
 
-            {/* Filters */}
             <div className="flex gap-2 mb-4 flex-wrap items-center">
               <div className="flex gap-1.5 flex-wrap">
                 {['all', 'free', 'pro', 'elite', 'founding', 'alliance'].map(t => (
@@ -1006,12 +1030,10 @@ export default function MissionControlPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {sortedUsers().map((u, i) => (
+                      {sortedUsers().map((u) => (
                         <tr
                           key={u.id}
-                          className={`border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors ${
-                            u.banned ? 'opacity-50' : ''
-                          }`}
+                          className={`border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors ${u.banned ? 'opacity-50' : ''}`}
                         >
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
@@ -1058,7 +1080,6 @@ export default function MissionControlPage() {
                   </table>
                 </div>
 
-                {/* Pagination */}
                 {usersTotal > 50 && (
                   <div className="flex items-center justify-between px-4 py-3 border-t border-zinc-800">
                     <span className="text-[11px] text-zinc-600 font-mono">

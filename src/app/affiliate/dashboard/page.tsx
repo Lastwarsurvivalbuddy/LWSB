@@ -24,9 +24,20 @@ interface DashboardData {
   referral_code: string;
   name: string;
   ign: string;
+  payout_method: string | null;
+  payout_account: string | null;
+  payout_country: string | null;
   conversions: Conversion[];
   stats: AffiliateStats;
 }
+
+const PAYOUT_METHODS = [
+  { value: 'paypal', label: 'PayPal', hint: 'PayPal email address' },
+  { value: 'wise', label: 'Wise', hint: 'Wise email address' },
+  { value: 'venmo', label: 'Venmo', hint: 'Venmo username or phone (US only)' },
+  { value: 'cashapp', label: 'Cash App', hint: 'Cash App $cashtag (US/UK only)' },
+  { value: 'other', label: 'Other', hint: 'Describe how you\'d like to be paid' },
+]
 
 export default function AffiliateDashboardPage() {
   const router = useRouter();
@@ -34,11 +45,22 @@ export default function AffiliateDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
+  const [token, setToken] = useState<string | null>(null);
+
+  // Payout setup state
+  const [showPayoutSetup, setShowPayoutSetup] = useState(false);
+  const [payoutMethod, setPayoutMethod] = useState('');
+  const [payoutAccount, setPayoutAccount] = useState('');
+  const [payoutCountry, setPayoutCountry] = useState('');
+  const [payoutSaving, setPayoutSaving] = useState(false);
+  const [payoutSaved, setPayoutSaved] = useState(false);
+  const [payoutError, setPayoutError] = useState('');
 
   useEffect(() => {
     const load = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { router.push('/login'); return; }
+      setToken(session.access_token);
 
       const res = await fetch('/api/affiliate/dashboard', {
         headers: { Authorization: `Bearer ${session.access_token}` },
@@ -58,6 +80,19 @@ export default function AffiliateDashboardPage() {
       }
 
       setData(json);
+
+      // Pre-fill payout fields if already set
+      if (json.payout_method) {
+        setPayoutMethod(json.payout_method);
+        setPayoutAccount(json.payout_account ?? '');
+        setPayoutCountry(json.payout_country ?? '');
+      }
+
+      // Auto-open setup if payout method not set
+      if (!json.payout_method) {
+        setShowPayoutSetup(true);
+      }
+
       setLoading(false);
     };
     load();
@@ -70,12 +105,45 @@ export default function AffiliateDashboardPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const savePayoutMethod = async () => {
+    if (!token || !payoutMethod || !payoutAccount) return;
+    setPayoutSaving(true);
+    setPayoutError('');
+
+    const res = await fetch('/api/affiliate/payout-method', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        payout_method: payoutMethod,
+        payout_account: payoutAccount,
+        payout_country: payoutCountry,
+      }),
+    });
+
+    if (res.ok) {
+      setData(prev => prev ? {
+        ...prev,
+        payout_method: payoutMethod,
+        payout_account: payoutAccount,
+        payout_country: payoutCountry,
+      } : prev);
+      setPayoutSaved(true);
+      setShowPayoutSetup(false);
+      setTimeout(() => setPayoutSaved(false), 3000);
+    } else {
+      setPayoutError('Failed to save. Please try again.');
+    }
+    setPayoutSaving(false);
+  };
+
   const tierLabel = (tier: string) => {
     if (tier === 'pro') return { label: 'Pro', color: '#60a0e8' };
     if (tier === 'elite') return { label: 'Elite', color: '#e8a020' };
     if (tier === 'founding') return { label: 'Founding', color: '#c090f0' };
     return { label: tier, color: '#8090a0' };
   };
+
+  const selectedMethod = PAYOUT_METHODS.find(m => m.value === payoutMethod);
 
   if (loading) return (
     <div style={{ minHeight: '100vh', background: '#07080a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -92,6 +160,7 @@ export default function AffiliateDashboardPage() {
   if (!data) return null;
 
   const { stats, conversions } = data;
+  const hasPayoutMethod = !!data.payout_method;
 
   return (
     <div style={{
@@ -132,10 +201,198 @@ export default function AffiliateDashboardPage() {
           </div>
         </div>
 
-        {/* Referral link */}
+        {/* ── PAYOUT METHOD SETUP / STATUS ── */}
+        {!hasPayoutMethod && !showPayoutSetup && (
+          <div style={{
+            background: 'rgba(232,160,32,0.06)', border: '1px solid rgba(232,160,32,0.25)',
+            borderRadius: 14, padding: '20px 24px', marginBottom: 24,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12,
+          }}>
+            <div>
+              <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#e8a020', marginBottom: 4 }}>
+                ⚠ Payout Method Required
+              </div>
+              <div style={{ fontSize: 13, color: '#8090a0' }}>
+                Set up how you'd like to receive payments before sharing your link.
+              </div>
+            </div>
+            <button
+              onClick={() => setShowPayoutSetup(true)}
+              style={{
+                background: 'rgba(232,160,32,0.12)', border: '1px solid rgba(232,160,32,0.3)',
+                borderRadius: 8, padding: '10px 20px', color: '#e8a020',
+                fontFamily: "'Oswald', sans-serif", fontSize: 13, fontWeight: 600,
+                letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Set Up Now
+            </button>
+          </div>
+        )}
+
+        {/* Payout setup form */}
+        {showPayoutSetup && (
+          <div style={{
+            background: '#0e1014', border: '1px solid #2a3040', borderRadius: 14,
+            padding: '24px', marginBottom: 24, position: 'relative', overflow: 'hidden',
+          }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg, transparent, #e8a020, transparent)' }} />
+
+            <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#606878', marginBottom: 16 }}>
+              {hasPayoutMethod ? 'Update Payout Method' : 'Set Up Payout Method'}
+            </div>
+
+            {/* Method selector */}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, color: '#606878', fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
+                Payment Method
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {PAYOUT_METHODS.map(m => (
+                  <button
+                    key={m.value}
+                    onClick={() => setPayoutMethod(m.value)}
+                    style={{
+                      background: payoutMethod === m.value ? 'rgba(232,160,32,0.15)' : 'rgba(255,255,255,0.04)',
+                      border: `1px solid ${payoutMethod === m.value ? 'rgba(232,160,32,0.5)' : '#2a3040'}`,
+                      borderRadius: 8, padding: '8px 16px',
+                      color: payoutMethod === m.value ? '#e8a020' : '#8090a0',
+                      fontFamily: "'Rajdhani', sans-serif", fontSize: 13, fontWeight: 700,
+                      letterSpacing: '0.08em', cursor: 'pointer', transition: 'all 0.15s',
+                    }}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Account field */}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, color: '#606878', fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
+                {selectedMethod?.hint ?? 'Account / Email / Username'}
+              </div>
+              <input
+                type="text"
+                value={payoutAccount}
+                onChange={e => setPayoutAccount(e.target.value)}
+                placeholder={selectedMethod?.hint ?? 'Your account details'}
+                style={{
+                  width: '100%', boxSizing: 'border-box',
+                  background: 'rgba(255,255,255,0.04)', border: '1px solid #2a3040',
+                  borderRadius: 8, padding: '11px 14px', color: '#e8e8e8',
+                  fontSize: 14, fontFamily: 'monospace', outline: 'none',
+                }}
+              />
+            </div>
+
+            {/* Country field */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 11, color: '#606878', fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
+                Country
+              </div>
+              <input
+                type="text"
+                value={payoutCountry}
+                onChange={e => setPayoutCountry(e.target.value)}
+                placeholder="e.g. United States, Netherlands, UK..."
+                style={{
+                  width: '100%', boxSizing: 'border-box',
+                  background: 'rgba(255,255,255,0.04)', border: '1px solid #2a3040',
+                  borderRadius: 8, padding: '11px 14px', color: '#e8e8e8',
+                  fontSize: 14, outline: 'none',
+                }}
+              />
+            </div>
+
+            {payoutError && (
+              <div style={{ fontSize: 12, color: '#ff6b6b', marginBottom: 12 }}>{payoutError}</div>
+            )}
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={savePayoutMethod}
+                disabled={payoutSaving || !payoutMethod || !payoutAccount}
+                style={{
+                  flex: 1, background: 'rgba(232,160,32,0.12)', border: '1px solid rgba(232,160,32,0.3)',
+                  borderRadius: 8, padding: '12px', color: '#e8a020',
+                  fontFamily: "'Oswald', sans-serif", fontSize: 14, fontWeight: 600,
+                  letterSpacing: '0.1em', textTransform: 'uppercase', cursor: payoutSaving || !payoutMethod || !payoutAccount ? 'not-allowed' : 'pointer',
+                  opacity: payoutSaving || !payoutMethod || !payoutAccount ? 0.5 : 1,
+                  transition: 'all 0.15s',
+                }}
+              >
+                {payoutSaving ? 'Saving...' : 'Save Payout Method'}
+              </button>
+              {hasPayoutMethod && (
+                <button
+                  onClick={() => setShowPayoutSetup(false)}
+                  style={{
+                    background: 'none', border: '1px solid #2a3040', borderRadius: 8,
+                    padding: '12px 20px', color: '#606878',
+                    fontFamily: "'Rajdhani', sans-serif", fontSize: 13, fontWeight: 700,
+                    letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Payout method set — compact status row */}
+        {hasPayoutMethod && !showPayoutSetup && (
+          <div style={{
+            background: 'rgba(48,184,112,0.06)', border: '1px solid rgba(48,184,112,0.2)',
+            borderRadius: 10, padding: '12px 18px', marginBottom: 24,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ color: '#30b870', fontSize: 13 }}>✓</span>
+              <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#30b870' }}>
+                {PAYOUT_METHODS.find(m => m.value === data.payout_method)?.label ?? data.payout_method}
+              </span>
+              <span style={{ fontSize: 13, color: '#606878', fontFamily: 'monospace' }}>
+                {data.payout_account}
+              </span>
+              {data.payout_country && (
+                <span style={{ fontSize: 12, color: '#4a5568' }}>· {data.payout_country}</span>
+              )}
+            </div>
+            <button
+              onClick={() => {
+                setShowPayoutSetup(true)
+                setPayoutSaved(false)
+              }}
+              style={{
+                background: 'none', border: 'none', color: '#4a5568',
+                fontFamily: "'Rajdhani', sans-serif", fontSize: 11, fontWeight: 700,
+                letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer',
+              }}
+            >
+              Edit
+            </button>
+          </div>
+        )}
+
+        {payoutSaved && (
+          <div style={{
+            background: 'rgba(48,184,112,0.08)', border: '1px solid rgba(48,184,112,0.25)',
+            borderRadius: 8, padding: '10px 16px', marginBottom: 16,
+            fontSize: 13, color: '#30b870',
+          }}>
+            ✓ Payout method saved.
+          </div>
+        )}
+
+        {/* Referral link — show always, but with subtle lock if no payout method */}
         <div style={{
-          background: '#0e1014', border: '1px solid #2a3040', borderRadius: 14,
-          padding: '24px 24px', marginBottom: 24, position: 'relative', overflow: 'hidden',
+          background: '#0e1014', border: `1px solid ${hasPayoutMethod ? '#2a3040' : '#1a2030'}`,
+          borderRadius: 14, padding: '24px', marginBottom: 24,
+          position: 'relative', overflow: 'hidden',
+          opacity: hasPayoutMethod ? 1 : 0.6,
         }}>
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg, transparent, #e8a020, transparent)' }} />
           <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#606878', marginBottom: 10 }}>
@@ -150,13 +407,14 @@ export default function AffiliateDashboardPage() {
               {stats.referral_link}
             </div>
             <button
-              onClick={copyLink}
+              onClick={hasPayoutMethod ? copyLink : undefined}
               style={{
                 background: copied ? 'rgba(48,184,112,0.15)' : 'rgba(232,160,32,0.12)',
                 border: `1px solid ${copied ? 'rgba(48,184,112,0.4)' : 'rgba(232,160,32,0.3)'}`,
                 borderRadius: 8, padding: '11px 20px', color: copied ? '#30b870' : '#e8a020',
                 fontFamily: "'Oswald', sans-serif", fontSize: 13, fontWeight: 600,
-                letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer',
+                letterSpacing: '0.1em', textTransform: 'uppercase',
+                cursor: hasPayoutMethod ? 'pointer' : 'not-allowed',
                 whiteSpace: 'nowrap', transition: 'all 0.2s',
               }}
             >
@@ -164,7 +422,9 @@ export default function AffiliateDashboardPage() {
             </button>
           </div>
           <div style={{ fontSize: 11, color: '#606878', marginTop: 10 }}>
-            Share this link anywhere. Every paying subscriber you bring in earns you {stats.payout_rate_pct}% of their subscription — for as long as they stay subscribed.
+            {hasPayoutMethod
+              ? `Share this link anywhere. Every paying subscriber you bring in earns you ${stats.payout_rate_pct}% of their subscription — for as long as they stay subscribed.`
+              : 'Set up your payout method above to start sharing your link.'}
           </div>
         </div>
 
@@ -252,7 +512,7 @@ export default function AffiliateDashboardPage() {
 
         <div style={{ marginTop: 24, fontSize: 11, color: '#606878', textAlign: 'center', lineHeight: 1.7 }}>
           Earnings are estimated based on current active subscriptions.<br />
-          Payouts are processed manually — contact us to arrange payment.
+          Payouts are processed manually on a biweekly cycle.
         </div>
       </div>
     </div>

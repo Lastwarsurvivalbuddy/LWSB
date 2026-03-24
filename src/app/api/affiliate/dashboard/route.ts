@@ -1,30 +1,28 @@
-// src/app/api/affiliate/dashboard/route.ts
-import '@/lib/env';
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import '@/lib/env'
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
-// Estimated monthly revenue per tier (avg)
 const TIER_REVENUE: Record<string, number> = {
   pro: 9.99,
   elite: 19.99,
-  founding: 0, // one-time, handled separately
-};
+  founding: 0,
+}
 
 export async function GET(req: NextRequest) {
   try {
-    const authHeader = req.headers.get('Authorization');
+    const authHeader = req.headers.get('Authorization')
     if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    const token = authHeader.split(' ')[1];
+    const token = authHeader.split(' ')[1]
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Fetch affiliate record
@@ -32,10 +30,10 @@ export async function GET(req: NextRequest) {
       .from('affiliates')
       .select('*')
       .eq('user_id', user.id)
-      .single();
+      .single()
 
     if (affError || !affiliate) {
-      return NextResponse.json({ error: 'No affiliate record found.' }, { status: 404 });
+      return NextResponse.json({ error: 'No affiliate record found.' }, { status: 404 })
     }
 
     // If not approved, return status only
@@ -45,7 +43,7 @@ export async function GET(req: NextRequest) {
         referral_code: null,
         conversions: [],
         stats: null,
-      });
+      })
     }
 
     // Fetch conversions
@@ -53,26 +51,23 @@ export async function GET(req: NextRequest) {
       .from('affiliate_conversions')
       .select('*')
       .eq('affiliate_id', affiliate.id)
-      .order('converted_at', { ascending: false });
+      .order('converted_at', { ascending: false })
 
     if (convError) {
-      console.error('Conversions fetch error:', convError);
-      return NextResponse.json({ error: 'Failed to fetch conversions.' }, { status: 500 });
+      console.error('Conversions fetch error:', convError)
+      return NextResponse.json({ error: 'Failed to fetch conversions.' }, { status: 500 })
     }
 
-    // Calculate stats
-    const totalConversions = conversions?.length ?? 0;
-    const activeConversions = conversions?.filter(c => c.subscription_tier !== 'founding') ?? [];
-    const foundingConversions = conversions?.filter(c => c.subscription_tier === 'founding') ?? [];
+    const totalConversions = conversions?.length ?? 0
+    const activeConversions = conversions?.filter(c => c.subscription_tier !== 'founding') ?? []
+    const foundingConversions = conversions?.filter(c => c.subscription_tier === 'founding') ?? []
 
-    // Estimated monthly recurring earnings
     const monthlyRecurring = activeConversions.reduce((sum, c) => {
-      const revenue = TIER_REVENUE[c.subscription_tier] ?? 0;
-      return sum + revenue * affiliate.payout_rate;
-    }, 0);
+      const revenue = TIER_REVENUE[c.subscription_tier] ?? 0
+      return sum + revenue * affiliate.payout_rate
+    }, 0)
 
-    // One-time founding earnings
-    const foundingEarnings = foundingConversions.length * 99 * affiliate.payout_rate;
+    const foundingEarnings = foundingConversions.length * 99 * affiliate.payout_rate
 
     const stats = {
       total_conversions: totalConversions,
@@ -82,18 +77,21 @@ export async function GET(req: NextRequest) {
       estimated_monthly_recurring: parseFloat(monthlyRecurring.toFixed(2)),
       founding_earnings: parseFloat(foundingEarnings.toFixed(2)),
       referral_link: `https://lastwarsurvivalbuddy.com/?ref=${affiliate.referral_code}`,
-    };
+    }
 
     return NextResponse.json({
       status: affiliate.status,
       referral_code: affiliate.referral_code,
       name: affiliate.name,
       ign: affiliate.ign,
+      payout_method: affiliate.payout_method ?? null,
+      payout_account: affiliate.payout_account ?? null,
+      payout_country: affiliate.payout_country ?? null,
       conversions: conversions ?? [],
       stats,
-    });
+    })
   } catch (err) {
-    console.error('Affiliate dashboard error:', err);
-    return NextResponse.json({ error: 'Internal server error.' }, { status: 500 });
+    console.error('Affiliate dashboard error:', err)
+    return NextResponse.json({ error: 'Internal server error.' }, { status: 500 })
   }
 }
