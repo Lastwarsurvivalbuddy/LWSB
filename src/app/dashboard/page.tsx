@@ -191,7 +191,6 @@ export default function Dashboard() {
           if (affiliateRes.ok) {
             setAffiliateStatus('approved')
           } else if (affiliateRes.status === 403) {
-            // Application exists but pending approval
             setAffiliateStatus('pending')
           } else {
             setAffiliateStatus('none')
@@ -683,40 +682,8 @@ export default function Dashboard() {
               ))}
             </div>
 
-            {/* Footer links row */}
-            <div className="pt-1 border-t border-zinc-800 flex items-center justify-between flex-wrap gap-y-2">
-              <button
-                onClick={() => router.push('/profile/edit')}
-                className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1"
-              >
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
-                  <path d="M8.5 1.5l2 2-7 7H1.5v-2l7-7z"
-                    stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                Edit profile
-              </button>
-              <button
-                onClick={() => router.push('/how-to')}
-                className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1"
-              >
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
-                  <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.2"/>
-                  <path d="M5 5c0-.55.45-1 1-1s1 .45 1 1c0 .42-.27.78-.67.92V8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-                  <circle cx="6" cy="9.5" r="0.5" fill="currentColor"/>
-                </svg>
-                How to use
-              </button>
-              <button
-                onClick={() => router.push('/contact')}
-                className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1"
-              >
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
-                  <path d="M1 2.5h10a.5.5 0 01.5.5v6a.5.5 0 01-.5.5H1a.5.5 0 01-.5-.5V3a.5.5 0 01.5-.5z"
-                    stroke="currentColor" strokeWidth="1.2" />
-                  <path d="M1 3l5 4 5-4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                </svg>
-                Contact
-              </button>
+            {/* Footer — Commander Card only */}
+            <div className="pt-1 border-t border-zinc-800 flex items-center">
               <button
                 onClick={() => router.push('/card')}
                 className="text-xs text-amber-700 hover:text-amber-500 transition-colors flex items-center gap-1"
@@ -728,33 +695,69 @@ export default function Dashboard() {
                 </svg>
                 Commander Card
               </button>
-              {/* Affiliate link — contextual on status */}
-              {affiliateStatus === 'approved' && (
-                <button
-                  onClick={() => router.push('/affiliate/dashboard')}
-                  className="text-xs text-green-700 hover:text-green-500 transition-colors flex items-center gap-1"
-                >
-                  <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
-                    <path d="M6 1l1.5 3 3.5.5-2.5 2.5.5 3.5L6 9l-3 1.5.5-3.5L1 4.5 4.5 4z"
-                      stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
-                  </svg>
-                  Affiliate Dashboard
-                </button>
-              )}
-              {affiliateStatus === 'none' && (
-                <button
-                  onClick={() => router.push('/affiliate')}
-                  className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors flex items-center gap-1"
-                >
-                  <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
-                    <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.2"/>
-                    <path d="M6 4v4M4 6h4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-                  </svg>
-                  Become an Affiliate
-                </button>
-              )}
-              {/* pending: silent — nothing to do until approved */}
             </div>
+          </div>
+
+          {/* ── Quick links below card ── */}
+          <div className="mt-3 flex items-center gap-5 flex-wrap px-1">
+            <button
+              onClick={() => router.push('/profile/edit')}
+              className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1"
+            >
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
+                <path d="M8.5 1.5l2 2-7 7H1.5v-2l7-7z"
+                  stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Edit profile
+            </button>
+            <button
+              onClick={() => router.push('/how-to')}
+              className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1"
+            >
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
+                <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.2"/>
+                <path d="M5 5c0-.55.45-1 1-1s1 .45 1 1c0 .42-.27.78-.67.92V8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                <circle cx="6" cy="9.5" r="0.5" fill="currentColor"/>
+              </svg>
+              How to use
+            </button>
+            <button
+              onClick={() => router.push('/contact')}
+              className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1"
+            >
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
+                <path d="M1 2.5h10a.5.5 0 01.5.5v6a.5.5 0 01-.5.5H1a.5.5 0 01-.5-.5V3a.5.5 0 01.5-.5z"
+                  stroke="currentColor" strokeWidth="1.2" />
+                <path d="M1 3l5 4 5-4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+              </svg>
+              Contact
+            </button>
+            {/* Affiliate link — contextual on status */}
+            {affiliateStatus === 'approved' && (
+              <button
+                onClick={() => router.push('/affiliate/dashboard')}
+                className="text-xs text-green-700 hover:text-green-500 transition-colors flex items-center gap-1"
+              >
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
+                  <path d="M6 1l1.5 3 3.5.5-2.5 2.5.5 3.5L6 9l-3 1.5.5-3.5L1 4.5 4.5 4z"
+                    stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+                </svg>
+                Affiliate Dashboard
+              </button>
+            )}
+            {affiliateStatus === 'none' && (
+              <button
+                onClick={() => router.push('/affiliate')}
+                className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors flex items-center gap-1"
+              >
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
+                  <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.2"/>
+                  <path d="M6 4v4M4 6h4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                </svg>
+                Become an Affiliate
+              </button>
+            )}
+            {/* pending: silent */}
           </div>
         </section>
       </main>
