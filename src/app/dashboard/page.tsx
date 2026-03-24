@@ -116,6 +116,8 @@ export default function Dashboard() {
     remaining: 0,
     can_analyze: false,
   })
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [affiliateStatus, setAffiliateStatus] = useState<'approved' | 'pending' | 'none'>('none')
   const router = useRouter()
   const duel = getDuelDay()
 
@@ -124,6 +126,12 @@ export default function Dashboard() {
       try {
         const { data: { session } } = await supabase.auth.getSession()
         if (!session) { router.push('/signin'); return }
+
+        // Admin check — UUID only, no PII
+        const adminUserId = process.env.NEXT_PUBLIC_ADMIN_USER_ID
+        if (adminUserId && session.user.id === adminUserId) {
+          setIsAdmin(true)
+        }
 
         const { data, error } = await supabase
           .from('commander_profile')
@@ -173,6 +181,23 @@ export default function Dashboard() {
             remaining,
             can_analyze: canAnalyze,
           })
+        }
+
+        // Affiliate status check — fire and forget, non-fatal
+        try {
+          const affiliateRes = await fetch('/api/affiliate/dashboard', {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          })
+          if (affiliateRes.ok) {
+            setAffiliateStatus('approved')
+          } else if (affiliateRes.status === 403) {
+            // Application exists but pending approval
+            setAffiliateStatus('pending')
+          } else {
+            setAffiliateStatus('none')
+          }
+        } catch {
+          setAffiliateStatus('none')
         }
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'Failed to load profile')
@@ -313,6 +338,21 @@ export default function Dashboard() {
                 <circle cx="8" cy="11" r="0.6" fill="currentColor"/>
               </svg>
             </button>
+
+            {/* Mission Control — Boyd only (UUID match, no PII) */}
+            {isAdmin && (
+              <button
+                onClick={() => router.push('/admin')}
+                className="text-zinc-500 hover:text-amber-500 transition-colors"
+                title="Mission Control"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16">
+                  <rect x="1.5" y="1.5" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="1.4"/>
+                  <path d="M4 8h2M10 8h2M8 4v2M8 10v2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                  <circle cx="8" cy="8" r="1.5" stroke="currentColor" strokeWidth="1.2"/>
+                </svg>
+              </button>
+            )}
 
             {/* Commander Card */}
             <button
@@ -540,7 +580,6 @@ export default function Dashboard() {
                     <p className="text-xs text-zinc-500 leading-relaxed">
                       Build shareable battle plans for your server. Assign roles, write orders, post to alliance chat.
                     </p>
-                    {/* Tool pills */}
                     <div className="flex items-center gap-2 mt-2 flex-wrap">
                       <span className="text-[10px] text-zinc-500 bg-zinc-800 border border-zinc-700 px-2 py-0.5 rounded-full">
                         🏜️ Desert Storm
@@ -644,7 +683,7 @@ export default function Dashboard() {
               ))}
             </div>
 
-            {/* Edit profile + Commander Card + Contact + How to Use links */}
+            {/* Footer links row */}
             <div className="pt-1 border-t border-zinc-800 flex items-center justify-between flex-wrap gap-y-2">
               <button
                 onClick={() => router.push('/profile/edit')}
@@ -689,6 +728,32 @@ export default function Dashboard() {
                 </svg>
                 Commander Card
               </button>
+              {/* Affiliate link — contextual on status */}
+              {affiliateStatus === 'approved' && (
+                <button
+                  onClick={() => router.push('/affiliate/dashboard')}
+                  className="text-xs text-green-700 hover:text-green-500 transition-colors flex items-center gap-1"
+                >
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
+                    <path d="M6 1l1.5 3 3.5.5-2.5 2.5.5 3.5L6 9l-3 1.5.5-3.5L1 4.5 4.5 4z"
+                      stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+                  </svg>
+                  Affiliate Dashboard
+                </button>
+              )}
+              {affiliateStatus === 'none' && (
+                <button
+                  onClick={() => router.push('/affiliate')}
+                  className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors flex items-center gap-1"
+                >
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
+                    <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.2"/>
+                    <path d="M6 4v4M4 6h4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                  </svg>
+                  Become an Affiliate
+                </button>
+              )}
+              {/* pending: silent — nothing to do until approved */}
             </div>
           </div>
         </section>
