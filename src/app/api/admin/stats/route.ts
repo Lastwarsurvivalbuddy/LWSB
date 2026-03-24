@@ -55,8 +55,7 @@ export async function GET(req: NextRequest) {
 
     const { data: profiles, error: profileErr } = await supabase
       .from('commander_profile')
-      .select('id, created_at, email, ign, server_number, hq_level')
-      .order('created_at', { ascending: false })
+      .select('id, commander_name, server_number, hq_level')
       .range(page * pageSize, (page + 1) * pageSize - 1)
 
     if (profileErr) {
@@ -64,6 +63,13 @@ export async function GET(req: NextRequest) {
     }
 
     const profileIds = (profiles ?? []).map(p => p.id)
+
+    // Pull email + created_at from auth.users via admin API
+    const { data: authData } = await supabase.auth.admin.listUsers({ perPage: 1000 })
+    const authMap: Record<string, { email: string; created_at: string }> = {}
+    for (const u of (authData?.users ?? [])) {
+      authMap[u.id] = { email: u.email ?? '—', created_at: u.created_at }
+    }
 
     const { data: subs } = await supabase
       .from('subscriptions')
@@ -135,16 +141,17 @@ export async function GET(req: NextRequest) {
     let users = (profiles ?? []).map(p => {
       const sub = subMap[p.id] ?? { tier: 'free', banned: false, flagged: false }
       const affiliateId = referralMap[p.id]
+      const auth = authMap[p.id] ?? { email: '—', created_at: null }
       return {
         id: p.id,
-        email: p.email ?? '—',
-        ign: p.ign ?? '—',
+        email: auth.email,
+        ign: p.commander_name ?? '—',
         server: p.server_number ?? '—',
         hq: p.hq_level ?? '—',
         tier: sub.tier,
         banned: sub.banned,
         flagged: sub.flagged,
-        joined: p.created_at,
+        joined: auth.created_at,
         lastActive: lastActiveMap[p.id] ?? null,
         totalQuestions: questionTotals[p.id] ?? 0,
         lifetimeRevenue: Math.round((revenueMap[p.id] ?? 0) * 100) / 100,
@@ -177,9 +184,12 @@ export async function GET(req: NextRequest) {
 
   const { data: recentProfiles } = await supabase
     .from('commander_profile')
-    .select('created_at')
-    .gte('created_at', thirtyDaysAgo.toISOString())
-    .order('created_at', { ascending: true })
+    .select('id')
+    .order('id', { ascending: true })
+
+  // Pull signup dates from auth for overview chart
+  const { data: authDataOverview } = await supabase.auth.admin.listUsers({ perPage: 1000 })
+  const allAuthUsers = authDataOverview?.users ?? []
 
   const { data: subRows } = await supabase
     .from('subscriptions')
@@ -242,10 +252,14 @@ export async function GET(req: NextRequest) {
   const COST_PER_BR = 0.012
   const apiCost = (totalQuestions * COST_PER_Q) + (totalScreenshots * COST_PER_SS) + (totalBattleReports * COST_PER_BR)
 
+  // Build signup series from auth.users created_at
   const signupsByDay: Record<string, number> = {}
-  for (const p of (recentProfiles || [])) {
-    const d = p.created_at.split('T')[0]
-    signupsByDay[d] = (signupsByDay[d] || 0) + 1
+  const thirtyDaysAgoStr = thirtyDaysAgo.toISOString()
+  for (const u of allAuthUsers) {
+    if (u.created_at >= thirtyDaysAgoStr) {
+      const d = u.created_at.split('T')[0]
+      signupsByDay[d] = (signupsByDay[d] || 0) + 1
+    }
   }
 
   const signupSeries: { date: string; count: number }[] = []
@@ -266,16 +280,17 @@ export async function GET(req: NextRequest) {
     .order('created_at', { ascending: false })
     .limit(50)
 
-  // Enrich with submitter IGN from commander_profile
   const submitterIds = [...new Set((submissions ?? []).map(s => s.user_id).filter(Boolean))]
   const submitterIgnMap: Record<string, string> = {}
   if (submitterIds.length > 0) {
     const { data: submitterProfiles } = await supabase
       .from('commander_profile')
-      .select('id, ign, server_number')
+      .select('id, commander_name, server_number')
       .in('id', submitterIds)
     for (const p of (submitterProfiles ?? [])) {
-      submitterIgnMap[p.id] = p.ign ? `${p.ign} (S${p.server_number})` : `S${p.server_number}`
+      submitterIgnMap[p.id] = p.commander_name
+        ? `${p.commander_name} (S${p.server_number})`
+        : `S${p.server_number}`
     }
   }
 
