@@ -123,6 +123,7 @@ export default function MissionControlPage() {
   const [payoutDataLoading, setPayoutDataLoading] = useState<string | null>(null)
   const [markPaidInputs, setMarkPaidInputs] = useState<Record<string, { amount: string; note: string; periodEnd: string }>>({})
   const [markPaidActing, setMarkPaidActing] = useState<string | null>(null)
+  const [ledgerLoading, setLedgerLoading] = useState(false)
 
   // Users state
   const [users, setUsers] = useState<UserRow[]>([])
@@ -172,15 +173,45 @@ export default function MissionControlPage() {
     })
     if (res.ok) {
       const data = await res.json()
-      setAffiliates(data.affiliates ?? [])
+      const list: Affiliate[] = data.affiliates ?? []
+      setAffiliates(list)
       const inputs: Record<string, string> = {}
       const notes: Record<string, string> = {}
-      for (const a of (data.affiliates ?? []) as Affiliate[]) {
+      for (const a of list) {
         inputs[a.id] = String(Math.round(a.payout_rate * 100))
         notes[a.id] = a.notes ?? ''
       }
       setPayoutInputs(inputs)
       setNotesInputs(notes)
+
+      // Batch-fetch payout data for all approved affiliates (powers the ledger)
+      const approved = list.filter(a => a.status === 'approved')
+      if (approved.length > 0) {
+        setLedgerLoading(true)
+        const results = await Promise.all(
+          approved.map(a =>
+            fetch(`/api/admin/affiliates?mode=payouts&id=${a.id}`, {
+              headers: { Authorization: `Bearer ${accessToken}` },
+            }).then(r => r.ok ? r.json() : null)
+          )
+        )
+        const newPayoutData: Record<string, AffiliatePayoutData> = {}
+        const today = new Date().toISOString().split('T')[0]
+        const newMarkPaidInputs: Record<string, { amount: string; note: string; periodEnd: string }> = {}
+        for (const result of results) {
+          if (result?.affiliateId) {
+            newPayoutData[result.affiliateId] = result
+            newMarkPaidInputs[result.affiliateId] = {
+              amount: result.unpaid > 0 ? String(result.unpaid) : '',
+              note: '',
+              periodEnd: today,
+            }
+          }
+        }
+        setPayoutData(prev => ({ ...prev, ...newPayoutData }))
+        setMarkPaidInputs(prev => ({ ...prev, ...newMarkPaidInputs }))
+        setLedgerLoading(false)
+      }
     }
     setAffiliatesLoading(false)
   }, [])
@@ -354,6 +385,26 @@ export default function MissionControlPage() {
   const pending = (stats?.submissions ?? []) as Submission[]
   const pendingAffiliates = affiliates.filter(a => a.status === 'pending').length
   const filteredAffiliates = affiliateFilter === 'all' ? affiliates : affiliates.filter(a => a.status === affiliateFilter)
+  const approvedAffiliates = affiliates.filter(a => a.status === 'approved')
+
+  // Ledger totals
+  const ledgerRows = approvedAffiliates.map(a => {
+    const pd = payoutData[a.id]
+    return {
+      id: a.id,
+      name: a.name,
+      code: a.referral_code,
+      rate: Math.round(a.payout_rate * 100),
+      conversions: a.affiliate_conversions?.[0]?.count ?? 0,
+      earned: pd?.totalEarned ?? null,
+      paid: pd?.totalPaid ?? null,
+      owed: pd?.unpaid ?? null,
+      method: a.payout_method,
+    }
+  })
+  const totalOwed = ledgerRows.reduce((sum, r) => sum + (r.owed ?? 0), 0)
+  const totalEarned = ledgerRows.reduce((sum, r) => sum + (r.earned ?? 0), 0)
+  const totalPaid = ledgerRows.reduce((sum, r) => sum + (r.paid ?? 0), 0)
 
   const tierConfig = [
     { key: 'free', label: 'Free', color: '#71717a', mrr: 0 },
@@ -678,6 +729,93 @@ export default function MissionControlPage() {
               </button>
             </div>
 
+            {/* ── AFFILIATE LEDGER ── */}
+            {approvedAffiliates.length > 0 && (
+              <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl mb-6 overflow-hidden">
+                <div className="px-4 py-3 border-b border-zinc-800 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-bold text-zinc-300">💳 Affiliate Ledger</p>
+                    <p className="text-[11px] text-zinc-600 mt-0.5">Approved affiliates · earnings &amp; outstanding balances</p>
+                  </div>
+                  {ledgerLoading && (
+                    <div className="w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+                  )}
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-zinc-800">
+                        {['Affiliate', 'Code', 'Rate', 'Conv.', 'Earned', 'Paid', 'Owed', 'Method'].map(h => (
+                          <th key={h} className="text-left px-4 py-2 text-[11px] font-mono text-zinc-500 uppercase tracking-wide whitespace-nowrap">
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ledgerRows.map(row => (
+                        <tr key={row.id} className="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors">
+                          <td className="px-4 py-2.5 text-white text-xs font-medium whitespace-nowrap">{row.name}</td>
+                          <td className="px-4 py-2.5 text-amber-400 text-xs font-mono">{row.code}</td>
+                          <td className="px-4 py-2.5 text-zinc-300 text-xs font-mono">{row.rate}%</td>
+                          <td className="px-4 py-2.5 text-zinc-400 text-xs font-mono">{row.conversions}</td>
+                          <td className="px-4 py-2.5 text-xs font-mono">
+                            {row.earned === null
+                              ? <span className="text-zinc-700">—</span>
+                              : <span className="text-zinc-300">${row.earned.toFixed(2)}</span>
+                            }
+                          </td>
+                          <td className="px-4 py-2.5 text-xs font-mono">
+                            {row.paid === null
+                              ? <span className="text-zinc-700">—</span>
+                              : <span className="text-zinc-400">${row.paid.toFixed(2)}</span>
+                            }
+                          </td>
+                          <td className="px-4 py-2.5 text-xs font-mono">
+                            {row.owed === null
+                              ? <span className="text-zinc-700">—</span>
+                              : row.owed > 0
+                                ? <span className="text-amber-400 font-bold">${row.owed.toFixed(2)}</span>
+                                : <span className="text-green-500 text-[11px]">✓ Clear</span>
+                            }
+                          </td>
+                          <td className="px-4 py-2.5 text-xs text-zinc-500">
+                            {row.method
+                              ? <span className="text-zinc-400">{PAYOUT_METHOD_LABELS[row.method] ?? row.method}</span>
+                              : <span className="text-amber-600 text-[11px]">⚠ not set</span>
+                            }
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    {/* Totals row */}
+                    {!ledgerLoading && ledgerRows.some(r => r.owed !== null) && (
+                      <tfoot>
+                        <tr className="border-t-2 border-zinc-700 bg-zinc-900/60">
+                          <td colSpan={4} className="px-4 py-2.5 text-[11px] font-bold text-zinc-500 uppercase tracking-wide">
+                            Total
+                          </td>
+                          <td className="px-4 py-2.5 text-xs font-bold text-zinc-300 font-mono">
+                            ${totalEarned.toFixed(2)}
+                          </td>
+                          <td className="px-4 py-2.5 text-xs font-bold text-zinc-400 font-mono">
+                            ${totalPaid.toFixed(2)}
+                          </td>
+                          <td className="px-4 py-2.5 text-xs font-bold font-mono">
+                            <span className={totalOwed > 0 ? 'text-amber-400' : 'text-green-500'}>
+                              ${totalOwed.toFixed(2)}
+                            </span>
+                          </td>
+                          <td />
+                        </tr>
+                      </tfoot>
+                    )}
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* ── Filter pills ── */}
             <div className="flex gap-2 mb-5 flex-wrap">
               {(['pending', 'approved', 'rejected', 'all'] as const).map(f => (
                 <button
@@ -739,7 +877,7 @@ export default function MissionControlPage() {
 
                   {/* Promo method */}
                   <div className="bg-zinc-950/60 rounded-xl p-3 mb-4">
-                    <p className="text-[10px] text-zinc-600 font-mono uppercase tracking-wide mb-1">How they'll promote</p>
+                    <p className="text-[10px] text-zinc-600 font-mono uppercase tracking-wide mb-1">How they&apos;ll promote</p>
                     <p className="text-sm text-zinc-300 leading-relaxed">{aff.promo_method}</p>
                   </div>
 
