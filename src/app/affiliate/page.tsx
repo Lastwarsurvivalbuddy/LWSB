@@ -1,98 +1,299 @@
-// src/app/api/admin/affiliates/route.ts
-import '@/lib/env';
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+'use client';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const BOYD_EMAIL = process.env.BOYD_EMAIL!;
+type AppStatus = 'idle' | 'loading' | 'submitted' | 'already_applied' | 'error';
 
-async function verifyBoyd(token: string): Promise<boolean> {
-  const supabase = createClient(supabaseUrl, supabaseServiceKey);
-  const { data: { user } } = await supabase.auth.getUser(token);
-  return user?.email === BOYD_EMAIL;
-}
+export default function AffiliatePage() {
+  const router = useRouter();
+  const [status, setStatus] = useState<AppStatus>('idle');
+  const [existingStatus, setExistingStatus] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState('');
 
-// GET — list all affiliates (pending first, then approved, then rejected)
-export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  const token = authHeader.split(' ')[1];
-  if (!(await verifyBoyd(token))) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  const [form, setForm] = useState({
+    name: '',
+    ign: '',
+    server: '',
+    promo_method: '',
+  });
 
-  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  useEffect(() => {
+    // Check if user already applied
+    const checkExisting = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
 
-  const { data, error } = await supabase
-    .from('affiliates')
-    .select(`
-      *,
-      affiliate_conversions(count)
-    `)
-    .order('status', { ascending: true }) // pending sorts before approved alphabetically
-    .order('created_at', { ascending: false });
+      const res = await fetch('/api/affiliate/dashboard', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.status) {
+          setExistingStatus(data.status);
+          setStatus('already_applied');
+        }
+      }
+    };
+    checkExisting();
+  }, []);
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json({ affiliates: data });
-}
-
-// PATCH — approve or reject an affiliate, set payout_rate
-export async function PATCH(req: NextRequest) {
-  const authHeader = req.headers.get('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  const token = authHeader.split(' ')[1];
-  if (!(await verifyBoyd(token))) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-
-  const supabase = createClient(supabaseUrl, supabaseServiceKey);
-  const body = await req.json();
-  const { affiliate_id, action, payout_rate, notes } = body;
-
-  if (!affiliate_id || !action) {
-    return NextResponse.json({ error: 'affiliate_id and action required.' }, { status: 400 });
-  }
-
-  if (!['approve', 'reject'].includes(action)) {
-    return NextResponse.json({ error: 'action must be approve or reject.' }, { status: 400 });
-  }
-
-  const updates: Record<string, unknown> = {
-    status: action === 'approve' ? 'approved' : 'rejected',
-    notes: notes ?? null,
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  if (action === 'approve') {
-    updates.approved_at = new Date().toISOString();
-    if (payout_rate !== undefined) {
-      const rate = parseFloat(payout_rate);
-      if (isNaN(rate) || rate < 0 || rate > 1) {
-        return NextResponse.json({ error: 'payout_rate must be between 0 and 1 (e.g. 0.25 for 25%).' }, { status: 400 });
-      }
-      updates.payout_rate = rate;
+  const handleSubmit = async () => {
+    setStatus('loading');
+    setErrorMsg('');
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      router.push('/login');
+      return;
     }
-  } else {
-    updates.rejected_at = new Date().toISOString();
-  }
 
-  const { data, error } = await supabase
-    .from('affiliates')
-    .update(updates)
-    .eq('id', affiliate_id)
-    .select()
-    .single();
+    const res = await fetch('/api/affiliate/apply', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify(form),
+    });
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+    const data = await res.json();
 
-  return NextResponse.json({ success: true, affiliate: data });
+    if (res.status === 409) {
+      setExistingStatus(data.status);
+      setStatus('already_applied');
+      return;
+    }
+
+    if (!res.ok) {
+      setErrorMsg(data.error ?? 'Something went wrong. Try again.');
+      setStatus('error');
+      return;
+    }
+
+    setStatus('submitted');
+  };
+
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: '#07080a',
+      color: '#e8e8e8',
+      fontFamily: "'Open Sans', sans-serif",
+      position: 'relative',
+      overflow: 'hidden',
+    }}>
+      {/* Grid overlay */}
+      <div style={{
+        position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
+        backgroundImage: 'linear-gradient(rgba(232,160,32,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(232,160,32,0.03) 1px, transparent 1px)',
+        backgroundSize: '60px 60px',
+      }} />
+      {/* Glow */}
+      <div style={{
+        position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
+        background: 'radial-gradient(ellipse 70% 50% at 50% 0%, rgba(232,160,32,0.06), transparent 60%)',
+      }} />
+
+      <div style={{ position: 'relative', zIndex: 1, maxWidth: 640, margin: '0 auto', padding: '80px 24px 60px' }}>
+
+        {/* Back */}
+        <button
+          onClick={() => router.push('/dashboard')}
+          style={{ background: 'none', border: 'none', color: '#606878', fontFamily: "'Rajdhani', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', cursor: 'pointer', marginBottom: 40, display: 'flex', alignItems: 'center', gap: 6 }}
+        >
+          ← Dashboard
+        </button>
+
+        {/* Header */}
+        <div style={{ marginBottom: 40 }}>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            background: 'rgba(232,160,32,0.08)', border: '1px solid rgba(232,160,32,0.25)',
+            borderRadius: 100, padding: '5px 14px', marginBottom: 20,
+          }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#e8a020', boxShadow: '0 0 8px #e8a020', display: 'inline-block' }} />
+            <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.2em', color: '#e8a020', textTransform: 'uppercase' }}>
+              Affiliate Program
+            </span>
+          </div>
+          <h1 style={{ fontFamily: "'Oswald', sans-serif", fontSize: 'clamp(32px, 6vw, 48px)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', lineHeight: 1.1, marginBottom: 16 }}>
+            Earn With<br /><span style={{ color: '#e8a020' }}>Last War Buddy</span>
+          </h1>
+          <p style={{ fontSize: 14, color: '#8090a0', lineHeight: 1.8, fontWeight: 300 }}>
+            Share your referral link. Earn a percentage of every subscription you bring in — for the life of that subscriber. Applications are reviewed manually. You'll hear back within 48 hours.
+          </p>
+        </div>
+
+        {/* Payout preview */}
+        <div style={{
+          display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 36,
+        }}>
+          {[
+            { label: 'Standard', rate: '10–15%', desc: 'General affiliates' },
+            { label: 'Active', rate: '20%', desc: 'High-volume partners' },
+            { label: 'Partner', rate: '25%', desc: 'Top-tier partners' },
+          ].map(tier => (
+            <div key={tier.label} style={{
+              background: '#0e1014', border: '1px solid #222830', borderRadius: 10, padding: '14px 12px', textAlign: 'center',
+            }}>
+              <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#606878', marginBottom: 6 }}>{tier.label}</div>
+              <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 22, fontWeight: 700, color: '#e8a020', marginBottom: 4 }}>{tier.rate}</div>
+              <div style={{ fontSize: 10, color: '#606878' }}>{tier.desc}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Already applied */}
+        {status === 'already_applied' && (
+          <div style={{
+            background: existingStatus === 'approved' ? 'rgba(48,184,112,0.08)' : 'rgba(232,160,32,0.08)',
+            border: `1px solid ${existingStatus === 'approved' ? 'rgba(48,184,112,0.3)' : 'rgba(232,160,32,0.3)'}`,
+            borderRadius: 12, padding: '24px 28px', textAlign: 'center',
+          }}>
+            <div style={{ fontSize: 28, marginBottom: 12 }}>
+              {existingStatus === 'approved' ? '✅' : existingStatus === 'rejected' ? '❌' : '⏳'}
+            </div>
+            <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 18, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+              {existingStatus === 'approved' ? 'Application Approved' : existingStatus === 'rejected' ? 'Application Not Approved' : 'Application Under Review'}
+            </div>
+            <div style={{ fontSize: 13, color: '#8090a0', lineHeight: 1.7 }}>
+              {existingStatus === 'approved'
+                ? 'Your affiliate account is active. Head to your dashboard to get your referral link.'
+                : existingStatus === 'rejected'
+                ? 'Your application was not approved. Contact us if you think this is an error.'
+                : 'Your application has been submitted and is pending review. Check back within 48 hours.'}
+            </div>
+            {existingStatus === 'approved' && (
+              <button
+                onClick={() => router.push('/affiliate/dashboard')}
+                style={{ marginTop: 20, background: 'linear-gradient(135deg, #c06010, #e8a020)', border: 'none', borderRadius: 8, padding: '12px 28px', color: '#fff', fontFamily: "'Oswald', sans-serif", fontSize: 14, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer' }}
+              >
+                Go to Dashboard →
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Submitted confirmation */}
+        {status === 'submitted' && (
+          <div style={{
+            background: 'rgba(48,184,112,0.08)', border: '1px solid rgba(48,184,112,0.3)',
+            borderRadius: 12, padding: '32px 28px', textAlign: 'center',
+          }}>
+            <div style={{ fontSize: 36, marginBottom: 16 }}>🎯</div>
+            <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 20, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#30b870', marginBottom: 10 }}>Application Submitted</div>
+            <div style={{ fontSize: 13, color: '#8090a0', lineHeight: 1.75 }}>
+              You'll hear back within 48 hours. Once approved, you'll get your referral link and dashboard access automatically.
+            </div>
+          </div>
+        )}
+
+        {/* Form */}
+        {status !== 'already_applied' && status !== 'submitted' && (
+          <div style={{
+            background: '#0e1014', border: '1px solid #2a3040', borderRadius: 16,
+            padding: '32px 28px', position: 'relative', overflow: 'hidden',
+          }}>
+            {/* Top accent */}
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg, transparent, #e8a020, transparent)' }} />
+
+            <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#e8a020', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
+              ⚡ Apply to Join
+              <span style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, #2a3040, transparent)' }} />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+              {/* Name */}
+              <div>
+                <label style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#606878', marginBottom: 6 }}>
+                  Full Name
+                </label>
+                <input
+                  name="name"
+                  value={form.name}
+                  onChange={handleChange}
+                  placeholder="Your name"
+                  style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid #222830', borderRadius: 8, padding: '12px 14px', color: '#e8e8e8', fontSize: 14, fontFamily: "'Open Sans', sans-serif", outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              {/* IGN */}
+              <div>
+                <label style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#606878', marginBottom: 6 }}>
+                  In-Game Name (IGN)
+                </label>
+                <input
+                  name="ign"
+                  value={form.ign}
+                  onChange={handleChange}
+                  placeholder="Your Last War IGN"
+                  style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid #222830', borderRadius: 8, padding: '12px 14px', color: '#e8e8e8', fontSize: 14, fontFamily: "'Open Sans', sans-serif", outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              {/* Server */}
+              <div>
+                <label style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#606878', marginBottom: 6 }}>
+                  Server Number
+                </label>
+                <input
+                  name="server"
+                  value={form.server}
+                  onChange={handleChange}
+                  placeholder="e.g. 1032"
+                  style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid #222830', borderRadius: 8, padding: '12px 14px', color: '#e8e8e8', fontSize: 14, fontFamily: "'Open Sans', sans-serif", outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              {/* Promo method */}
+              <div>
+                <label style={{ display: 'block', fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#606878', marginBottom: 6 }}>
+                  How Will You Promote?
+                </label>
+                <textarea
+                  name="promo_method"
+                  value={form.promo_method}
+                  onChange={handleChange}
+                  placeholder="e.g. I'm R5 on Server 1032 and will share in alliance chat. I run a YouTube channel with 5k subs. etc."
+                  rows={4}
+                  style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid #222830', borderRadius: 8, padding: '12px 14px', color: '#e8e8e8', fontSize: 13, fontFamily: "'Open Sans', sans-serif", outline: 'none', resize: 'vertical', lineHeight: 1.6, boxSizing: 'border-box' }}
+                />
+              </div>
+
+              {status === 'error' && (
+                <div style={{ fontSize: 13, color: '#ff6b6b', background: 'rgba(255,107,107,0.08)', border: '1px solid rgba(255,107,107,0.2)', borderRadius: 8, padding: '10px 14px' }}>
+                  {errorMsg}
+                </div>
+              )}
+
+              <button
+                onClick={handleSubmit}
+                disabled={status === 'loading' || !form.name || !form.ign || !form.server || !form.promo_method}
+                style={{
+                  width: '100%', background: 'linear-gradient(135deg, #c0281a, #c06010, #e8a020)',
+                  border: 'none', borderRadius: 8, padding: '15px', color: '#fff',
+                  fontFamily: "'Oswald', sans-serif", fontSize: 16, fontWeight: 600,
+                  letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer',
+                  opacity: status === 'loading' || !form.name || !form.ign || !form.server || !form.promo_method ? 0.5 : 1,
+                  transition: 'opacity 0.2s',
+                }}
+              >
+                {status === 'loading' ? 'Submitting...' : 'Submit Application →'}
+              </button>
+
+              <div style={{ fontSize: 11, color: '#606878', textAlign: 'center', lineHeight: 1.6 }}>
+                Applications are reviewed manually. You'll receive confirmation within 48 hours.<br />
+                Payout rate is set individually at approval.
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
