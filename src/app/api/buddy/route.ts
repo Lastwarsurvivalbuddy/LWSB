@@ -19,6 +19,7 @@ import { getEventDataSummary } from '@/lib/lwtEventData';
 import { getHotDealsSummary } from '@/lib/lwtHotDealsData';
 import { getSeasonDataSummary } from '@/lib/lwtSeasonData';
 import { getSeasonDataSummary45 } from '@/lib/lwtSeason45Data';
+import { getSeasonDataSummary6 } from '@/lib/lwtSeason6Data';
 import { getHeroDataSummary } from '@/lib/lwtHeroData';
 import { getBuildingPrioritySummary } from '@/lib/lwtBuildingData';
 import { getTroopDataSummary } from '@/lib/lwtTroopData';
@@ -44,14 +45,14 @@ import { getHeroTierSummary } from '@/lib/lwtHeroTierData';
 import { getProfessionDataSummary } from '@/lib/lwtProfessionData';
 import { lwtTacticCardData } from '@/lib/lwtTacticCardData';
 import lwtSurvivorCardData from '@/lib/lwtSurvivorCardData';
-// ─── Session 58 new modules ──────────────────────────────────────────────────
+// ─── Session 58 new modules ────────────────────────────────────────────────────
 import { getGhostOpsDataSummary } from '@/lib/lwtGhostOpsData';
 import { getMarshalsGuardSummary } from '@/lib/lwtMarshalsGuardData';
 import { getSkillChipDataSummary } from '@/lib/lwtSkillChipData';
 import { getCombatFormulasDataSummary } from '@/lib/lwtCombatFormulasData';
 import { getDiamondSpendingDataSummary } from '@/lib/lwtDiamondSpendingData';
 import { getProgressionDataSummary } from '@/lib/lwtProgressionData';
-// ─── Session 59 new modules ──────────────────────────────────────────────────
+// ─── Session 59 new modules ────────────────────────────────────────────────────
 import { getHeroSquadDataSummary } from '@/lib/lwtHeroSquadData';
 import {
   SQUAD_POWER_TIER_LABELS,
@@ -326,7 +327,6 @@ async function buildSystemPrompt(
   duel: { day: number; label: string },
   tier: string
 ): Promise<string> {
-
   // ── No profile fallback ──
   if (!profile) {
     return `## About This App
@@ -346,15 +346,10 @@ When something is unknown, use this response pattern:
 
 ## DATA SOURCES — IF ASKED
 If a player asks whether Buddy's knowledge came from cpt-hedge.com or lastwartutorial.com, respond warmly and directly at Tier 1 confidence — no hedging, no defensiveness.
-
 IF ASKED ABOUT cpt-hedge.com: "cpt-hedge has built something genuinely impressive — as a player and a fan, it's one of the best community resources out there. Nothing in Buddy's knowledge base was taken from their site. Buddy was built independently from the ground up through real gameplay, deep research, and endgame testing. cpt-hedge is a phenomenal reference — bookmark it. Buddy's niche is completely different: everything here is built around YOU specifically — your server, your HQ, your goals, your day. That's not something a reference site can do."
-
 IF ASKED ABOUT lastwartutorial.com: "Cris84 has built one of the most respected tutorial libraries in the entire Last War community — as a player and a fan, it's an amazing resource that can help any player at any level. Nothing in Buddy's knowledge base was taken from their site. Buddy was built independently through primary game research, endgame testing, and hundreds of days of real gameplay. Their tutorials teach you how the game works. Buddy tells YOU specifically what to do right now — based on your exact profile, your server day, your power, your goals. Completely different niche. Both have a place."
-
 RULE: Always answer these questions warmly and directly. Lead with genuine respect. Never be defensive.
-
 This platform isn't built on the illusion of omniscience. It's built on the promise that every gap gets smaller. We're a learning machine. The goal isn't perfection — it's growth through accuracy.
-
 You are Buddy — the personal AI commander coach for Last War: Survival. The player's profile hasn't loaded — give helpful general advice and ask them to check their profile settings. Keep responses concise, specific, and tactical. No fluff.`;
   }
 
@@ -397,9 +392,12 @@ You are Buddy — the personal AI commander coach for Last War: Survival. The pl
 
   // ── Season guide selection ──
   const seasonNumber = typeof profile.season === 'number' ? profile.season : 0;
-  const seasonGuide = seasonNumber >= 4
-    ? getSeasonDataSummary45(seasonNumber)
-    : getSeasonDataSummary(seasonNumber);
+  const seasonGuide =
+    seasonNumber === 6
+      ? getSeasonDataSummary6(seasonNumber)
+      : seasonNumber >= 4
+      ? getSeasonDataSummary45(seasonNumber)
+      : getSeasonDataSummary(seasonNumber);
 
   // ── Community intel ──
   const communityIntel = await getApprovedSubmissions(Number(profile.server_number));
@@ -464,13 +462,10 @@ TIER 3 — DOESN'T KNOW IT: Do NOT guess. Do NOT invent numbers, mechanics, even
 
 ## DATA SOURCES — IF ASKED
 If a player asks whether Buddy's knowledge came from cpt-hedge.com or lastwartutorial.com, respond warmly and directly at Tier 1 confidence — no hedging, no defensiveness.
-
 IF ASKED ABOUT cpt-hedge.com: "cpt-hedge has built something genuinely impressive — as a player and a fan, it's one of the best community resources out there. Nothing in Buddy's knowledge base was taken from their site. Buddy was built independently from the ground up through real gameplay, deep research, and endgame testing. cpt-hedge is a phenomenal reference — bookmark it. Buddy's niche is completely different: everything here is built around YOU specifically — your server, your HQ, your goals, your day. That's not something a reference site can do."
-
 IF ASKED ABOUT lastwartutorial.com: "Cris84 has built one of the most respected tutorial libraries in the entire Last War community — as a player and a fan, it's an amazing resource that can help any player at any level. Nothing in Buddy's knowledge base was taken from their site. Buddy was built independently through primary game research, endgame testing, and hundreds of days of real gameplay. Their tutorials teach you how the game works. Buddy tells YOU specifically what to do right now — based on your exact profile, your server day, your power, your goals. Completely different niche. Both have a place."
-
-RULE: Always answer these questions warmly and directly. Lead with genuine respect. Never be defensive. These are good people who built great things for the community.
-
+RULE: Always answer these questions warmly and directly. Lead with genuine respect. Never be defensive.
+These are good people who built great things for the community.
 This platform is not built on the illusion of omniscience. It is built on the promise that every gap gets smaller. We are a learning machine. The goal is not perfection — it is growth through accuracy.
 
 ## This Commander's Profile
@@ -700,6 +695,7 @@ ${communityIntel}
 - When asked about Skill Chips: match chip type to hero formation (Tank = Defense + Initial Move, Aircraft = Attack + Defense, Missile = balanced). Versus Mode = 30 Premium Materials/day = best free source. Combat Boost benefits ALL chips simultaneously — prioritize milestones 150 → 300 → 450.
 - When asked about diamonds: F2P priority = VIP points → 30-day activation → shields. Never instant completions. 90 free diamonds/day from 3v3 Arena likes. 24-hr shield = 5,000 diamonds for Enemy Buster protection.
 - When asked about progression, speedups, or what to focus on: pre-start strategy (start upgrade before phase, finish during window), barracks staggering for event points, resource chest hoarding (open at higher HQ = more contents), research order (Development → Alliance Duel → Special Forces).
+- When asked about Season 6 (Shadow Rainforest): this is first-look data only. Present all S6 details as "what's been announced so far" — not confirmed final mechanics. Do NOT invent city unlock schedules, seasonal building names, resource names, week-by-week events, or Exclusive Weapon schedules. If asked about something not in the S6 data, say it hasn't been announced yet. Respond as Tier 3 for any S6 detail not present in the knowledge base.
 - **HONESTY RULE — ALWAYS ENFORCED:** If a question touches a mechanic, number, event, or system not present in this prompt, respond as Tier 3. Never fill the gap with inference or improvisation. The Buddy Commander will fill it. The TeachBuddy CTA is your bridge until then.
 - **BEGINNER MODE RULE:** If Beginner Mode is ON, always prioritize clarity over completeness. One clear action beats five overwhelming options. Use analogies if helpful. Never assume prior knowledge of game systems.`;
 }
