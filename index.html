@@ -234,7 +234,7 @@
     .stat-number { font-family: 'Oswald', sans-serif; font-size: 28px; font-weight: 700;
       color: var(--gold); letter-spacing: 0.04em; display: block; }
     .stat-label { font-size: 10px; color: var(--muted); letter-spacing: 0.15em;
-      text-transform: uppercase; font-weight: 600; }
+      text-transform: uppercase; font-weight: 600; display: block; }
     .stat-divider { width: 1px; height: 36px; background: var(--border2); }
 
     .features { position: relative; z-index: 1; padding: 100px 5%;
@@ -683,7 +683,11 @@
   <div class="stats-row" role="region" aria-label="App stats">
     <div class="stat"><span class="stat-number">500+</span><span class="stat-label">Active Servers</span></div>
     <div class="stat-divider" aria-hidden="true"></div>
-    <div class="stat"><span class="stat-number">S1–S5</span><span class="stat-label">All Seasons Covered</span><span class="stat-label" style="color:#facc15;font-size:0.75em;">S6 Coming Soon!</span>
+    <div class="stat" style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+      <span class="stat-number">S1–S5</span>
+      <span class="stat-label">All Seasons Covered</span>
+      <span class="stat-label" style="color:#facc15;font-size:0.75em;">S6 Coming Soon!</span>
+    </div>
     <div class="stat-divider" aria-hidden="true"></div>
     <div class="stat"><span class="stat-number" aria-label="Battle Report Analyzer">⚔️</span><span class="stat-label">Battle Report Analyzer</span></div>
     <div class="stat-divider" aria-hidden="true"></div>
@@ -860,7 +864,7 @@
         <p class="war-room-desc">
           R5s: stop typing your battle plan in alliance chat with 3 minutes on the clock.
           Open the War Room, fill in your roles and orders — get a clean shareable card
-          your entire server can act on. Desert Storm, Warzone Duel, and Canyon Storm. Done in 30 seconds.
+          your entire alliance/server can act on. Desert Storm, Warzone Duel, and Canyon Storm. Done in 30 seconds.
           Other battles coming soon.
         </p>
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px;" role="list" aria-label="War Room tools">
