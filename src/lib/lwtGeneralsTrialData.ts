@@ -1,275 +1,127 @@
 // src/lib/lwtGeneralsTrialData.ts
-// General's Trial — solo + alliance challenge modes, rewards, Overlord items
-// Source: lastwartutorial.com content extract
+// General's Trial — recurring 4-day map-based PvE challenge event
+// Source: lastwartutorial.com/generals-trial — verified March 25, 2026
+// Replaces prior hallucinated version (wave-based PvE, daily resets, Trial Coins store — none of that is real).
+// Boyd's firsthand knowledge overrides any data here if conflicts arise.
+// Cross-reference: lwtOverlordData.ts already documents that Advanced L4-5 drops
+// Overlord Skill Badges + Universal Overlord Shards. Not duplicated here.
 
-export interface GeneralsTrialMode {
-  name: string;
-  type: 'solo' | 'alliance';
-  description: string;
-  unlockRequirement: string;
-  frequency: string;
-  keyMechanics: string[];
-  rewardTypes: string[];
-}
-
-export interface GeneralsTrialTip {
-  category: string;
-  tip: string;
-}
-
-// ─── MODE DEFINITIONS ───────────────────────────────────────────────────────
-
-export const GENERALS_TRIAL_MODES: GeneralsTrialMode[] = [
-  {
-    name: 'Normal Mode',
-    type: 'solo',
-    description:
-      'Standard solo challenge against waves of enemy units. Tests individual combat strength and hero loadout.',
-    unlockRequirement: 'Available to all players. No HQ minimum.',
-    frequency: 'Daily attempts available. Resets each day.',
-    keyMechanics: [
-      'Select a hero lineup before each attempt',
-      'Waves increase in difficulty progressively',
-      'Hero skills and troop type matchups matter significantly',
-      'Damage dealt counts toward score — higher damage = better reward tier',
-      'Losing does not consume attempt if you exit before full defeat',
-    ],
-    rewardTypes: [
-      'General Trial Coins (primary currency)',
-      'Speed-ups',
-      'Resources',
-      'Hero EXP items',
-      'Overlord training items (higher tiers)',
-    ],
-  },
-  {
-    name: 'Advanced Mode',
-    type: 'solo',
-    description:
-      'Harder version of Normal Mode with stronger enemy waves. Requires stronger hero builds and troop tiers.',
-    unlockRequirement: 'Unlocks after clearing Normal Mode to a set stage threshold.',
-    frequency: 'Daily attempts. Resets each day.',
-    keyMechanics: [
-      'Enemy stats significantly higher than Normal Mode',
-      'Counter-troop matchups punished more harshly',
-      'Hero skill level matters more — higher skill levels outperform raw power',
-      'Troop type specialization recommended over mixed builds',
-      'Missile Vehicle squads often perform well due to counter-all advantage',
-    ],
-    rewardTypes: [
-      'More General Trial Coins per run',
-      'Higher-tier speed-ups',
-      'Overlord Bond Badges',
-      'Overlord Training Guidebooks',
-      'Commander Certificates (Overlord deployment resource)',
-    ],
-  },
-  {
-    name: 'Solo Challenge',
-    type: 'solo',
-    description:
-      'Special timed solo event within General\'s Trial. Compete for a personal high score on a fixed enemy configuration.',
-    unlockRequirement: 'Opens during event windows. Check event tab for schedule.',
-    frequency: 'Event-based, not always active.',
-    keyMechanics: [
-      'Fixed enemy layout — same for all players during the event',
-      'Score is based on total damage dealt before time expires',
-      'Multiple attempts allowed — best score counts',
-      'Hero lineup optimization is key — test different combos',
-      'Cooldowns between attempts — plan your tries',
-    ],
-    rewardTypes: [
-      'Leaderboard rewards based on final rank',
-      'General Trial Coins',
-      'Exclusive cosmetic or resource bundles (varies by event)',
-    ],
-  },
-  {
-    name: 'Alliance Challenge',
-    type: 'alliance',
-    description:
-      'Cooperative mode where alliance members attack shared enemy bosses together. Total alliance damage determines reward tier.',
-    unlockRequirement: 'Must be in an alliance. No minimum HQ required but contribution matters.',
-    frequency: 'Scheduled event. Check alliance event tab.',
-    keyMechanics: [
-      'All alliance members attack the same boss pool simultaneously',
-      'Individual contribution tracked — higher damage = better personal reward',
-      'Boss has a shared HP bar — alliance wins when boss is defeated',
-      'Members can use multiple attempts during the event window',
-      'Troop type counter advantage still applies — coordinate with alliance if possible',
-      'Rally feature may be available on some boss types — check event rules',
-    ],
-    rewardTypes: [
-      'General Trial Coins',
-      'Alliance Contribution Points',
-      'Speed-ups and resources scaled to contribution tier',
-      'Overlord items at higher contribution tiers',
-      'Exclusive alliance rewards if boss is defeated before timer',
-    ],
-  },
-];
-
-// ─── OVERLORD ITEM REWARDS ───────────────────────────────────────────────────
-
-export interface OverlordRewardItem {
-  itemName: string;
-  primarySource: string;
-  secondarySource: string;
+export interface GeneralsTrialLevel {
+  level: number;
+  mode: 'normal' | 'advanced';
+  challengeCount: number;        // total challenges per level
+  appearsAtOnce: number;         // enemies visible on map simultaneously
+  minSquadPowerM: number | null; // suggested minimum for solo single attacks (millions). null = not documented.
+  rewardMilestones: number[];    // challenge counts that trigger reward tiers
+  overlordRewards: boolean;
   notes: string;
 }
 
-export const OVERLORD_REWARD_ITEMS: OverlordRewardItem[] = [
-  {
-    itemName: 'Commander Certificate',
-    primarySource: 'Advanced Mode drops',
-    secondarySource: 'Alliance Challenge high-contribution reward',
-    notes:
-      'Required for Overlord deployment (1,800 per deploy). Farm consistently — this is the primary Overlord bottleneck for most players.',
-  },
-  {
-    itemName: 'Overlord Training Guidebook',
-    primarySource: 'Advanced Mode drops',
-    secondarySource: 'Alliance Challenge, VIP Store',
-    notes:
-      'Required for Overlord deployment (300,000 per deploy). Less scarce than Certificates but still requires consistent farming.',
-  },
-  {
-    itemName: 'Bond Badge',
-    primarySource: 'Alliance Challenge reward tiers',
-    secondarySource: 'Advanced Mode (rare), VIP Store weekly limit',
-    notes:
-      'Required for Overlord deployment (24 per deploy). Also unlocks the New Partner milestone at L50 and gates Rookie Partner I at L100. Save carefully.',
-  },
-  {
-    itemName: 'Overlord EXP Items',
-    primarySource: 'Normal Mode drops',
-    secondarySource: 'Advanced Mode drops',
-    notes:
-      'Used to level the Overlord Gorilla from L1 upward. Skill unlocks at L31/51/71/91/111. Prioritize leveling to L31 for first skill unlock.',
-  },
+// ── Event Structure ──────────────────────────────────────────────────
+export const GENERALS_TRIAL_STRUCTURE = {
+  duration_days: 4,
+  hqMinimum: 8,
+  difficultyLockRule: 'CRITICAL: Only ONE difficulty level can be selected per event. Once chosen, it CANNOT be changed for the entire event duration. Choose carefully before committing.',
+  progressionRule: 'Each time you complete a difficulty level, you unlock the NEXT level — but only challengeable in the NEXT General\'s Trial event, not the current one.',
+  staminaCost_singleAttack: 10,
+  staminaCost_rally: 20,
+  mapBehavior: 'Enemies appear on the world map. Attack via the Challenge button in the event page, or tap the Marshall icon on the map above the daily task icon.',
+  pacingRule: 'Spread challenges across all 4 days. Do not burn all stamina on Day 1.',
+  allianceGuidance: 'Always wait for R4/R5 guidance before selecting difficulty. Alliance may ask players to hold off before a Season starts to preserve troops for the opening week.',
+};
+
+// ── Normal Mode ──────────────────────────────────────────────────────
+// 9 difficulty levels. 30 challenges each. Enemies = Marshall tanks. Appear 3 at a time on map.
+// Reward tiers unlock at 10 / 15 / 20 / 25 / 30 challenges completed.
+// Power benchmarks from LWT source — noted as averages, vary by hero type and gear.
+export const GENERALS_TRIAL_NORMAL_LEVELS: GeneralsTrialLevel[] = [
+  { level: 1, mode: 'normal', challengeCount: 30, appearsAtOnce: 3, minSquadPowerM: null, rewardMilestones: [10,15,20,25,30], overlordRewards: false, notes: 'No power requirement documented.' },
+  { level: 2, mode: 'normal', challengeCount: 30, appearsAtOnce: 3, minSquadPowerM: null, rewardMilestones: [10,15,20,25,30], overlordRewards: false, notes: 'No power requirement documented.' },
+  { level: 3, mode: 'normal', challengeCount: 30, appearsAtOnce: 3, minSquadPowerM: 7,    rewardMilestones: [10,15,20,25,30], overlordRewards: false, notes: 'Under 7M: troop loss risk. Use rallies if solo is failing.' },
+  { level: 4, mode: 'normal', challengeCount: 30, appearsAtOnce: 3, minSquadPowerM: 7,    rewardMilestones: [10,15,20,25,30], overlordRewards: false, notes: '7M+ for solo.' },
+  { level: 5, mode: 'normal', challengeCount: 30, appearsAtOnce: 3, minSquadPowerM: 10,   rewardMilestones: [10,15,20,25,30], overlordRewards: false, notes: '10M+ for solo.' },
+  { level: 6, mode: 'normal', challengeCount: 30, appearsAtOnce: 3, minSquadPowerM: 14,   rewardMilestones: [10,15,20,25,30], overlordRewards: false, notes: '14M+ for solo. Below this: rallies strongly recommended.' },
+  { level: 7, mode: 'normal', challengeCount: 30, appearsAtOnce: 3, minSquadPowerM: 16,   rewardMilestones: [10,15,20,25,30], overlordRewards: false, notes: '16M+ for solo.' },
+  { level: 8, mode: 'normal', challengeCount: 30, appearsAtOnce: 3, minSquadPowerM: 19.5, rewardMilestones: [10,15,20,25,30], overlordRewards: false, notes: '19.5M+ for solo.' },
+  { level: 9, mode: 'normal', challengeCount: 30, appearsAtOnce: 3, minSquadPowerM: 22,   rewardMilestones: [10,15,20,25,30], overlordRewards: false, notes: '22M+ for solo. Completing Level 9 unlocks Advanced mode — available in the NEXT event cycle.' },
 ];
 
-// ─── GENERAL TRIAL COINS STORE ───────────────────────────────────────────────
-
-export const TRIAL_COINS_STORE_PRIORITIES: { item: string; priority: string; notes: string }[] = [
-  {
-    item: 'Hero Shards (priority heroes)',
-    priority: 'HIGH',
-    notes: 'Best long-term value. Check which heroes are available — prioritize UR hero shards.',
-  },
-  {
-    item: 'Commander Certificates',
-    priority: 'HIGH',
-    notes: 'If Overlord is your bottleneck, buy these first. 1,800 needed per deployment.',
-  },
-  {
-    item: 'Speed-ups (Build/Research)',
-    priority: 'MEDIUM',
-    notes: 'Solid value if not farming hero shards. Build speed-ups especially useful pre-HQ30.',
-  },
-  {
-    item: 'Bond Badges',
-    priority: 'MEDIUM',
-    notes: 'Only 24 needed per Overlord deployment but they are scarce — worth buying if available.',
-  },
-  {
-    item: 'Resources (Food/Iron/Oil)',
-    priority: 'LOW',
-    notes: 'Skip unless desperately short. Resources are better farmed from other sources.',
-  },
+// ── Advanced Mode ────────────────────────────────────────────────────
+// 9 difficulty levels. 10 challenges each. Enemies = full Marshall squads. Appear 1 at a time.
+// Significantly harder per challenge than Normal mode.
+// Unlocks after completing ALL 9 Normal levels AND server reaches required age.
+// Reward tiers unlock at 3 / 6 / 10 challenges completed.
+// OVERLORD REWARDS (Skill Badges + Universal Shards) begin at Level 4.
+export const GENERALS_TRIAL_ADVANCED_LEVELS: GeneralsTrialLevel[] = [
+  { level: 1, mode: 'advanced', challengeCount: 10, appearsAtOnce: 1, minSquadPowerM: 30,   rewardMilestones: [3,6,10], overlordRewards: false, notes: '30M+ for solo. Much harder per challenge than Normal.' },
+  { level: 2, mode: 'advanced', challengeCount: 10, appearsAtOnce: 1, minSquadPowerM: 32,   rewardMilestones: [3,6,10], overlordRewards: false, notes: '32M+ for solo.' },
+  { level: 3, mode: 'advanced', challengeCount: 10, appearsAtOnce: 1, minSquadPowerM: 34,   rewardMilestones: [3,6,10], overlordRewards: false, notes: '34M+ for solo.' },
+  { level: 4, mode: 'advanced', challengeCount: 10, appearsAtOnce: 1, minSquadPowerM: 42,   rewardMilestones: [3,6,10], overlordRewards: true,  notes: '★ OVERLORD REWARDS START HERE. 42M+ for solo. Overlord Skill Badges + Universal Overlord Shards. Primary target for endgame players. Rally support strongly recommended if below 42M.' },
+  { level: 5, mode: 'advanced', challengeCount: 10, appearsAtOnce: 1, minSquadPowerM: 48,   rewardMilestones: [3,6,10], overlordRewards: true,  notes: '48M+ for solo. Increased Overlord rewards. Rally coordination strongly recommended.' },
+  { level: 6, mode: 'advanced', challengeCount: 10, appearsAtOnce: 1, minSquadPowerM: null, rewardMilestones: [3,6,10], overlordRewards: true,  notes: 'Power requirement not documented. Rally-only realistically.' },
+  { level: 7, mode: 'advanced', challengeCount: 10, appearsAtOnce: 1, minSquadPowerM: null, rewardMilestones: [3,6,10], overlordRewards: true,  notes: 'Power requirement not documented. Full alliance rally required.' },
+  { level: 8, mode: 'advanced', challengeCount: 10, appearsAtOnce: 1, minSquadPowerM: null, rewardMilestones: [3,6,10], overlordRewards: true,  notes: 'Power requirement not documented. Full alliance rally required.' },
+  { level: 9, mode: 'advanced', challengeCount: 10, appearsAtOnce: 1, minSquadPowerM: null, rewardMilestones: [3,6,10], overlordRewards: true,  notes: 'Maximum level. Highest Overlord rewards. Full alliance rally required.' },
 ];
 
-// ─── STRATEGY TIPS ───────────────────────────────────────────────────────────
+// ── Alliance Challenge ───────────────────────────────────────────────
+export const GENERALS_TRIAL_ALLIANCE = {
+  levelCount: 9,
+  unlockCondition: 'R4 or R5 can launch an Alliance Challenge level once at least 10 alliance members have completed the corresponding Solo Challenge level.',
+  attackType: 'Rally attacks ONLY. Solo attacks cannot be used on Alliance Challenge forces.',
+  forceDuration_hours: 24,
+  rewardsRule: 'ALL alliance members receive rewards via mail at event end. You do NOT need to participate in the rally to receive them.',
+  coordinationTip: 'The upper-right button in the Alliance Challenge tab shows each ally\'s Solo Challenge progress — use it to see which levels are close to the 10-member unlock threshold.',
+};
 
-export const GENERALS_TRIAL_TIPS: GeneralsTrialTip[] = [
-  {
-    category: 'Hero Selection',
-    tip:
-      'Always match your hero skills to your troop type. Aircraft heroes with Aircraft troops outperform mismatched builds significantly.',
-  },
-  {
-    category: 'Hero Selection',
-    tip:
-      'Skill level matters more than hero rarity in General\'s Trial. A well-leveled SSR often beats a low-skill UR.',
-  },
-  {
-    category: 'Troop Type',
-    tip:
-      'Missile Vehicle squads perform well across all modes due to the counter-all advantage. Good fallback if unsure.',
-  },
-  {
-    category: 'Troop Type',
-    tip:
-      'Check enemy troop type before committing to a lineup. Bring the counter type for maximum damage multiplier.',
-  },
-  {
-    category: 'Attempts',
-    tip:
-      'Do not burn all attempts at once in Advanced Mode. If cooldowns exist, stagger your attempts across the day.',
-  },
-  {
-    category: 'Alliance Challenge',
-    tip:
-      'Hit the boss early in the event window — alliance members who contribute early get tracked even if the boss dies before window closes.',
-  },
-  {
-    category: 'Alliance Challenge',
-    tip:
-      'Coordinate troop types with alliance if possible. If most are Aircraft, bring Infantry to hit back hard on the counter cycle.',
-  },
-  {
-    category: 'Coins Priority',
-    tip:
-      'Spend Trial Coins on hero shards or Overlord items first. Resources are the worst value in the store.',
-  },
-  {
-    category: 'Overlord Farming',
-    tip:
-      'Commander Certificates are the hardest Overlord item to accumulate. Treat every Advanced Mode run as a Certificate farming session.',
-  },
-];
-
-// ─── SUMMARY FUNCTION ────────────────────────────────────────────────────────
-
-export function getGeneralsTrialSummary(): string {
-  const modeList = GENERALS_TRIAL_MODES.map((m) => {
-    const mechanics = m.keyMechanics.map((k) => `    - ${k}`).join('\n');
-    const rewards = m.rewardTypes.map((r) => `    - ${r}`).join('\n');
-    return (
-      `  [${m.type.toUpperCase()}] ${m.name}\n` +
-      `  Unlock: ${m.unlockRequirement}\n` +
-      `  Frequency: ${m.frequency}\n` +
-      `  Key Mechanics:\n${mechanics}\n` +
-      `  Rewards:\n${rewards}`
-    );
-  }).join('\n\n');
-
-  const overlordItems = OVERLORD_REWARD_ITEMS.map(
-    (o) => `  - ${o.itemName}: ${o.notes}`
-  ).join('\n');
-
-  const storePriority = TRIAL_COINS_STORE_PRIORITIES.map(
-    (s) => `  [${s.priority}] ${s.item} — ${s.notes}`
-  ).join('\n');
-
-  const tips = GENERALS_TRIAL_TIPS.map(
-    (t) => `  [${t.category}] ${t.tip}`
-  ).join('\n');
-
-  return `## General's Trial
-
-General's Trial has 4 modes: Normal (daily solo), Advanced (harder solo, better rewards), Solo Challenge (event-based score attack), and Alliance Challenge (cooperative boss event).
-
-### Modes
-${modeList}
-
-### Overlord Items from General's Trial
-${overlordItems}
-
-### Trial Coins Store Priority
-${storePriority}
-
-### Strategy Tips
-${tips}
+// ── Arms Race Double-Dip ─────────────────────────────────────────────
+export const GENERALS_TRIAL_ARMS_RACE_TIP = `
+GENERAL'S TRIAL × ARMS RACE — DRONE BOOST DOUBLE-DIP:
+Single attacks cost 10 stamina. Rally attacks cost 20 stamina.
+Stamina consumption scores points during the Arms Race DRONE BOOST phase.
+Time your General's Trial attacks during the Drone Boost window to earn
+Arms Race points from the same stamina spend. Confirmed tip from LWT source.
+Never burn General's Trial stamina outside the Drone Boost window when Arms Race is active.
 `;
+
+// ── Summary Function ─────────────────────────────────────────────────
+export function getGeneralsTrialSummary(): string {
+  const normalLevels = GENERALS_TRIAL_NORMAL_LEVELS.map(l =>
+    `  L${l.level}: min ${l.minSquadPowerM != null ? l.minSquadPowerM + 'M' : 'none'} power. Rewards at ${l.rewardMilestones.join('/')} challenges. ${l.notes}`
+  ).join('\n');
+
+  const advancedLevels = GENERALS_TRIAL_ADVANCED_LEVELS.map(l =>
+    `  L${l.level}: min ${l.minSquadPowerM != null ? l.minSquadPowerM + 'M' : 'not documented'} power.${l.overlordRewards ? ' ★ OVERLORD REWARDS.' : ''} ${l.notes}`
+  ).join('\n');
+
+  return `
+## General's Trial
+
+### Event Structure
+- Duration: ${GENERALS_TRIAL_STRUCTURE.duration_days} days. HQ minimum: ${GENERALS_TRIAL_STRUCTURE.hqMinimum}.
+- Stamina cost: ${GENERALS_TRIAL_STRUCTURE.staminaCost_singleAttack} per single attack · ${GENERALS_TRIAL_STRUCTURE.staminaCost_rally} per rally.
+- ${GENERALS_TRIAL_STRUCTURE.difficultyLockRule}
+- ${GENERALS_TRIAL_STRUCTURE.progressionRule}
+- ${GENERALS_TRIAL_STRUCTURE.allianceGuidance}
+- ${GENERALS_TRIAL_STRUCTURE.pacingRule}
+
+### Normal Mode — 9 levels · 30 challenges each · 3 enemies on map at once
+Reward tiers unlock at 10/15/20/25/30 challenges. Enemies: Marshall tanks.
+${normalLevels}
+
+### Advanced Mode — 9 levels · 10 challenges each · 1 enemy on map at once
+Unlocks after completing ALL 9 Normal levels + server age threshold. Available in the NEXT event cycle.
+Reward tiers unlock at 3/6/10 challenges. Enemies: full Marshall squads. Significantly harder than Normal.
+${advancedLevels}
+
+### Alliance Challenge
+- ${GENERALS_TRIAL_ALLIANCE.unlockCondition}
+- ${GENERALS_TRIAL_ALLIANCE.attackType}
+- Forces remain on map for ${GENERALS_TRIAL_ALLIANCE.forceDuration_hours} hours.
+- ${GENERALS_TRIAL_ALLIANCE.rewardsRule}
+- ${GENERALS_TRIAL_ALLIANCE.coordinationTip}
+
+### Arms Race Double-Dip
+${GENERALS_TRIAL_ARMS_RACE_TIP}
+`.trim();
 }
