@@ -20,7 +20,6 @@ export async function POST(req: NextRequest) {
   }
 
   let event: Stripe.Event
-
   try {
     event = stripe.webhooks.constructEvent(
       body,
@@ -52,14 +51,15 @@ export async function POST(req: NextRequest) {
         if (refCode) {
           await recordAffiliateConversion(userId, tier, refCode, session.id)
         }
-
         break
       }
 
       case 'invoice.paid': {
         const invoice = event.data.object as Stripe.Invoice
-        const subscriptionId = (invoice as any).subscription
-          ?? (invoice as any).parent?.subscription_details?.subscription
+        const subscriptionId =
+          (invoice as any).subscription ??
+          (invoice as any).parent?.subscription_details?.subscription
+
         if (!subscriptionId) break
 
         const subscription = await stripe.subscriptions.retrieve(subscriptionId)
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
         const tier = subscription.metadata?.tier
         const refCode = subscription.metadata?.ref_code ?? null
 
-        // Extract billing period — cast to any because field names vary across Stripe SDK versions
+        // Extract billing period — cast to any for SDK compat
         const subAny = subscription as any
         const periodStart: string | null = subAny.current_period_start
           ? new Date(subAny.current_period_start * 1000).toISOString()
@@ -77,9 +77,10 @@ export async function POST(req: NextRequest) {
           : null
 
         if (!userId) {
-          const customerId = typeof subscription.customer === 'string'
-            ? subscription.customer
-            : (subscription.customer as Stripe.Customer)?.id
+          const customerId =
+            typeof subscription.customer === 'string'
+              ? subscription.customer
+              : (subscription.customer as Stripe.Customer)?.id
           if (customerId) {
             const { data: profile } = await supabaseAdmin
               .from('subscriptions')
@@ -88,8 +89,13 @@ export async function POST(req: NextRequest) {
               .single()
             if (profile) {
               await upsertSubscription(
-                profile.user_id, tier || 'pro', 'active',
-                subscriptionId, undefined, periodStart, periodEnd
+                profile.user_id,
+                tier || 'pro',
+                'active',
+                subscriptionId,
+                undefined,
+                periodStart,
+                periodEnd
               )
             }
           }
@@ -97,21 +103,106 @@ export async function POST(req: NextRequest) {
         }
 
         await upsertSubscription(
-          userId, tier || 'pro', 'active',
-          subscriptionId, undefined, periodStart, periodEnd
+          userId,
+          tier || 'pro',
+          'active',
+          subscriptionId,
+          undefined,
+          periodStart,
+          periodEnd
         )
 
         // Record affiliate conversion on first invoice only
-        // (avoid duplicate conversions on recurring renewals)
         if (refCode) {
           const isFirstInvoice = (invoice as any).billing_reason === 'subscription_create'
           if (isFirstInvoice) {
             await recordAffiliateConversion(userId, tier || 'pro', refCode, subscriptionId)
           }
         }
-
         break
       }
+
+      // ── NEW: log every successful charge to the payments table ──────────
+      case 'invoice.payment_succeeded': {
+        const invoice = event.data.object as Stripe.Invoice
+        const invoiceAny = invoice as any
+
+        // Amount in cents → dollars
+        const amountUsd = (invoiceAny.amount_paid ?? 0) / 100
+        if (amountUsd <= 0) break // skip $0 invoices (free trials, etc.)
+
+        const subscriptionId =
+          invoiceAny.subscription ??
+          invoiceAny.parent?.subscription_details?.subscription
+
+        let userId: string | null = null
+        let tier: string | null = null
+
+        if (subscriptionId) {
+          const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+          userId = subscription.metadata?.user_id ?? null
+          tier = subscription.metadata?.tier ?? null
+
+          // Fallback: look up user_id via customer if metadata missing
+          if (!userId) {
+            const customerId =
+              typeof subscription.customer === 'string'
+                ? subscription.customer
+                : (subscription.customer as Stripe.Customer)?.id
+            if (customerId) {
+              const { data: profile } = await supabaseAdmin
+                .from('subscriptions')
+                .select('user_id, tier')
+                .eq('stripe_customer_id', customerId)
+                .single()
+              if (profile) {
+                userId = profile.user_id
+                tier = tier ?? profile.tier
+              }
+            }
+          }
+        } else {
+          // One-time payment (Founding Member) — no subscription_id
+          // Pull user_id from checkout session metadata via customer
+          const customerId =
+            typeof invoiceAny.customer === 'string'
+              ? invoiceAny.customer
+              : invoiceAny.customer?.id
+          if (customerId) {
+            const { data: profile } = await supabaseAdmin
+              .from('subscriptions')
+              .select('user_id, tier')
+              .eq('stripe_customer_id', customerId)
+              .single()
+            if (profile) {
+              userId = profile.user_id
+              tier = tier ?? profile.tier
+            }
+          }
+        }
+
+        if (!userId) {
+          console.warn('invoice.payment_succeeded: could not resolve user_id, skipping payments insert')
+          break
+        }
+
+        const { error } = await supabaseAdmin
+          .from('payments')
+          .insert({
+            user_id: userId,
+            stripe_payment_id: invoiceAny.id,
+            amount_usd: amountUsd,
+            subscription_tier: tier ?? 'unknown',
+          })
+
+        if (error) {
+          console.error('payments insert error:', error)
+        } else {
+          console.log(`Payment recorded: user ${userId} · $${amountUsd} · tier ${tier}`)
+        }
+        break
+      }
+      // ────────────────────────────────────────────────────────────────────
 
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription
@@ -120,6 +211,7 @@ export async function POST(req: NextRequest) {
           .select('user_id')
           .eq('stripe_subscription_id', subscription.id)
           .single()
+
         if (sub) {
           await supabaseAdmin
             .from('subscriptions')
@@ -144,11 +236,13 @@ export async function POST(req: NextRequest) {
         const periodEnd: string | null = subUpdatedAny.current_period_end
           ? new Date(subUpdatedAny.current_period_end * 1000).toISOString()
           : null
+
         const { data: sub } = await supabaseAdmin
           .from('subscriptions')
           .select('user_id')
           .eq('stripe_subscription_id', subscription.id)
           .single()
+
         if (sub) {
           await supabaseAdmin
             .from('subscriptions')
@@ -188,6 +282,7 @@ async function upsertSubscription(
     status,
     updated_at: new Date().toISOString(),
   }
+
   if (stripeSubscriptionId) payload.stripe_subscription_id = stripeSubscriptionId
   if (stripeSessionId) payload.stripe_session_id = stripeSessionId
   if (periodStart !== undefined) payload.period_start = periodStart
@@ -210,7 +305,6 @@ async function recordAffiliateConversion(
   stripeRef: string
 ) {
   try {
-    // Look up affiliate by referral_code — must be approved
     const { data: affiliate } = await supabaseAdmin
       .from('affiliates')
       .select('id')
