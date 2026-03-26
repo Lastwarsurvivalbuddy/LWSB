@@ -106,6 +106,7 @@ const REPORT_TYPE_OPTIONS = [
   'PvP — I attacked someone',
   'PvP — Someone attacked me',
   'PvP — Rally',
+  'PvP — Arena',
   'PvE — Zombie / Monster',
 ];
 
@@ -215,6 +216,7 @@ function formatReportDate(isoString: string): string {
 function getReportTypeShort(reportType: string): string {
   if (reportType.toLowerCase().includes('pve') || reportType.toLowerCase().includes('zombie')) return 'PvE';
   if (reportType.toLowerCase().includes('rally')) return 'Rally';
+  if (reportType.toLowerCase().includes('arena')) return 'Arena';
   return 'PvP';
 }
 
@@ -391,11 +393,20 @@ export default function BattleReportAnalyzer({
   // ── Gate check ─────────────────────────────────────────────────────────────
   const isFree = userTier === 'free';
   const isFounding = userTier === 'founding';
-  const isAtLimit = !isFounding && reportsUsedThisPeriod >= reportsLimitThisPeriod;
+  // Founding hard cap is 15/mo — never treat as unlimited
+  const FOUNDING_LIMIT = 15;
+  const effectiveLimit = isFounding ? FOUNDING_LIMIT : reportsLimitThisPeriod;
+  const isAtLimit = reportsUsedThisPeriod >= effectiveLimit;
   const isLocked = isFree || isAtLimit;
 
   // ── Intake complete check ──────────────────────────────────────────────────
   const intakeComplete = intake.report_type !== '' && intake.squad_type !== '';
+
+  // ── Quota display — header line ────────────────────────────────────────────
+  // Founding always shows X of 15, never "unlimited"
+  const headerQuotaLine = isFounding
+    ? `${reportsUsedThisPeriod} of 15 used this month · Founding Member`
+    : `${effectiveLimit - reportsUsedThisPeriod} of ${effectiveLimit} remaining this month`;
 
   // ── Load commander name once for share card ────────────────────────────────
   useEffect(() => {
@@ -557,12 +568,6 @@ export default function BattleReportAnalyzer({
 
   if (!isOpen) return null;
 
-  // ── Quota display helpers ──────────────────────────────────────────────────
-  // Founding = 15/mo hard cap (not unlimited)
-  const headerQuotaLine = isFounding
-    ? `${reportsUsedThisPeriod} of 15 used this month · Founding`
-    : `${reportsLimitThisPeriod - reportsUsedThisPeriod} of ${reportsLimitThisPeriod} remaining this month`;
-
   // ─────────────────────────────────────────────────────────────────────────
   // LOCKED STATE
   // ─────────────────────────────────────────────────────────────────────────
@@ -578,7 +583,7 @@ export default function BattleReportAnalyzer({
           <p className="text-gray-400 text-sm mb-6 leading-relaxed">
             {isFree
               ? 'Upload your battle report screenshots. Get an expert breakdown of exactly why you won or lost — type matchup, morale cascade, decoration gap, EW analysis, and a rematch verdict.'
-              : `You've used all ${reportsLimitThisPeriod} analyses this month.${resetsOn ? ` Resets ${resetsOn}.` : ''}`}
+              : `You've used all ${effectiveLimit} analyses this month.${resetsOn ? ` Resets ${resetsOn}.` : ''}`}
           </p>
           {isFree ? (
             <button onClick={() => router.push('/upgrade')} className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 rounded-xl transition-colors">
@@ -987,7 +992,9 @@ export default function BattleReportAnalyzer({
                 {/* Post-analysis quota line */}
                 <p className="text-center text-xs text-gray-600">
                   {meta
-                    ? `${meta.reports_used_this_period} of ${meta.display_limit} used this billing period`
+                    ? isFounding
+                      ? `${meta.reports_used_this_period} of 15 used this month · Founding Member`
+                      : `${meta.reports_used_this_period} of ${meta.display_limit} used this billing period`
                     : headerQuotaLine
                   }
                 </p>
@@ -1012,4 +1019,3 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     </div>
   );
 }
-

@@ -39,10 +39,6 @@ interface ProfileRow {
   beginner_mode: boolean | null;
 }
 
-interface UsageCountRow {
-  count: number;
-}
-
 // ─────────────────────────────────────────────────────────────
 // TIER LIMIT HELPER
 // ─────────────────────────────────────────────────────────────
@@ -174,11 +170,13 @@ export async function POST(req: NextRequest) {
     }
 
     // ── 3. Subscription tier + billing period ─────────────────
+    // NOTE: .maybeSingle() instead of .single() — returns null (not error) when no row exists.
+    // A user with no subscription row is treated as free tier.
     const { data: subData } = await supabase
       .from('subscriptions')
       .select('tier, period_start, period_end')
       .eq('user_id', user.id)
-      .single() as { data: SubscriptionRow | null };
+      .maybeSingle() as { data: SubscriptionRow | null };
 
     const tier = subData?.tier ?? 'free';
     const monthlyLimit = getMonthlyLimit(tier);
@@ -230,7 +228,7 @@ export async function POST(req: NextRequest) {
       .from('commander_profile')
       .select('hq_level, troop_type, troop_tier, squad_power, server_day, spend_style, hero_power, beginner_mode')
       .eq('id', user.id)
-      .single() as { data: ProfileRow | null };
+      .maybeSingle() as { data: ProfileRow | null };
 
     const playerProfile = {
       hq_level:      profileData?.hq_level      ?? undefined,
@@ -328,7 +326,6 @@ Return ONLY valid JSON matching the schema in your instructions. No markdown, no
     }
 
     // ── 10. Save report to battle_reports table ───────────────
-    // Quota is now derived from battle_reports directly — no daily_usage update needed
     const outcome       = (analysis.outcome       as string) ?? 'Unknown';
     const verdict       = (analysis.verdict       as string) ?? 'Analysis complete';
     const reportType    = (analysis.report_type   as string) ?? intake.report_type;
@@ -372,7 +369,7 @@ Return ONLY valid JSON matching the schema in your instructions. No markdown, no
 }
 
 // ─────────────────────────────────────────────────────────────
-// GET — fetch user's recent battle reports (last 10)
+// GET — fetch user's recent battle reports (last 10) + quota
 // ─────────────────────────────────────────────────────────────
 export async function GET(req: NextRequest) {
   try {
@@ -420,11 +417,12 @@ export async function GET(req: NextRequest) {
     });
 
     // ── Quota summary ─────────────────────────────────────────
+    // NOTE: .maybeSingle() — returns null (not error) when no subscription row exists.
     const { data: subData } = await supabase
       .from('subscriptions')
       .select('tier, period_start, period_end')
       .eq('user_id', user.id)
-      .single() as { data: SubscriptionRow | null };
+      .maybeSingle() as { data: SubscriptionRow | null };
 
     const tier = subData?.tier ?? 'free';
     const monthlyLimit = getMonthlyLimit(tier);
