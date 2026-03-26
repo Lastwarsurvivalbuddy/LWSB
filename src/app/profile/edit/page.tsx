@@ -1,5 +1,4 @@
 'use client'
-
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -38,48 +37,63 @@ interface ProfileForm {
 
 const SPEND_OPTIONS = ['f2p', 'budget', 'moderate', 'investor', 'whale', 'mega_whale']
 const SPEND_LABELS: Record<string, string> = {
-  f2p: 'F2P', budget: 'Budget', moderate: 'Moderate',
-  investor: 'Investor', whale: 'Whale', mega_whale: 'Mega Whale',
+  f2p: 'F2P',
+  budget: 'Budget',
+  moderate: 'Moderate',
+  investor: 'Investor',
+  whale: 'Whale',
+  mega_whale: 'Mega Whale',
 }
 
 const PLAYSTYLE_OPTIONS = [
-  { value: 'fighter',   label: '⚔️ Fighter',   sub: 'Player vs. Player'     },
-  { value: 'developer', label: '🎯 Developer', sub: 'Player vs. Event'      },
-  { value: 'commander', label: '⚖️ Commander', sub: '50/50 Balanced'        },
-  { value: 'scout',     label: '🗺️ Scout',     sub: 'Still Figuring It Out' },
+  { value: 'fighter', label: '⚔️ Fighter', sub: 'Player vs. Player' },
+  { value: 'developer', label: '🎯 Developer', sub: 'Player vs. Event' },
+  { value: 'commander', label: '⚖️ Commander', sub: '50/50 Balanced' },
+  { value: 'scout', label: '🗺️ Scout', sub: 'Still Figuring It Out' },
 ]
 
 const TROOP_TYPES = [
-  { value: 'aircraft',        label: '✈️ Aircraft' },
-  { value: 'tank',            label: '🛡️ Tank' },
+  { value: 'aircraft', label: '✈️ Aircraft' },
+  { value: 'tank', label: '🛡️ Tank' },
   { value: 'missile vehicle', label: '🚀 Missile Vehicle' },
-  { value: 'mixed',           label: '⚖️ Mixed' },
+  { value: 'mixed', label: '⚖️ Mixed' },
 ]
 
 const TROOP_TIERS = [
   { value: 'under_t10', label: 'Under T10' },
-  { value: 't10',       label: 'T10' },
-  { value: 't11',       label: 'T11' },
+  { value: 't10', label: 'T10' },
+  { value: 't11', label: 'T11' },
 ]
 
 const SEASONS = [0, 1, 2, 3, 4, 5]
-
 const HQ_SHORTCUTS = [5, 10, 15, 20, 25, 30, 35]
 
 const REMINDER_OPTIONS = [
-  { value: 'daily',  label: 'Daily',  sub: 'Every day'    },
+  { value: 'daily', label: 'Daily', sub: 'Every day' },
   { value: 'weekly', label: 'Weekly', sub: 'Every 7 days' },
-  { value: 'off',    label: 'Off',    sub: 'No reminders' },
+  { value: 'off', label: 'Off', sub: 'No reminders' },
 ]
 
+/** Given a server day number, back-calculate what date the server started. */
 function calcServerStartDate(serverDay: number): string {
   const d = new Date()
   d.setDate(d.getDate() - (serverDay - 1))
   return d.toISOString().split('T')[0]
 }
 
-const NAME_REGEX = /^[a-zA-Z0-9_ ]{3,20}$/
+/** Given a stored server_start_date string, compute today's server day. */
+function computeServerDay(serverStartDate: string): number {
+  const start = new Date(serverStartDate)
+  const today = new Date()
+  // Zero out time portion to get clean day diff
+  start.setHours(0, 0, 0, 0)
+  today.setHours(0, 0, 0, 0)
+  const diffMs = today.getTime() - start.getTime()
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  return diffDays + 1
+}
 
+const NAME_REGEX = /^[a-zA-Z0-9_ ]{3,20}$/
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
 export default function ProfileEditPage() {
@@ -112,7 +126,8 @@ export default function ProfileEditPage() {
 
   // Snapshot of last-saved form — used to compute isDirty
   const savedSnapshot = useRef<ProfileForm | null>(null)
-  const isDirty = savedSnapshot.current !== null &&
+  const isDirty =
+    savedSnapshot.current !== null &&
     JSON.stringify(form) !== JSON.stringify(savedSnapshot.current)
 
   // Warn on browser refresh / tab close when dirty
@@ -127,7 +142,9 @@ export default function ProfileEditPage() {
     return () => window.removeEventListener('beforeunload', handler)
   }, [isDirty])
 
-  useEffect(() => { loadProfile() }, [])
+  useEffect(() => {
+    loadProfile()
+  }, [])
 
   useEffect(() => {
     if (!form.commander_name || form.commander_name === originalName) {
@@ -153,8 +170,13 @@ export default function ProfileEditPage() {
 
   async function loadProfile() {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { router.push('/signin'); return }
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      if (!session) {
+        router.push('/signin')
+        return
+      }
 
       const { data, error } = await supabase
         .from('profiles')
@@ -164,26 +186,34 @@ export default function ProfileEditPage() {
 
       if (error) throw error
 
-      const loaded: ProfileForm = {
-        commander_name:            data.commander_name || '',
-        server_number:             data.server_number?.toString() || '',
-        server_day:                data.server_day?.toString() || '',
-        season:                    data.season ?? 0,
-        hq_level:                  data.hq_level?.toString() || '',
-        spend_style:               data.spend_style || '',
-        playstyle:                 data.playstyle || '',
-        troop_type:                data.troop_type || '',
-        troop_tier:                data.troop_tier || '',
-        rank_bucket:               data.rank_bucket || '',
-        squad_power_tier:          data.squad_power_tier || '',
-        power_bucket:              data.power_bucket || '',
-        kill_tier:                 data.kill_tier || '',
-        update_reminder_frequency: data.update_reminder_frequency || 'weekly',
-        alliance_name:             data.alliance_name || '',
-        alliance_tag:              data.alliance_tag || '',
-        beginner_mode:             data.beginner_mode ?? false,
+      // Compute today's server day from server_start_date if available,
+      // otherwise fall back to stored server_day integer.
+      let serverDayValue = ''
+      if (data.server_start_date) {
+        serverDayValue = computeServerDay(data.server_start_date).toString()
+      } else if (data.server_day) {
+        serverDayValue = data.server_day.toString()
       }
 
+      const loaded: ProfileForm = {
+        commander_name: data.commander_name || '',
+        server_number: data.server_number?.toString() || '',
+        server_day: serverDayValue,
+        season: data.season ?? 0,
+        hq_level: data.hq_level?.toString() || '',
+        spend_style: data.spend_style || '',
+        playstyle: data.playstyle || '',
+        troop_type: data.troop_type || '',
+        troop_tier: data.troop_tier || '',
+        rank_bucket: data.rank_bucket || '',
+        squad_power_tier: data.squad_power_tier || '',
+        power_bucket: data.power_bucket || '',
+        kill_tier: data.kill_tier || '',
+        update_reminder_frequency: data.update_reminder_frequency || 'weekly',
+        alliance_name: data.alliance_name || '',
+        alliance_tag: data.alliance_tag || '',
+        beginner_mode: data.beginner_mode ?? false,
+      }
       setForm(loaded)
       savedSnapshot.current = loaded
       setOriginalName(data.commander_name || '')
@@ -222,32 +252,39 @@ export default function ProfileEditPage() {
 
     setSaveStatus('saving')
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { router.push('/signin'); return }
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      if (!session) {
+        router.push('/signin')
+        return
+      }
 
       const serverDay = form.server_day ? parseInt(form.server_day) : null
 
       const updates: Record<string, unknown> = {
-        commander_name:            form.commander_name,
-        server_number:             form.server_number ? parseInt(form.server_number) : null,
-        server_day:                serverDay,
-        season:                    form.season ?? 0,
-        hq_level:                  form.hq_level ? parseInt(form.hq_level) : null,
-        spend_style:               form.spend_style || null,
-        playstyle:                 form.playstyle || null,
-        troop_type:                form.troop_type || null,
-        troop_tier:                form.troop_tier || null,
-        rank_bucket:               form.rank_bucket || null,
-        squad_power_tier:          form.squad_power_tier || null,
-        power_bucket:              form.power_bucket || null,
-        kill_tier:                 form.kill_tier || null,
+        commander_name: form.commander_name,
+        server_number: form.server_number ? parseInt(form.server_number) : null,
+        server_day: serverDay,
+        season: form.season ?? 0,
+        hq_level: form.hq_level ? parseInt(form.hq_level) : null,
+        spend_style: form.spend_style || null,
+        playstyle: form.playstyle || null,
+        troop_type: form.troop_type || null,
+        troop_tier: form.troop_tier || null,
+        rank_bucket: form.rank_bucket || null,
+        squad_power_tier: form.squad_power_tier || null,
+        power_bucket: form.power_bucket || null,
+        kill_tier: form.kill_tier || null,
         update_reminder_frequency: form.update_reminder_frequency,
-        server_start_date:         serverDay ? calcServerStartDate(serverDay) : null,
-        alliance_name:             form.alliance_name || null,
-        alliance_tag:              form.alliance_tag || null,
-        beginner_mode:             form.beginner_mode,
-        last_profile_update:       new Date().toISOString(),
-        updated_at:                new Date().toISOString(),
+        // Always recompute server_start_date from the entered day so future
+        // loads will show the correct incremented value.
+        server_start_date: serverDay ? calcServerStartDate(serverDay) : null,
+        alliance_name: form.alliance_name || null,
+        alliance_tag: form.alliance_tag || null,
+        beginner_mode: form.beginner_mode,
+        last_profile_update: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       }
 
       const { error } = await supabase
@@ -269,7 +306,7 @@ export default function ProfileEditPage() {
   }
 
   const nameChanged = form.commander_name !== originalName
-  const nameValid   = NAME_REGEX.test(form.commander_name)
+  const nameValid = NAME_REGEX.test(form.commander_name)
 
   if (loading) {
     return (
@@ -284,7 +321,6 @@ export default function ProfileEditPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
-
       {/* Header */}
       <header className="border-b border-zinc-800/80 bg-zinc-950/95 sticky top-0 z-20 backdrop-blur-sm">
         <div className="max-w-2xl mx-auto px-4 h-12 flex items-center justify-between">
@@ -320,7 +356,6 @@ export default function ProfileEditPage() {
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-8 space-y-8 pb-20">
-
         {errorMsg && (
           <div className="bg-red-950/50 border border-red-800 rounded-lg px-4 py-3 text-sm text-red-400">
             {errorMsg}
@@ -330,7 +365,6 @@ export default function ProfileEditPage() {
         {/* ── Identity ── */}
         <section className="space-y-4">
           <SectionHeader label="Identity" />
-
           <Field label="Commander Tag" hint="3–20 chars · letters, numbers, underscores, spaces">
             <div className="relative">
               <input
@@ -354,7 +388,6 @@ export default function ProfileEditPage() {
               )}
             </div>
           </Field>
-
           <div className="grid grid-cols-2 gap-3">
             <Field label="Server Number">
               <input
@@ -365,7 +398,7 @@ export default function ProfileEditPage() {
                 className="input-base"
               />
             </Field>
-            <Field label="Server Day" hint="Tap VIP emblem to find">
+            <Field label="Server Day" hint="Updates automatically · edit to correct">
               <input
                 type="number"
                 value={form.server_day}
@@ -375,7 +408,6 @@ export default function ProfileEditPage() {
               />
             </Field>
           </div>
-
           <Field label="Profile update reminders" hint="Keeps Buddy accurate as you level up">
             <div className="grid grid-cols-3 gap-2">
               {REMINDER_OPTIONS.map(opt => (
@@ -400,7 +432,6 @@ export default function ProfileEditPage() {
         {/* ── Alliance ── */}
         <section className="space-y-4">
           <SectionHeader label="Alliance" />
-
           <div className="grid grid-cols-3 gap-3">
             <div className="col-span-2">
               <Field label="Alliance Name">
@@ -432,7 +463,6 @@ export default function ProfileEditPage() {
         {/* ── Base ── */}
         <section className="space-y-4">
           <SectionHeader label="Base" />
-
           <Field label="Season">
             <div className="flex flex-wrap gap-2">
               {SEASONS.map(s => (
@@ -445,14 +475,14 @@ export default function ProfileEditPage() {
               ))}
             </div>
           </Field>
-
           <Field label="HQ Level">
             <input
               type="number"
               value={form.hq_level}
               onChange={e => set('hq_level', e.target.value)}
               placeholder="e.g. 35"
-              min={1} max={40}
+              min={1}
+              max={40}
               className="input-base mb-2"
             />
             <div className="flex flex-wrap gap-2">
@@ -477,7 +507,6 @@ export default function ProfileEditPage() {
         {/* ── Playstyle ── */}
         <section className="space-y-4">
           <SectionHeader label="Playstyle" />
-
           <Field label="Spend Style">
             <div className="flex flex-wrap gap-2">
               {SPEND_OPTIONS.map(opt => (
@@ -490,7 +519,6 @@ export default function ProfileEditPage() {
               ))}
             </div>
           </Field>
-
           <Field label="Playstyle">
             <div className="grid grid-cols-2 gap-2">
               {PLAYSTYLE_OPTIONS.map(opt => (
@@ -521,14 +549,18 @@ export default function ProfileEditPage() {
                 : 'border-zinc-700 hover:border-zinc-500 bg-zinc-900/40'}
             `}
           >
-            <div className={`
-              relative mt-0.5 flex-shrink-0 w-10 h-5 rounded-full transition-colors duration-200
-              ${form.beginner_mode ? 'bg-amber-500' : 'bg-zinc-600'}
-            `}>
-              <div className={`
-                absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200
-                ${form.beginner_mode ? 'translate-x-5' : 'translate-x-0.5'}
-              `} />
+            <div
+              className={`
+                relative mt-0.5 flex-shrink-0 w-10 h-5 rounded-full transition-colors duration-200
+                ${form.beginner_mode ? 'bg-amber-500' : 'bg-zinc-600'}
+              `}
+            >
+              <div
+                className={`
+                  absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200
+                  ${form.beginner_mode ? 'translate-x-5' : 'translate-x-0.5'}
+                `}
+              />
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-sm font-semibold text-zinc-100">Beginner Mode</div>
@@ -540,7 +572,6 @@ export default function ProfileEditPage() {
         {/* ── Troops ── */}
         <section className="space-y-4">
           <SectionHeader label="Troops" />
-
           <Field label="Squad 1 Troop Type" hint="Your highest-power squad">
             <div className="flex flex-wrap gap-2">
               {TROOP_TYPES.map(opt => (
@@ -553,7 +584,6 @@ export default function ProfileEditPage() {
               ))}
             </div>
           </Field>
-
           <Field label="Troop Tier">
             <div className="flex flex-wrap gap-2">
               {TROOP_TIERS.map(opt => (
@@ -571,7 +601,6 @@ export default function ProfileEditPage() {
         {/* ── Rank & Power ── */}
         <section className="space-y-4">
           <SectionHeader label="Rank & Power" />
-
           <Field label="Server Rank" hint="Rankings → Total Hero Power">
             <div className="flex flex-wrap gap-2">
               {(Object.entries(RANK_BUCKET_LABELS) as [RankBucket, string][]).map(([key, label]) => (
@@ -584,7 +613,6 @@ export default function ProfileEditPage() {
               ))}
             </div>
           </Field>
-
           <Field label="Squad 1 Power" hint="Tap Squad 1 in Battle screen">
             <div className="flex flex-wrap gap-2">
               {(Object.entries(SQUAD_POWER_TIER_LABELS) as [SquadPowerTier, string][]).map(([key, label]) => (
@@ -597,7 +625,6 @@ export default function ProfileEditPage() {
               ))}
             </div>
           </Field>
-
           <Field label="Total Individual Power" hint="Your profile page">
             <div className="flex flex-wrap gap-2">
               {(Object.entries(POWER_BUCKET_LABELS) as [PowerBucket, string][]).map(([key, label]) => (
@@ -610,7 +637,6 @@ export default function ProfileEditPage() {
               ))}
             </div>
           </Field>
-
           <Field label="Kill Tier" hint="Profile → Combat Stats">
             <div className="flex flex-wrap gap-2">
               {(Object.entries(KILL_TIER_LABELS) as [KillTier, string][]).map(([key, label]) => (
@@ -644,10 +670,15 @@ export default function ProfileEditPage() {
                 : 'bg-zinc-700 text-zinc-500'}
             `}
           >
-            {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? '✓ Profile Saved' : isDirty ? 'Save Changes' : 'No Changes'}
+            {saveStatus === 'saving'
+              ? 'Saving...'
+              : saveStatus === 'saved'
+              ? '✓ Profile Saved'
+              : isDirty
+              ? 'Save Changes'
+              : 'No Changes'}
           </button>
         </div>
-
       </main>
 
       <style jsx global>{`
@@ -672,7 +703,7 @@ export default function ProfileEditPage() {
   )
 }
 
-// ── Sub-components ──────────────────────────────────────────────────────────
+// ── Sub-components ────────────────────────────────────────────────────────────
 
 function SectionHeader({ label }: { label: string }) {
   return (
