@@ -70,9 +70,10 @@ interface AnalysisResult {
 
 interface Meta {
   images_analyzed: number;
-  reports_used_today: number;
-  reports_remaining_today: number | string;
+  reports_used_this_period: number;
+  reports_remaining: number | string;
   display_limit: string;
+  resets_on: string;
   tier: string;
 }
 
@@ -91,8 +92,9 @@ interface BattleReportAnalyzerProps {
   isOpen: boolean;
   onClose: () => void;
   userTier: string;
-  reportsUsedToday: number;
-  reportsLimitToday: number;
+  reportsUsedThisPeriod: number;
+  reportsLimitThisPeriod: number;
+  resetsOn: string;
   onReportComplete?: () => void;
 }
 
@@ -229,9 +231,7 @@ function getCardGroups(reportType: string): Record<string, string[]> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SHARE CARD RENDERER — inline HTML for html2canvas
-// Rendered off-screen, captured as PNG, then removed from DOM
-// Same pattern as DS War Room and Commander Card
+// SHARE CARD RENDERER
 // ─────────────────────────────────────────────────────────────────────────────
 
 function buildShareCardHTML(result: AnalysisResult, commanderName: string): string {
@@ -267,7 +267,6 @@ function buildShareCardHTML(result: AnalysisResult, commanderName: string): stri
       color:${card.text};
       overflow:hidden;
     ">
-      <!-- HEADER -->
       <div style="
         background:${card.surface};
         border-bottom:2px solid ${card.gold};
@@ -283,7 +282,6 @@ function buildShareCardHTML(result: AnalysisResult, commanderName: string): stri
         <div style="font-size:22px;">⚔️</div>
       </div>
 
-      <!-- OUTCOME BANNER -->
       <div style="
         padding:14px 20px;
         background:${card.surface};
@@ -310,15 +308,12 @@ function buildShareCardHTML(result: AnalysisResult, commanderName: string): stri
         </div>
       </div>
 
-      <!-- STATS ROW -->
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:${card.border};margin-top:1px;">
-        <!-- Type matchup -->
         <div style="background:${card.bg};padding:10px 14px;">
           <div style="font-size:9px;color:${card.textMuted};text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">Troop Matchup</div>
           <div style="font-size:14px;font-weight:800;color:${matchupColor};">${result.troop_breakdown.type_matchup}</div>
           <div style="font-size:10px;color:${card.textMuted};margin-top:2px;">${result.troop_breakdown.counter_explanation.slice(0, 50)}${result.troop_breakdown.counter_explanation.length > 50 ? '…' : ''}</div>
         </div>
-        <!-- Stats -->
         <div style="background:${card.bg};padding:10px 14px;">
           <div style="font-size:9px;color:${card.textMuted};text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">Key Stats</div>
           ${[['ATK', result.stat_comparison.atk_status], ['HP', result.stat_comparison.hp_status], ['DEF', result.stat_comparison.def_status]].map(([lbl, s]) =>
@@ -328,26 +323,22 @@ function buildShareCardHTML(result: AnalysisResult, commanderName: string): stri
             </div>`
           ).join('')}
         </div>
-        <!-- Rematch -->
         <div style="background:${card.bg};padding:10px 14px;">
           <div style="font-size:9px;color:${card.textMuted};text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">Rematch?</div>
           <div style="font-size:13px;font-weight:800;color:${rematchColor};line-height:1.3;">${result.rematch_verdict.replace('Yes — ', '✓ ').replace('No — ', '✗ ').replace('Not yet — ', '⏳ ').replace('N/A — ', '')}</div>
         </div>
       </div>
 
-      <!-- ROOT CAUSES -->
       <div style="padding:14px 20px;border-bottom:1px solid ${card.border};">
         <div style="font-size:9px;color:${card.textMuted};text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;">🔍 Root Causes</div>
         ${rootCausesHTML || `<div style="color:${card.textMuted};font-size:12px;">See full analysis in app</div>`}
       </div>
 
-      <!-- COACHING -->
       <div style="padding:14px 20px;border-bottom:1px solid ${card.border};">
         <div style="font-size:9px;color:${card.textMuted};text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;">🎯 Top Fixes</div>
         ${coachingHTML || `<div style="color:${card.textMuted};font-size:12px;">See full analysis in app</div>`}
       </div>
 
-      <!-- FOOTER -->
       <div style="
         background:${card.surface};
         border-top:1px solid ${card.border};
@@ -371,8 +362,9 @@ export default function BattleReportAnalyzer({
   isOpen,
   onClose,
   userTier,
-  reportsUsedToday,
-  reportsLimitToday,
+  reportsUsedThisPeriod,
+  reportsLimitThisPeriod,
+  resetsOn,
   onReportComplete,
 }: BattleReportAnalyzerProps) {
   const router = useRouter();
@@ -388,11 +380,9 @@ export default function BattleReportAnalyzer({
   const [error, setError] = useState<string>('');
   const [analyzing, setAnalyzing] = useState(false);
 
-  // ── Share card state ───────────────────────────────────────────────────────
   const [savingCard, setSavingCard] = useState(false);
   const [commanderName, setCommanderName] = useState('');
 
-  // ── History state ──────────────────────────────────────────────────────────
   const [history, setHistory] = useState<HistoryReport[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string>('');
@@ -401,7 +391,7 @@ export default function BattleReportAnalyzer({
   // ── Gate check ─────────────────────────────────────────────────────────────
   const isFree = userTier === 'free';
   const isFounding = userTier === 'founding';
-  const isAtLimit = !isFounding && reportsUsedToday >= reportsLimitToday;
+  const isAtLimit = !isFounding && reportsUsedThisPeriod >= reportsLimitThisPeriod;
   const isLocked = isFree || isAtLimit;
 
   // ── Intake complete check ──────────────────────────────────────────────────
@@ -453,7 +443,6 @@ export default function BattleReportAnalyzer({
     if (activeTab === 'history' && !historyFetched) fetchHistory();
   }, [activeTab, historyFetched, fetchHistory]);
 
-  // ── Report type selection ──────────────────────────────────────────────────
   const handleReportTypeSelect = (val: string) => {
     setIntake(prev => ({ ...prev, report_type: val, tactics_cards: [] }));
   };
@@ -464,7 +453,6 @@ export default function BattleReportAnalyzer({
     });
   };
 
-  // ── File handling ──────────────────────────────────────────────────────────
   const addFiles = useCallback(async (files: File[]) => {
     const remaining = 6 - images.length;
     const toAdd = files.slice(0, remaining);
@@ -485,7 +473,6 @@ export default function BattleReportAnalyzer({
   const handleDragLeave = () => setIsDragging(false);
   const handleDrop = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(false); addFiles(Array.from(e.dataTransfer.files)); };
 
-  // ── Submit ─────────────────────────────────────────────────────────────────
   const handleAnalyze = async () => {
     if (!intakeComplete || images.length === 0) return;
     setAnalyzing(true);
@@ -516,7 +503,6 @@ export default function BattleReportAnalyzer({
     }
   };
 
-  // ── Reset ──────────────────────────────────────────────────────────────────
   const handleReset = () => {
     setStep('upload');
     setImages([]);
@@ -526,7 +512,6 @@ export default function BattleReportAnalyzer({
     setError('');
   };
 
-  // ── Ask Buddy bridge ───────────────────────────────────────────────────────
   const handleAskBuddy = () => {
     if (!result) return;
     const opponentLine = result.opponent_name && result.opponent_name !== 'Unknown'
@@ -537,47 +522,28 @@ export default function BattleReportAnalyzer({
     router.push('/buddy');
   };
 
-  // ── Save share card PNG ────────────────────────────────────────────────────
-  // Same pattern as Desert Storm War Room and Commander Card:
-  // 1. Clone rendered HTML into an off-screen fixed 600px-wide div
-  // 2. Capture with html2canvas
-  // 3. Trigger PNG download
-  // 4. Remove the off-screen div
   const handleSaveCard = async () => {
     if (!result || savingCard) return;
     setSavingCard(true);
     try {
-      // Dynamic import — html2canvas is already a dependency from War Room / Commander Card
       const html2canvas = (await import('html2canvas')).default;
-
-      // Build the card HTML
       const cardHTML = buildShareCardHTML(result, commanderName);
-
-      // Create off-screen container (same pattern as War Room)
       const container = document.createElement('div');
       container.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:600px;z-index:-1;';
       container.innerHTML = cardHTML;
       document.body.appendChild(container);
-
-      // Measure actual height, then capture
       const cardEl = container.firstElementChild as HTMLElement;
       const captureHeight = cardEl.scrollHeight;
       container.style.height = `${captureHeight}px`;
-
       const canvas = await (html2canvas as unknown as (el: HTMLElement, opts: Record<string, unknown>) => Promise<HTMLCanvasElement>)(
         container,
         { backgroundColor: null, scale: 2, useCORS: true, width: 600, height: captureHeight }
       );
-
       document.body.removeChild(container);
-
-      // Build filename
       const opponentSlug = result.opponent_name && result.opponent_name !== 'Unknown'
         ? result.opponent_name.replace(/[^a-zA-Z0-9]/g, '') : 'Battle';
       const outcomeSlug = result.outcome.replace(/[^a-zA-Z]/g, '');
       const filename = `BattleReport-${opponentSlug}-${outcomeSlug}.png`;
-
-      // Trigger download
       const link = document.createElement('a');
       link.download = filename;
       link.href = canvas.toDataURL('image/png');
@@ -591,6 +557,12 @@ export default function BattleReportAnalyzer({
 
   if (!isOpen) return null;
 
+  // ── Quota display helpers ──────────────────────────────────────────────────
+  // Founding = 15/mo hard cap (not unlimited)
+  const headerQuotaLine = isFounding
+    ? `${reportsUsedThisPeriod} of 15 used this month · Founding`
+    : `${reportsLimitThisPeriod - reportsUsedThisPeriod} of ${reportsLimitThisPeriod} remaining this month`;
+
   // ─────────────────────────────────────────────────────────────────────────
   // LOCKED STATE
   // ─────────────────────────────────────────────────────────────────────────
@@ -600,13 +572,13 @@ export default function BattleReportAnalyzer({
         <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-md p-8 text-center">
           <div className="text-4xl mb-4">⚔️</div>
           <div className="inline-block bg-yellow-500/20 border border-yellow-500/50 rounded px-3 py-1 text-yellow-400 text-xs font-bold tracking-wider mb-4">
-            {isFree ? 'PRO FEATURE' : 'DAILY LIMIT REACHED'}
+            {isFree ? 'PRO FEATURE' : 'MONTHLY LIMIT REACHED'}
           </div>
           <h2 className="text-xl font-bold text-white mb-3">Battle Report Analyzer</h2>
           <p className="text-gray-400 text-sm mb-6 leading-relaxed">
             {isFree
               ? 'Upload your battle report screenshots. Get an expert breakdown of exactly why you won or lost — type matchup, morale cascade, decoration gap, EW analysis, and a rematch verdict.'
-              : `You've used all ${reportsLimitToday} analyses today. Resets at midnight UTC.`}
+              : `You've used all ${reportsLimitThisPeriod} analyses this month.${resetsOn ? ` Resets ${resetsOn}.` : ''}`}
           </p>
           {isFree ? (
             <button onClick={() => router.push('/upgrade')} className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 rounded-xl transition-colors">
@@ -614,7 +586,7 @@ export default function BattleReportAnalyzer({
             </button>
           ) : (
             <button onClick={onClose} className="w-full bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 rounded-xl transition-colors">
-              Come Back Tomorrow
+              {resetsOn ? `Come Back ${resetsOn}` : 'Come Back Next Month'}
             </button>
           )}
           <button onClick={onClose} className="mt-3 text-gray-500 text-sm hover:text-gray-300 transition-colors block w-full">Close</button>
@@ -636,9 +608,7 @@ export default function BattleReportAnalyzer({
             <span className="text-2xl">⚔️</span>
             <div>
               <h2 className="text-lg font-bold text-white">Battle Report Analyzer</h2>
-              <p className="text-xs text-gray-400">
-                {isFounding ? 'Unlimited · Founding Member' : `${reportsLimitToday - reportsUsedToday} of ${reportsLimitToday} remaining today`}
-              </p>
+              <p className="text-xs text-gray-400">{headerQuotaLine}</p>
             </div>
           </div>
           <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors text-xl">✕</button>
@@ -991,7 +961,7 @@ export default function BattleReportAnalyzer({
                   <p className="text-gray-300 text-sm">{result.rematch_reasoning}</p>
                 </Section>
 
-                {/* ── ACTIONS — 3 buttons: New / Save Card / Ask Buddy ── */}
+                {/* ── ACTIONS ── */}
                 <div className="flex gap-3 pt-2">
                   <button
                     onClick={handleReset}
@@ -1014,10 +984,12 @@ export default function BattleReportAnalyzer({
                   </button>
                 </div>
 
+                {/* Post-analysis quota line */}
                 <p className="text-center text-xs text-gray-600">
-                  {meta?.reports_remaining_today === 'unlimited'
-                    ? 'Unlimited analyses · Founding Member'
-                    : `${meta?.reports_remaining_today} analyses remaining today`}
+                  {meta
+                    ? `${meta.reports_used_this_period} of ${meta.display_limit} used this billing period`
+                    : headerQuotaLine
+                  }
                 </p>
               </div>
             )}
@@ -1040,3 +1012,4 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     </div>
   );
 }
+

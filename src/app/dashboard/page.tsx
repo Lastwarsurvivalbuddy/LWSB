@@ -49,11 +49,12 @@ interface Profile {
 }
 
 interface BattleReportQuota {
-  used_today: number
+  used_this_period: number
   limit: number
   display_limit: string
   remaining: number | string
   can_analyze: boolean
+  resets_on: string
 }
 
 // Alliance Duel day helper — reset is always 2am UTC
@@ -100,21 +101,18 @@ function troopTierDisplay(tier: string): string {
   return map[tier] ?? tier ?? '—'
 }
 
-function getUTCDateString(): string {
-  return new Date().toISOString().split('T')[0]
-}
-
 export default function Dashboard() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [battleReportOpen, setBattleReportOpen] = useState(false)
   const [battleReportQuota, setBattleReportQuota] = useState<BattleReportQuota>({
-    used_today: 0,
+    used_this_period: 0,
     limit: 0,
     display_limit: '0',
     remaining: 0,
     can_analyze: false,
+    resets_on: '',
   })
   const [isAdmin, setIsAdmin] = useState(false)
   const [affiliateStatus, setAffiliateStatus] = useState<'approved' | 'pending' | 'none'>('none')
@@ -154,33 +152,29 @@ export default function Dashboard() {
           last_checkin_date: streakData?.last_checkin_date ?? null,
         })
 
-        // Load battle report quota
+        // Load battle report quota — use the API route which does correct
+        // monthly billing-period counting (not stale daily_usage reads)
         const tier = data.subscription_tier ?? 'free'
         if (tier !== 'free') {
-          const today = getUTCDateString()
-          const { data: usageData } = await supabase
-            .from('daily_usage')
-            .select('battle_report_count')
-            .eq('user_id', session.user.id)
-            .eq('date', today)
-            .single()
-
-          const used = (usageData as { battle_report_count?: number } | null)?.battle_report_count ?? 0
-          const isFounding = tier === 'founding'
-          const limitMap: Record<string, number> = {
-            pro: 3, elite: 5, alliance: 5, founding: 10,
+          try {
+            const quotaRes = await fetch('/api/battle-report', {
+              headers: { Authorization: `Bearer ${session.access_token}` },
+            })
+            if (quotaRes.ok) {
+              const quotaData = await quotaRes.json()
+              const q = quotaData.quota
+              setBattleReportQuota({
+                used_this_period: q.used_this_period ?? 0,
+                limit: q.limit ?? 0,
+                display_limit: q.display_limit ?? '0',
+                remaining: q.remaining ?? 0,
+                can_analyze: q.can_analyze ?? false,
+                resets_on: q.resets_on ?? '',
+              })
+            }
+          } catch {
+            // Non-fatal — quota display degrades gracefully
           }
-          const limit = limitMap[tier] ?? 0
-          const remaining = isFounding ? 'unlimited' : Math.max(0, limit - used)
-          const canAnalyze = isFounding ? used < 10 : used < limit
-
-          setBattleReportQuota({
-            used_today: used,
-            limit,
-            display_limit: isFounding ? 'Unlimited' : `${limit}/day`,
-            remaining,
-            can_analyze: canAnalyze,
-          })
         }
 
         // Affiliate status check — fire and forget, non-fatal
@@ -213,12 +207,21 @@ export default function Dashboard() {
   }
 
   function handleReportComplete() {
-    setBattleReportQuota((prev: BattleReportQuota) => ({
-      ...prev,
-      used_today: prev.used_today + 1,
-      remaining: typeof prev.remaining === 'number' ? Math.max(0, prev.remaining - 1) : prev.remaining,
-      can_analyze: typeof prev.remaining === 'number' ? prev.remaining - 1 > 0 : true,
-    }))
+    setBattleReportQuota((prev: BattleReportQuota) => {
+      const newUsed = prev.used_this_period + 1
+      const newRemaining = typeof prev.remaining === 'number'
+        ? Math.max(0, prev.remaining - 1)
+        : prev.remaining
+      const canStillAnalyze = typeof newRemaining === 'number'
+        ? newRemaining > 0
+        : true // founding — string 'unlimited' path handled in component
+      return {
+        ...prev,
+        used_this_period: newUsed,
+        remaining: newRemaining,
+        can_analyze: canStillAnalyze,
+      }
+    })
   }
 
   // ─── LOADING ───
@@ -504,7 +507,7 @@ export default function Dashboard() {
                           <span className="text-sm font-bold text-white">Battle Report Analyzer</span>
                           {isFounding && (
                             <span className="text-[10px] font-bold bg-purple-500/20 border border-purple-500/40 text-purple-400 px-1.5 py-0.5 rounded tracking-wider">
-                              UNLIMITED
+                              FOUNDING
                             </span>
                           )}
                         </div>
@@ -524,32 +527,27 @@ export default function Dashboard() {
                   <div className="mt-4 pt-3 border-t border-zinc-800/40">
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="text-[11px] text-zinc-500 font-mono">
-                        {isFounding
-                          ? 'Founding Member — Unlimited'
-                          : `${battleReportQuota.used_today} of ${battleReportQuota.limit} used today`
-                        }
+                        {`${battleReportQuota.used_this_period} of ${battleReportQuota.limit} used this month`}
                       </span>
                       <span className={`text-[11px] font-bold ${battleReportQuota.can_analyze ? 'text-red-400' : 'text-zinc-600'}`}>
                         {battleReportQuota.can_analyze
-                          ? isFounding ? 'Analyze →' : `${battleReportQuota.remaining} left →`
-                          : 'Resets midnight UTC'
+                          ? `${battleReportQuota.remaining} left →`
+                          : battleReportQuota.resets_on ? `Resets ${battleReportQuota.resets_on}` : 'Limit reached'
                         }
                       </span>
                     </div>
-                    {!isFounding && (
-                      <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all ${
-                            battleReportQuota.used_today >= battleReportQuota.limit
-                              ? 'bg-zinc-600'
-                              : 'bg-red-500'
-                          }`}
-                          style={{
-                            width: `${Math.min(100, (battleReportQuota.used_today / Math.max(battleReportQuota.limit, 1)) * 100)}%`
-                          }}
-                        />
-                      </div>
-                    )}
+                    <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${
+                          battleReportQuota.used_this_period >= battleReportQuota.limit
+                            ? 'bg-zinc-600'
+                            : 'bg-red-500'
+                        }`}
+                        style={{
+                          width: `${Math.min(100, (battleReportQuota.used_this_period / Math.max(battleReportQuota.limit, 1)) * 100)}%`
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
               </button>
@@ -577,7 +575,7 @@ export default function Dashboard() {
                       </span>
                     </div>
                     <p className="text-xs text-zinc-500 leading-relaxed">
-                      Build shareable battle plans for your server. Assign roles, write orders, post to alliance chat.
+                      Build shareable battle plans for your alliance/server. Assign roles, write orders, post to alliance chat.
                     </p>
                     <div className="flex items-center gap-2 mt-2 flex-wrap">
                       <span className="text-[10px] text-zinc-500 bg-zinc-800 border border-zinc-700 px-2 py-0.5 rounded-full">
@@ -768,8 +766,9 @@ export default function Dashboard() {
           isOpen={battleReportOpen}
           onClose={() => setBattleReportOpen(false)}
           userTier={subscriptionTier}
-          reportsUsedToday={battleReportQuota.used_today}
-          reportsLimitToday={battleReportQuota.limit}
+          reportsUsedThisPeriod={battleReportQuota.used_this_period}
+          reportsLimitThisPeriod={battleReportQuota.limit}
+          resetsOn={battleReportQuota.resets_on}
           onReportComplete={handleReportComplete}
         />
       </ErrorBoundary>
