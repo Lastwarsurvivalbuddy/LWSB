@@ -19,7 +19,6 @@ function getServerSupabase() {
 // ─────────────────────────────────────────────────────────────
 interface IntakeAnswers {
   report_type: string;
-  squad_type: string;
   tactics_cards: string[];
 }
 
@@ -176,7 +175,7 @@ export async function POST(req: NextRequest) {
     if (images.length > 6) {
       return NextResponse.json({ error: 'Maximum 6 screenshots per analysis' }, { status: 400 });
     }
-    if (!intake?.squad_type || !intake?.report_type) {
+    if (!intake?.report_type) {
       return NextResponse.json({ error: 'Intake answers required' }, { status: 400 });
     }
 
@@ -278,10 +277,9 @@ export async function POST(req: NextRequest) {
 
 Player confirmed:
 - Report type: ${intake.report_type}
-- Their squad type: ${intake.squad_type}
 - Tactics cards active: ${tacticsCardsSummary}
 
-Read ALL screenshots as a set. Screen 1 (Outcome + Power Summary) contains the opponent's name and displayed power — extract these carefully.
+Read ALL screenshots as a set. Determine troop types directly from the per-type damage percentages on Screen 2. Screen 1 contains the opponent's name and displayed power — extract these carefully.
 
 Return ONLY valid JSON matching the schema in your instructions. No markdown, no preamble, no explanation outside the JSON object.`,
     });
@@ -428,7 +426,6 @@ export async function GET(req: NextRequest) {
     });
 
     // ── Quota summary ─────────────────────────────────────────
-    // NOTE: .maybeSingle() — returns null (not error) when no subscription row exists.
     const { data: subData } = await getServerSupabase()
       .from('subscriptions')
       .select('tier, period_start, period_end')

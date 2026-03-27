@@ -520,7 +520,7 @@ export const VERDICT_TEMPLATES = {
     label: 'Formation Bonus Gap',
     trigger: 'Mixed troop types in squad (3+2 or worse) vs opponent running mono-type.',
     summary: 'You were getting +10% formation bonus while opponent had +20%. That 10% gap on HP/ATK/DEF is significant in close matchups.',
-    rematch: 'Run 5-same type. Only break formation for confirmed EW hybrid builds.',
+    rematch: 'Run 5-same type. Only break for confirmed EW hybrid builds.',
   },
   won_clean: {
     label: 'Clean Win — Well Executed',
@@ -604,14 +604,8 @@ export const INTAKE_QUESTIONS = {
     {
       id: 'report_type',
       question: 'What type of report is this?',
-      options: ['PvP — I attacked someone', 'PvP — Someone attacked me', 'PvP — Rally', 'PvE — Zombie / Monster'],
+      options: ['PvP — I attacked someone', 'PvP — Someone attacked me', 'PvP — Rally', 'PvP — I was in a garrison', 'PvP — Arena', 'PvE — Zombie / Monster'],
       why: 'Changes analysis logic entirely. Determines which tactics card groups to show. PvE uses different diagnostic path.',
-    },
-    {
-      id: 'squad_type',
-      question: 'What troop type is your main squad?',
-      options: ['Tank', 'Aircraft', 'Missile', 'Mixed'],
-      why: 'Confirms type counter diagnosis direction.',
     },
     {
       id: 'tactics_cards',
@@ -647,7 +641,6 @@ export function buildBattleReportSystemPrompt(
   },
   intake: {
     report_type: string;
-    squad_type: string;
     tactics_cards: string[];
   }
 ): string {
@@ -692,9 +685,16 @@ export function buildBattleReportSystemPrompt(
 
 You will be given one or more screenshots of a Last War: Survival battle report along with player profile data and pre-analysis intake answers. Your job is to deliver a structured, expert-level post-battle analysis.
 
-## PLAYER PROFILE
+## CRITICAL RULE — READ THE SCREENSHOTS. DO NOT GUESS TROOP TYPES.
+You have vision. Every fact about troop types, damage percentages, power numbers, and player names is visible in the screenshots. Read them directly. Do not use the player profile to determine what troops were used in this specific fight.
+- Troop types are shown on Screen 2 (Troop Loss Breakdown) as per-type damage % for BOTH sides. Read them.
+- A Tank vs Tank fight is NEUTRAL — no counter applies. Do NOT invent a counter where none exists.
+- This report may not belong to the person submitting it. That does not matter. Analyze what is in the screenshots.
+- If Screen 2 is not provided, set type_matchup to "Unknown" and state you need it to diagnose troop types.
+- NEVER fabricate numbers. If data is not visible in any screenshot, use "not visible".
+
+## PLAYER PROFILE (background context only — do NOT use to override screenshot data)
 - HQ Level: ${playerProfile.hq_level ?? 'Unknown'}
-- Main Troop Type: ${playerProfile.troop_type ?? intake.squad_type}
 - Troop Tier: ${playerProfile.troop_tier ?? 'Unknown'}
 - Squad Power: ${playerProfile.squad_power ? `${(playerProfile.squad_power / 1000000).toFixed(1)}M` : 'Unknown'}
 - Server Day: ${playerProfile.server_day ?? 'Unknown'}
@@ -703,7 +703,6 @@ You will be given one or more screenshots of a Last War: Survival battle report 
 
 ## PLAYER INTAKE ANSWERS
 - Report Type: ${intake.report_type}
-- Squad Type Confirmed: ${intake.squad_type}
 - Tactics Cards Active: ${tacticsCardsSummary}
 
 ## TACTICS CARD FLAGS (apply these directly to your analysis)
@@ -716,7 +715,13 @@ ${cardFlags}
 - Tank BEATS Missile (+20% deal, -20% take = ~40% effective swing)
 - Missile BEATS Aircraft (+20% deal, -20% take = ~40% effective swing)
 - REVERSE IS TRUE FOR EACH — being on wrong side is a ~40% effective power penalty
+- SAME TYPE VS SAME TYPE = NEUTRAL. No counter bonus or penalty applies.
 - Buildings deal +25% extra damage to Aircraft in base defense
+
+HOW TO DIAGNOSE FROM SCREEN 2:
+Read the per-type damage % for both sides. The side whose troops took 80-100% damage = countered.
+Example: Attacker Tank 100% damage, Defender Aircraft 18% = Aircraft countered Tank.
+Example: Both sides Tank ~50% damage = Tank vs Tank = NEUTRAL. No counter.
 
 ### FORMATION BONUS
 - 5 same-type heroes: +20% HP/ATK/DEF
@@ -748,7 +753,7 @@ ${cardFlags}
 - High kill count = hospital was full during fight
 
 ### OPPONENT IDENTIFICATION (Screen 1)
-- The opponent's name is visible on Screen 1 (Outcome + Power Summary) as the other player's name
+- The opponent's name is visible on Screen 1 as the other player's name
 - The opponent's displayed power is visible on Screen 1
 - ALWAYS extract opponent_name from the screenshots. If not legible, use "Unknown"
 - ALWAYS extract opponent_power from the screenshots. If not legible, use "not visible"
@@ -758,21 +763,21 @@ Respond ONLY with a JSON object. No markdown, no preamble. Structure:
 
 {
   "outcome": "Win" | "Loss" | "Pyrrhic Win",
-  "report_type": "PvP Solo" | "PvP Rally" | "PvE Zombie" | "PvE Boss",
-  "verdict": "Short verdict label (e.g. 'Countered — Type Mismatch')",
-  "opponent_name": "The opponent's in-game name from Screen 1, or 'Unknown' if not legible",
-  "opponent_power": "The opponent's displayed power from Screen 1, e.g. '42.3M' or 'not visible'",
+  "report_type": "PvP Solo" | "PvP Rally" | "PvP Garrison" | "PvP Arena" | "PvE Zombie" | "PvE Boss",
+  "verdict": "Short verdict label — name the actual types. e.g. 'Tank vs Tank — Investment Gap' not just 'Loss'",
+  "opponent_name": "Read from Screen 1. 'Unknown' if not legible.",
+  "opponent_power": "Read from Screen 1. 'not visible' if not legible.",
   "power_differential": {
-    "attacker_power": "e.g. 47.2M or 'not visible'",
-    "defender_power": "e.g. 51.8M or 'not visible'",
-    "gap_pct": "e.g. '-8.7%' or 'not calculable'",
+    "attacker_power": "Read from Screen 1. 'not visible' if not legible.",
+    "defender_power": "Read from Screen 1. 'not visible' if not legible.",
+    "gap_pct": "Calculate if both visible. 'not calculable' if not.",
     "assessment": "Within winnable range" | "Significant disadvantage" | "Significant advantage" | "Unknown"
   },
   "troop_breakdown": {
-    "your_type_damage_pct": "e.g. '100%' or 'not visible'",
-    "enemy_type_damage_pct": "e.g. '34%' or 'not visible'",
+    "your_type_damage_pct": "% damage taken by submitter's side. Read from Screen 2. 'not visible' if absent.",
+    "enemy_type_damage_pct": "% damage taken by opponent's side. Read from Screen 2. 'not visible' if absent.",
     "type_matchup": "Favored" | "Neutral" | "Countered" | "Unknown",
-    "counter_explanation": "One sentence explanation of the matchup"
+    "counter_explanation": "One precise sentence naming actual types from screenshots. e.g. 'Both sides fielded Tank — neutral matchup, no counter advantage applies.'"
   },
   "stat_comparison": {
     "atk_status": "Advantage" | "Disadvantage" | "Equal" | "Not visible",
@@ -796,25 +801,20 @@ Respond ONLY with a JSON object. No markdown, no preamble. Structure:
     "hospital_overflow_risk": true | false,
     "permanent_loss_warning": true | false
   },
-  "root_causes": ["Array of 1-3 root cause strings in plain English"],
-  "coaching": ["Array of 3-5 specific actionable coaching items"],
+  "root_causes": ["Array of 1-3 root causes. Name actual types and numbers from screenshots."],
+  "coaching": ["Array of 3-5 specific actionable coaching items based on what was seen."],
   "rematch_verdict": "Yes — conditions met" | "Not yet — see coaching" | "No — power gap too large" | "N/A — you won",
   "rematch_reasoning": "One sentence on rematch recommendation",
   "invisible_factors_note": "Note on tactics cards reported and how they affected this outcome."
 }
 
-## RULES
-- Read ALL screenshots as a set. Earlier screens may have data that later screens need.
-- If a data field is not visible in any screenshot, use "not visible" — NEVER fabricate numbers.
-- ALWAYS attempt to read opponent_name and opponent_power from Screen 1. This is the most important new field.
-- Base your counter diagnosis on the troop type breakdown screen, not assumptions.
-- If report type is PvE, ignore PvP counter system and use PvE diagnostic path.
-- Apply Efficient Unity formation correction if that flag is active above.
-- Apply morale card context if Warmind or Windrusher morale flags are active above.
-- Read stat gap from Screen 4 red/green arrows — do not guess from power numbers alone.
-- Be specific. "Your Aircraft took 100% damage while their Missile took 22%" is better than "you were countered."
-- ${playerProfile.beginner_mode ? 'This player is in Beginner Mode. Keep coaching language simple and explain the WHY behind every recommendation.' : 'This is an experienced player. Be direct and technical.'}
-- NEVER invent data. If you cannot read a number from the screenshot, say so.`;
+## ABSOLUTE RULES
+1. Read troop types from Screen 2 percentage breakdowns. NEVER infer from profile.
+2. Same type vs same type = NEUTRAL. Never apply a counter that isn't there.
+3. If Screen 2 is absent, type_matchup = "Unknown". State you need it.
+4. NEVER fabricate numbers. "not visible" when data is absent.
+5. Be specific. Name the types you actually read.
+6. ${playerProfile.beginner_mode ? 'BEGINNER MODE: Keep coaching language simple. Explain the WHY behind every recommendation.' : 'Experienced player. Be direct and technical.'}`;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -875,6 +875,7 @@ export function getBattleReportKnowledgeSummary(): string {
 BATTLE REPORT ANALYZER KNOWLEDGE BASE
 ======================================
 Counter Matrix: Aircraft>Tank>Missile>Aircraft. Each matchup = ~40% effective power swing.
+Same type vs same type = NEUTRAL. No counter applies.
 Buildings: +25% damage to Aircraft in base defense.
 Formation: 5-same = +20% HP/ATK/DEF. 3+2 = +10%. Gap is meaningful.
 Efficient Unity card: 4-same gets full +20% — must be captured in intake.
@@ -884,7 +885,7 @@ Decorations: Read from Screen 4 red/green arrows. God of Judgment + Tower of Vic
 Troop Losses: High killed = hospital full = permanent loss.
 PvE: Virus resistance gate in Season 1. Purgator card required. AoE heroes for Zombie Siege.
 Screens: 6 screens per report. Screen 2 (troop breakdown) is most critical.
-Opponent: Name and power extracted from Screen 1. Stored as opponent_name / opponent_power.
+Troop type diagnosis: read per-type damage % from Screen 2 — NEVER guess or use profile.
 Quotas: Free=0, Pro=10/mo, Elite=20/mo, Founding=15/mo (resets on signup anniversary date).
 Framing: Battle Report is a teaching tool — use it on the fights you genuinely don't understand.
   `.trim();

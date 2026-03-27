@@ -5,7 +5,6 @@ import { supabase } from '@/lib/supabase';
 
 interface IntakeAnswers {
   report_type: string;
-  squad_type: string;
   tactics_cards: string[];
 }
 
@@ -99,11 +98,10 @@ const REPORT_TYPE_OPTIONS = [
   'PvP — I attacked someone',
   'PvP — Someone attacked me',
   'PvP — Rally',
+  'PvP — I was in a garrison',
   'PvP — Arena',
   'PvE — Zombie / Monster',
 ];
-
-const SQUAD_TYPE_OPTIONS = ['Tank', 'Aircraft', 'Missile', 'Mixed'];
 
 const TACTICS_CARDS_PVP: Record<string, string[]> = {
   'Core Cards — Attacker': [
@@ -169,8 +167,6 @@ const card = {
   textMuted: '#8b929f', green: '#22c55e', red: '#ef4444', yellow: '#f59e0b',
 };
 
-// Compresses image to max 1200px wide at 0.82 JPEG quality.
-// Reduces iPhone screenshots from ~3MB to ~150KB — keeps total POST well under Vercel's 4.5MB limit.
 async function compressImage(file: File): Promise<{ base64: string; mediaType: ImageFile['mediaType'] }> {
   return new Promise((resolve) => {
     const img = new Image();
@@ -206,6 +202,7 @@ function getReportTypeShort(reportType: string): string {
   if (reportType.toLowerCase().includes('pve') || reportType.toLowerCase().includes('zombie')) return 'PvE';
   if (reportType.toLowerCase().includes('rally')) return 'Rally';
   if (reportType.toLowerCase().includes('arena')) return 'Arena';
+  if (reportType.toLowerCase().includes('garrison')) return 'Garrison';
   return 'PvP';
 }
 
@@ -244,7 +241,7 @@ export default function BattleReportAnalyzer({
   const [step, setStep] = useState<'upload' | 'intake' | 'analyzing' | 'result'>('upload');
   const [images, setImages] = useState<ImageFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
-  const [intake, setIntake] = useState<IntakeAnswers>({ report_type: '', squad_type: '', tactics_cards: [] });
+  const [intake, setIntake] = useState<IntakeAnswers>({ report_type: '', tactics_cards: [] });
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [meta, setMeta] = useState<Meta | null>(null);
   const [error, setError] = useState<string>('');
@@ -262,17 +259,15 @@ export default function BattleReportAnalyzer({
   const effectiveLimit = isFounding ? FOUNDING_LIMIT : reportsLimitThisPeriod;
   const isAtLimit = reportsUsedThisPeriod >= effectiveLimit;
   const isLocked = isFree || isAtLimit;
-  const intakeComplete = intake.report_type !== '' && intake.squad_type !== '';
+  const intakeComplete = intake.report_type !== '';
   const headerQuotaLine = isFounding
     ? `${reportsUsedThisPeriod} of 15 used this month · Founding Member`
     : `${effectiveLimit - reportsUsedThisPeriod} of ${effectiveLimit} remaining this month`;
 
-  // Load commander name using accessToken prop — no getSession() call
   useEffect(() => {
     async function loadName() {
       if (!accessToken) return;
       try {
-        // Decode user_id from JWT — avoids getSession() which throws on mobile Chrome
         const payload = JSON.parse(atob(accessToken.split('.')[1]));
         const userId = payload?.sub;
         if (!userId) return;
@@ -372,7 +367,7 @@ export default function BattleReportAnalyzer({
   const handleReset = () => {
     setStep('upload');
     setImages([]);
-    setIntake({ report_type: '', squad_type: '', tactics_cards: [] });
+    setIntake({ report_type: '', tactics_cards: [] });
     setResult(null);
     setMeta(null);
     setError('');
@@ -516,7 +511,7 @@ export default function BattleReportAnalyzer({
           <>
             {step === 'upload' && (
               <div className="p-6 space-y-5">
-                <p className="text-gray-300 text-sm leading-relaxed">Upload screenshots of your battle report. More screens = better analysis. Recommended: all 6 tabs in order.</p>
+                <p className="text-gray-300 text-sm leading-relaxed">Upload screenshots from your battle report. <span className="text-yellow-400 font-semibold">One screenshot per tab — crop to just that screen.</span></p>
                 <div ref={dropRef} onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
                   onClick={() => fileInputRef.current?.click()}
                   className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${isDragging ? 'border-yellow-400 bg-yellow-400/5' : 'border-gray-600 hover:border-gray-500 hover:bg-gray-800/50'}`}>
@@ -543,8 +538,14 @@ export default function BattleReportAnalyzer({
                     )}
                   </div>
                 )}
-                <div className="bg-blue-900/20 border border-blue-800/40 rounded-xl p-4 text-xs text-blue-300 leading-relaxed">
-                  <span className="font-semibold">Pro tip:</span> For the most accurate analysis, upload in screen order: Outcome → Troop Breakdown → Hero Skills → Stat Comparison → Gear → Power Up.
+                <div className="bg-blue-900/20 border border-blue-800/40 rounded-xl p-4 text-xs text-blue-300 leading-relaxed space-y-1.5">
+                  <p className="font-semibold text-blue-200 mb-2">Which screens to upload:</p>
+                  <p><span className="text-white font-semibold">Screen 1 — Outcome</span> · Win/loss, power numbers, opponent name. <span className="text-yellow-400">Required.</span></p>
+                  <p><span className="text-white font-semibold">Screen 2 — Troop Breakdown</span> · Tank/Aircraft/Missile % for both sides. <span className="text-yellow-400">Required.</span> This is how Buddy identifies troop types.</p>
+                  <p><span className="text-white font-semibold">Screen 3 — Hero Skills</span> · Skill damage per hero. Needed for EW gap diagnosis.</p>
+                  <p><span className="text-white font-semibold">Screen 4 — Stat Comparison</span> · ATK/HP/DEF arrows. Needed for decoration and gear gap diagnosis.</p>
+                  <p><span className="text-white font-semibold">Screen 5 — Gear</span> · Equipment tier comparison.</p>
+                  <p><span className="text-white font-semibold">Screen 6 — Power Up</span> · Game&apos;s own letter grades.</p>
                 </div>
                 <button onClick={() => setStep('intake')} disabled={images.length === 0}
                   className="w-full bg-yellow-500 hover:bg-yellow-400 disabled:bg-gray-700 disabled:text-gray-500 text-black font-bold py-3 rounded-xl transition-colors">
@@ -556,8 +557,8 @@ export default function BattleReportAnalyzer({
             {step === 'intake' && (
               <div className="p-6 space-y-6">
                 <div>
-                  <p className="text-gray-300 text-sm mb-1 font-medium">Quick setup <span className="text-gray-500">(30 seconds)</span></p>
-                  <p className="text-gray-500 text-xs">These questions capture details that don&apos;t show in screenshots.</p>
+                  <p className="text-gray-300 text-sm mb-1 font-medium">Two quick questions <span className="text-gray-500">(10 seconds)</span></p>
+                  <p className="text-gray-500 text-xs">Everything else gets read directly from your screenshots.</p>
                 </div>
                 {error && <div className="bg-red-900/30 border border-red-700/50 rounded-xl p-4 text-red-300 text-sm">{error}</div>}
                 <div className="space-y-2">
@@ -571,22 +572,11 @@ export default function BattleReportAnalyzer({
                     ))}
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm text-gray-300 font-medium">What&apos;s your main squad&apos;s troop type?</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {SQUAD_TYPE_OPTIONS.map(opt => (
-                      <button key={opt} onClick={() => setIntake(prev => ({ ...prev, squad_type: opt }))}
-                        className={`py-2.5 px-3 rounded-xl text-sm font-medium border transition-colors ${intake.squad_type === opt ? 'border-yellow-400 bg-yellow-400/10 text-yellow-300' : 'border-gray-700 bg-gray-800 text-gray-300 hover:border-gray-600'}`}>
-                        {opt}
-                      </button>
-                    ))}
-                  </div>
-                </div>
                 {intake.report_type !== '' && (
                   <div className="space-y-3">
                     <div>
                       <label className="text-sm text-gray-300 font-medium">Which Tactics Cards were active in your deck?</label>
-                      <p className="text-xs text-gray-500 mt-0.5">Select all that apply — or skip if none.</p>
+                      <p className="text-xs text-gray-500 mt-0.5">These are invisible in screenshots — select all that apply, or skip if none.</p>
                     </div>
                     {Object.entries(getCardGroups(intake.report_type)).map(([groupName, cards]) => (
                       <div key={groupName} className="space-y-1.5">
@@ -606,7 +596,7 @@ export default function BattleReportAnalyzer({
                       </div>
                     ))}
                     <p className="text-xs text-gray-600 italic">
-                      {intake.tactics_cards.length === 0 ? 'Nothing selected — analyzer will note no cards were active.' : `${intake.tactics_cards.length} card${intake.tactics_cards.length > 1 ? 's' : ''} selected`}
+                      {intake.tactics_cards.length === 0 ? 'Nothing selected — Buddy will note no cards were active.' : `${intake.tactics_cards.length} card${intake.tactics_cards.length > 1 ? 's' : ''} selected`}
                     </p>
                   </div>
                 )}
@@ -614,7 +604,7 @@ export default function BattleReportAnalyzer({
                   <button onClick={() => setStep('upload')} className="flex-1 py-3 rounded-xl border border-gray-700 text-gray-300 text-sm font-medium hover:border-gray-600 transition-colors">← Back</button>
                   <button onClick={handleAnalyze} disabled={!intakeComplete}
                     className="flex-[2] bg-yellow-500 hover:bg-yellow-400 disabled:bg-gray-700 disabled:text-gray-500 text-black font-bold py-3 rounded-xl transition-colors">
-                    {intakeComplete ? '⚔️ Analyze Report' : 'Answer all questions'}
+                    {intakeComplete ? '⚔️ Analyze Report' : 'Select report type'}
                   </button>
                 </div>
               </div>
