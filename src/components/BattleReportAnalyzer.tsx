@@ -170,7 +170,7 @@ const REMATCH_COLOR: Record<string, string> = {
   'N/A — you won': 'text-green-400',
 };
 
-// Share card theme — dark with accent colors
+// Share card theme
 const card = {
   bg: '#0d0f14',
   surface: '#161a22',
@@ -183,6 +183,29 @@ const card = {
   red: '#ef4444',
   yellow: '#f59e0b',
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AUTH HELPER
+// getSession() throws DOMException ("The string did not match the expected
+// pattern") when it reads a malformed JWT from localStorage — happens when
+// the stored token was written by a different client instance or is corrupt.
+// This helper catches that and falls back to refreshSession() for a fresh token.
+// ─────────────────────────────────────────────────────────────────────────────
+async function getAccessToken(): Promise<string | null> {
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (!error && session?.access_token) return session.access_token;
+  } catch {
+    // getSession threw — malformed JWT in storage, fall through to refresh
+  }
+  try {
+    const { data: { session }, error } = await supabase.auth.refreshSession();
+    if (!error && session?.access_token) return session.access_token;
+  } catch {
+    // refresh also failed — user needs to sign in again
+  }
+  return null;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPERS
@@ -262,45 +285,19 @@ function buildShareCardHTML(result: AnalysisResult, commanderName: string): stri
     : '';
 
   return `
-    <div style="
-      width:600px;
-      background:${card.bg};
-      font-family:system-ui,-apple-system,sans-serif;
-      color:${card.text};
-      overflow:hidden;
-    ">
-      <div style="
-        background:${card.surface};
-        border-bottom:2px solid ${card.gold};
-        padding:16px 20px;
-        display:flex;
-        align-items:center;
-        justify-content:space-between;
-      ">
+    <div style="width:600px;background:${card.bg};font-family:system-ui,-apple-system,sans-serif;color:${card.text};overflow:hidden;">
+      <div style="background:${card.surface};border-bottom:2px solid ${card.gold};padding:16px 20px;display:flex;align-items:center;justify-content:space-between;">
         <div>
           <div style="font-size:10px;color:${card.goldDim};letter-spacing:0.14em;text-transform:uppercase;margin-bottom:2px;">Battle Report</div>
           <div style="font-size:18px;font-weight:800;color:${card.gold};letter-spacing:0.04em;">LAST WAR: SURVIVAL BUDDY</div>
         </div>
         <div style="font-size:22px;">⚔️</div>
       </div>
-
-      <div style="
-        padding:14px 20px;
-        background:${card.surface};
-        border-bottom:1px solid ${card.border};
-        display:flex;
-        align-items:flex-start;
-        justify-content:space-between;
-        gap:12px;
-      ">
+      <div style="padding:14px 20px;background:${card.surface};border-bottom:1px solid ${card.border};display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
         <div style="flex:1;">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
             <span style="font-size:26px;font-weight:900;color:${outcomeColor};">${result.outcome.toUpperCase()}</span>
-            <span style="
-              font-size:10px;font-weight:700;border:1px solid ${outcomeColor}40;
-              background:${outcomeColor}18;color:${outcomeColor};
-              padding:2px 8px;border-radius:4px;letter-spacing:0.06em;
-            ">${getReportTypeShort(result.report_type)}</span>
+            <span style="font-size:10px;font-weight:700;border:1px solid ${outcomeColor}40;background:${outcomeColor}18;color:${outcomeColor};padding:2px 8px;border-radius:4px;letter-spacing:0.06em;">${getReportTypeShort(result.report_type)}</span>
           </div>
           <div style="font-size:13px;font-weight:700;color:${card.yellow};margin-bottom:4px;">${result.verdict}</div>
           ${opponentLine ? `<div style="font-size:11px;color:${card.textMuted};">${opponentLine}</div>` : ''}
@@ -309,7 +306,6 @@ function buildShareCardHTML(result: AnalysisResult, commanderName: string): stri
           ${commanderName ? `<div style="font-size:10px;color:${card.textMuted};">Commander</div><div style="font-size:13px;font-weight:700;color:${card.gold};">${commanderName}</div>` : ''}
         </div>
       </div>
-
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:${card.border};margin-top:1px;">
         <div style="background:${card.bg};padding:10px 14px;">
           <div style="font-size:9px;color:${card.textMuted};text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">Troop Matchup</div>
@@ -319,10 +315,7 @@ function buildShareCardHTML(result: AnalysisResult, commanderName: string): stri
         <div style="background:${card.bg};padding:10px 14px;">
           <div style="font-size:9px;color:${card.textMuted};text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">Key Stats</div>
           ${[['ATK', result.stat_comparison.atk_status], ['HP', result.stat_comparison.hp_status], ['DEF', result.stat_comparison.def_status]].map(([lbl, s]) =>
-            `<div style="display:flex;justify-content:space-between;margin-bottom:2px;">
-              <span style="font-size:10px;color:${card.textMuted};">${lbl}</span>
-              <span style="font-size:10px;font-weight:700;color:${s === 'Advantage' ? card.green : s === 'Disadvantage' ? card.red : card.yellow};">${s}</span>
-            </div>`
+            `<div style="display:flex;justify-content:space-between;margin-bottom:2px;"><span style="font-size:10px;color:${card.textMuted};">${lbl}</span><span style="font-size:10px;font-weight:700;color:${s === 'Advantage' ? card.green : s === 'Disadvantage' ? card.red : card.yellow};">${s}</span></div>`
           ).join('')}
         </div>
         <div style="background:${card.bg};padding:10px 14px;">
@@ -330,25 +323,15 @@ function buildShareCardHTML(result: AnalysisResult, commanderName: string): stri
           <div style="font-size:13px;font-weight:800;color:${rematchColor};line-height:1.3;">${result.rematch_verdict.replace('Yes — ', '✓ ').replace('No — ', '✗ ').replace('Not yet — ', '⏳ ').replace('N/A — ', '')}</div>
         </div>
       </div>
-
       <div style="padding:14px 20px;border-bottom:1px solid ${card.border};">
         <div style="font-size:9px;color:${card.textMuted};text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;">🔍 Root Causes</div>
         ${rootCausesHTML || `<div style="color:${card.textMuted};font-size:12px;">See full analysis in app</div>`}
       </div>
-
       <div style="padding:14px 20px;border-bottom:1px solid ${card.border};">
         <div style="font-size:9px;color:${card.textMuted};text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;">🎯 Top Fixes</div>
         ${coachingHTML || `<div style="color:${card.textMuted};font-size:12px;">See full analysis in app</div>`}
       </div>
-
-      <div style="
-        background:${card.surface};
-        border-top:1px solid ${card.border};
-        padding:10px 20px;
-        display:flex;
-        align-items:center;
-        justify-content:space-between;
-      ">
+      <div style="background:${card.surface};border-top:1px solid ${card.border};padding:10px 20px;display:flex;align-items:center;justify-content:space-between;">
         <div style="font-size:10px;color:${card.goldDim};font-weight:700;letter-spacing:0.08em;">LastWarSurvivalBuddy.com</div>
         <div style="font-size:10px;color:${card.textMuted};">AI Battle Report Analysis</div>
       </div>
@@ -381,10 +364,8 @@ export default function BattleReportAnalyzer({
   const [meta, setMeta] = useState<Meta | null>(null);
   const [error, setError] = useState<string>('');
   const [analyzing, setAnalyzing] = useState(false);
-
   const [savingCard, setSavingCard] = useState(false);
   const [commanderName, setCommanderName] = useState('');
-
   const [history, setHistory] = useState<HistoryReport[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string>('');
@@ -393,25 +374,21 @@ export default function BattleReportAnalyzer({
   // ── Gate check ─────────────────────────────────────────────────────────────
   const isFree = userTier === 'free';
   const isFounding = userTier === 'founding';
-  // Founding hard cap is 15/mo — never treat as unlimited
   const FOUNDING_LIMIT = 15;
   const effectiveLimit = isFounding ? FOUNDING_LIMIT : reportsLimitThisPeriod;
   const isAtLimit = reportsUsedThisPeriod >= effectiveLimit;
   const isLocked = isFree || isAtLimit;
-
-  // ── Intake complete check ──────────────────────────────────────────────────
   const intakeComplete = intake.report_type !== '' && intake.squad_type !== '';
-
-  // ── Quota display — header line ────────────────────────────────────────────
-  // Founding always shows X of 15, never "unlimited"
   const headerQuotaLine = isFounding
     ? `${reportsUsedThisPeriod} of 15 used this month · Founding Member`
     : `${effectiveLimit - reportsUsedThisPeriod} of ${effectiveLimit} remaining this month`;
 
-  // ── Load commander name once for share card ────────────────────────────────
+  // ── Load commander name ────────────────────────────────────────────────────
   useEffect(() => {
     async function loadName() {
       try {
+        const token = await getAccessToken();
+        if (!token) return;
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
         const { data } = await supabase
@@ -431,9 +408,15 @@ export default function BattleReportAnalyzer({
     setHistoryLoading(true);
     setHistoryError('');
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) throw new Error('Not authenticated');
-      const res = await fetch('/api/battle-report', { headers: { Authorization: `Bearer ${session.access_token}` } });
+      const token = await getAccessToken();
+      if (!token) {
+        await supabase.auth.signOut();
+        router.push('/signin');
+        return;
+      }
+      const res = await fetch('/api/battle-report', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!res.ok) throw new Error('Failed to load history');
       const data = await res.json();
       setHistory(data.reports ?? []);
@@ -443,7 +426,7 @@ export default function BattleReportAnalyzer({
     } finally {
       setHistoryLoading(false);
     }
-  }, [historyFetched]);
+  }, [historyFetched, router]);
 
   const handleReportComplete = useCallback(() => {
     setHistoryFetched(false);
@@ -457,10 +440,10 @@ export default function BattleReportAnalyzer({
   const handleReportTypeSelect = (val: string) => {
     setIntake(prev => ({ ...prev, report_type: val, tactics_cards: [] }));
   };
-  const toggleCard = (card: string) => {
+  const toggleCard = (c: string) => {
     setIntake(prev => {
-      const already = prev.tactics_cards.includes(card);
-      return { ...prev, tactics_cards: already ? prev.tactics_cards.filter(c => c !== card) : [...prev.tactics_cards, card] };
+      const already = prev.tactics_cards.includes(c);
+      return { ...prev, tactics_cards: already ? prev.tactics_cards.filter(x => x !== c) : [...prev.tactics_cards, c] };
     });
   };
 
@@ -479,7 +462,6 @@ export default function BattleReportAnalyzer({
   }, [images.length]);
 
   const removeImage = (id: string) => setImages(prev => prev.filter(img => img.id !== id));
-
   const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); };
   const handleDragLeave = () => setIsDragging(false);
   const handleDrop = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(false); addFiles(Array.from(e.dataTransfer.files)); };
@@ -490,11 +472,17 @@ export default function BattleReportAnalyzer({
     setStep('analyzing');
     setError('');
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) throw new Error('Not authenticated');
+      // getAccessToken catches DOMException from malformed stored JWTs
+      // and falls back to refreshSession() for a fresh token
+      const token = await getAccessToken();
+      if (!token) {
+        await supabase.auth.signOut();
+        router.push('/signin');
+        return;
+      }
       const res = await fetch('/api/battle-report', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ images: images.map(img => ({ base64: img.base64, mediaType: img.mediaType })), intake }),
       });
       const data = await res.json();
@@ -834,7 +822,6 @@ export default function BattleReportAnalyzer({
             {/* ── RESULT ── */}
             {step === 'result' && result && (
               <div className="p-6 space-y-5">
-                {/* Outcome + Verdict */}
                 <div className="bg-gray-800 rounded-2xl p-5 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className={`text-2xl font-black ${OUTCOME_COLOR[result.outcome] ?? 'text-white'}`}>{result.outcome?.toUpperCase()}</span>
@@ -849,7 +836,6 @@ export default function BattleReportAnalyzer({
                   )}
                 </div>
 
-                {/* Power Differential */}
                 {result.power_differential.attacker_power !== 'not visible' && (
                   <Section title="⚡ Power Differential">
                     <div className="grid grid-cols-2 gap-3 text-center">
@@ -863,7 +849,6 @@ export default function BattleReportAnalyzer({
                   </Section>
                 )}
 
-                {/* Troop Breakdown */}
                 <Section title="🪖 Troop Type Matchup">
                   <div className={`text-sm font-bold mb-1 ${MATCHUP_COLOR[result.troop_breakdown.type_matchup] ?? 'text-gray-300'}`}>{result.troop_breakdown.type_matchup}</div>
                   <p className="text-gray-300 text-sm">{result.troop_breakdown.counter_explanation}</p>
@@ -881,7 +866,6 @@ export default function BattleReportAnalyzer({
                   )}
                 </Section>
 
-                {/* Stat Comparison */}
                 <Section title="📊 Stat Comparison">
                   <div className="grid grid-cols-2 gap-2">
                     {([['ATK', result.stat_comparison.atk_status], ['HP', result.stat_comparison.hp_status], ['DEF', result.stat_comparison.def_status], ['Lethality', result.stat_comparison.lethality_status]] as [string, string][]).map(([label, status]) => (
@@ -898,7 +882,6 @@ export default function BattleReportAnalyzer({
                   )}
                 </Section>
 
-                {/* Hero Performance */}
                 <Section title="🦸 Hero Performance">
                   <div className="flex items-center gap-2 mb-1">
                     <span className={`text-sm font-bold ${result.hero_performance.skill_damage_assessment === 'Strong' ? 'text-green-400' : result.hero_performance.skill_damage_assessment === 'Moderate' ? 'text-yellow-400' : result.hero_performance.skill_damage_assessment === 'Weak' ? 'text-red-400' : 'text-gray-400'}`}>
@@ -911,7 +894,6 @@ export default function BattleReportAnalyzer({
                   <p className="text-gray-300 text-sm">{result.hero_performance.notes}</p>
                 </Section>
 
-                {/* Formation */}
                 {result.formation.formation_issue && (
                   <Section title="🔺 Formation Issue">
                     <div className="flex items-center gap-2 mb-1">
@@ -922,7 +904,6 @@ export default function BattleReportAnalyzer({
                   </Section>
                 )}
 
-                {/* Loss Severity */}
                 {result.loss_severity.permanent_loss_warning && (
                   <div className="bg-red-900/30 border border-red-700/50 rounded-xl p-4">
                     <div className="text-red-400 font-bold text-sm mb-1">⚠️ Permanent Loss Warning</div>
@@ -930,7 +911,6 @@ export default function BattleReportAnalyzer({
                   </div>
                 )}
 
-                {/* Root Causes */}
                 <Section title="🔍 Root Causes">
                   <ul className="space-y-2">
                     {result.root_causes.map((cause, i) => (
@@ -941,7 +921,6 @@ export default function BattleReportAnalyzer({
                   </ul>
                 </Section>
 
-                {/* Coaching */}
                 <Section title="🎯 Coaching">
                   <ul className="space-y-3">
                     {result.coaching.map((item, i) => (
@@ -953,43 +932,27 @@ export default function BattleReportAnalyzer({
                   </ul>
                 </Section>
 
-                {/* Invisible Factors */}
                 {result.invisible_factors_note && (
                   <div className="bg-blue-900/20 border border-blue-800/40 rounded-xl p-4 text-xs text-blue-300 leading-relaxed">
                     <span className="font-semibold">Tactics Card / EW Note: </span>{result.invisible_factors_note}
                   </div>
                 )}
 
-                {/* Rematch Verdict */}
                 <Section title="🔁 Rematch?">
                   <div className={`text-base font-bold mb-1 ${REMATCH_COLOR[result.rematch_verdict] ?? 'text-gray-300'}`}>{result.rematch_verdict}</div>
                   <p className="text-gray-300 text-sm">{result.rematch_reasoning}</p>
                 </Section>
 
-                {/* ── ACTIONS ── */}
                 <div className="flex gap-3 pt-2">
-                  <button
-                    onClick={handleReset}
-                    className="flex-1 py-3 rounded-xl border border-gray-700 text-gray-300 text-sm font-medium hover:border-gray-600 transition-colors"
-                  >
-                    New
-                  </button>
-                  <button
-                    onClick={handleSaveCard}
-                    disabled={savingCard}
-                    className="flex-1 py-3 rounded-xl border border-amber-600/60 bg-amber-600/10 text-amber-400 text-sm font-medium hover:bg-amber-600/20 transition-colors disabled:opacity-50"
-                  >
+                  <button onClick={handleReset} className="flex-1 py-3 rounded-xl border border-gray-700 text-gray-300 text-sm font-medium hover:border-gray-600 transition-colors">New</button>
+                  <button onClick={handleSaveCard} disabled={savingCard} className="flex-1 py-3 rounded-xl border border-amber-600/60 bg-amber-600/10 text-amber-400 text-sm font-medium hover:bg-amber-600/20 transition-colors disabled:opacity-50">
                     {savingCard ? 'Saving…' : '📸 Save Card'}
                   </button>
-                  <button
-                    onClick={handleAskBuddy}
-                    className="flex-[2] bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 rounded-xl transition-colors text-sm"
-                  >
+                  <button onClick={handleAskBuddy} className="flex-[2] bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 rounded-xl transition-colors text-sm">
                     Ask Buddy More →
                   </button>
                 </div>
 
-                {/* Post-analysis quota line */}
                 <p className="text-center text-xs text-gray-600">
                   {meta
                     ? isFounding
