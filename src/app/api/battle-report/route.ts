@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 import '@/lib/env';
+
+// Create a server-side Supabase client directly — never use the shared
+// @/lib/supabase export in API routes. That export guards against window
+// being undefined and returns null on the server, breaking all auth calls.
 import { buildBattleReportSystemPrompt, BATTLE_REPORT_QUOTAS } from '@/lib/lwtBattleReportData';
+
+function getServerSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 // ─────────────────────────────────────────────────────────────
 // TYPES
@@ -150,7 +161,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const { data: { user }, error: authError } = await getServerSupabase().auth.getUser(token);
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -172,7 +183,7 @@ export async function POST(req: NextRequest) {
     // ── 3. Subscription tier + billing period ─────────────────
     // NOTE: .maybeSingle() instead of .single() — returns null (not error) when no row exists.
     // A user with no subscription row is treated as free tier.
-    const { data: subData } = await supabase
+    const { data: subData } = await getServerSupabase()
       .from('subscriptions')
       .select('tier, period_start, period_end')
       .eq('user_id', user.id)
@@ -196,7 +207,7 @@ export async function POST(req: NextRequest) {
     );
 
     // Count reports submitted within the current billing period
-    const { count: periodCount, error: countError } = await supabase
+    const { count: periodCount, error: countError } = await getServerSupabase()
       .from('battle_reports')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id)
@@ -224,7 +235,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ── 5. Load player profile ────────────────────────────────
-    const { data: profileData } = await supabase
+    const { data: profileData } = await getServerSupabase()
       .from('commander_profile')
       .select('hq_level, troop_type, troop_tier, squad_power, server_day, spend_style, hero_power, beginner_mode')
       .eq('id', user.id)
@@ -332,7 +343,7 @@ Return ONLY valid JSON matching the schema in your instructions. No markdown, no
     const opponentName  = (analysis.opponent_name  as string) ?? 'Unknown';
     const opponentPower = (analysis.opponent_power as string) ?? 'not visible';
 
-    await supabase
+    await getServerSupabase()
       .from('battle_reports')
       .insert({
         user_id:     user.id,
@@ -378,12 +389,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const { data: { user }, error: authError } = await getServerSupabase().auth.getUser(token);
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: reports, error } = await supabase
+    const { data: reports, error } = await getServerSupabase()
       .from('battle_reports')
       .select('id, created_at, outcome, report_type, verdict, images_count, intake_data')
       .eq('user_id', user.id)
@@ -418,7 +429,7 @@ export async function GET(req: NextRequest) {
 
     // ── Quota summary ─────────────────────────────────────────
     // NOTE: .maybeSingle() — returns null (not error) when no subscription row exists.
-    const { data: subData } = await supabase
+    const { data: subData } = await getServerSupabase()
       .from('subscriptions')
       .select('tier, period_start, period_end')
       .eq('user_id', user.id)
@@ -431,7 +442,7 @@ export async function GET(req: NextRequest) {
       user.created_at
     );
 
-    const { count: periodCount } = await supabase
+    const { count: periodCount } = await getServerSupabase()
       .from('battle_reports')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id)
