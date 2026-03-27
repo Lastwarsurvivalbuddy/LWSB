@@ -106,6 +106,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [battleReportOpen, setBattleReportOpen] = useState(false)
+  const [accessToken, setAccessToken] = useState<string>('')
   const [battleReportQuota, setBattleReportQuota] = useState<BattleReportQuota>({
     used_this_period: 0,
     limit: 0,
@@ -124,6 +125,10 @@ export default function Dashboard() {
       try {
         const { data: { session } } = await supabase.auth.getSession()
         if (!session) { router.push('/signin'); return }
+
+        // Store access token — passed to BattleReportAnalyzer to avoid
+        // getSession() calls inside the component (throws on mobile Chrome)
+        setAccessToken(session.access_token)
 
         // Admin check — UUID only, no PII
         const adminUserId = process.env.NEXT_PUBLIC_ADMIN_USER_ID
@@ -152,8 +157,7 @@ export default function Dashboard() {
           last_checkin_date: streakData?.last_checkin_date ?? null,
         })
 
-        // Load battle report quota — use the API route which does correct
-        // monthly billing-period counting (not stale daily_usage reads)
+        // Load battle report quota
         const tier = data.subscription_tier ?? 'free'
         if (tier !== 'free') {
           try {
@@ -177,7 +181,7 @@ export default function Dashboard() {
           }
         }
 
-        // Affiliate status check — fire and forget, non-fatal
+        // Affiliate status check
         try {
           const affiliateRes = await fetch('/api/affiliate/dashboard', {
             headers: { Authorization: `Bearer ${session.access_token}` },
@@ -214,7 +218,7 @@ export default function Dashboard() {
         : prev.remaining
       const canStillAnalyze = typeof newRemaining === 'number'
         ? newRemaining > 0
-        : true // founding — string 'unlimited' path handled in component
+        : true
       return {
         ...prev,
         used_this_period: newUsed,
@@ -277,7 +281,6 @@ export default function Dashboard() {
     },
   ]
 
-  // ─── DASHBOARD ───
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
 
@@ -328,7 +331,7 @@ export default function Dashboard() {
               <span>{streak}</span>
             </div>
 
-            {/* How to Use — ? icon */}
+            {/* How to Use */}
             <button
               onClick={() => router.push('/how-to')}
               className="text-zinc-500 hover:text-zinc-300 transition-colors"
@@ -341,7 +344,7 @@ export default function Dashboard() {
               </svg>
             </button>
 
-            {/* Mission Control — Boyd only (UUID match, no PII) */}
+            {/* Mission Control — Boyd only */}
             {isAdmin && (
               <button
                 onClick={() => router.push('/admin')}
@@ -527,7 +530,9 @@ export default function Dashboard() {
                   <div className="mt-4 pt-3 border-t border-zinc-800/40">
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="text-[11px] text-zinc-500 font-mono">
-                        {`${battleReportQuota.used_this_period} of ${battleReportQuota.limit} used this month`}
+                        {isFounding
+                          ? `${battleReportQuota.used_this_period} of 15 used this month`
+                          : `${battleReportQuota.used_this_period} of ${battleReportQuota.limit} used this month`}
                       </span>
                       <span className={`text-[11px] font-bold ${battleReportQuota.can_analyze ? 'text-red-400' : 'text-zinc-600'}`}>
                         {battleReportQuota.can_analyze
@@ -578,15 +583,9 @@ export default function Dashboard() {
                       Build shareable battle plans for your alliance/server. Assign roles, write orders, post to alliance chat.
                     </p>
                     <div className="flex items-center gap-2 mt-2 flex-wrap">
-                      <span className="text-[10px] text-zinc-500 bg-zinc-800 border border-zinc-700 px-2 py-0.5 rounded-full">
-                        🏜️ Desert Storm
-                      </span>
-                      <span className="text-[10px] text-zinc-500 bg-zinc-800 border border-zinc-700 px-2 py-0.5 rounded-full">
-                        ⚔️ Warzone Duel
-                      </span>
-                      <span className="text-[10px] text-zinc-500 bg-zinc-800 border border-zinc-700 px-2 py-0.5 rounded-full">
-                        ⚡ Canyon Storm
-                      </span>
+                      <span className="text-[10px] text-zinc-500 bg-zinc-800 border border-zinc-700 px-2 py-0.5 rounded-full">🏜️ Desert Storm</span>
+                      <span className="text-[10px] text-zinc-500 bg-zinc-800 border border-zinc-700 px-2 py-0.5 rounded-full">⚔️ Warzone Duel</span>
+                      <span className="text-[10px] text-zinc-500 bg-zinc-800 border border-zinc-700 px-2 py-0.5 rounded-full">⚡ Canyon Storm</span>
                     </div>
                   </div>
                 </div>
@@ -621,7 +620,6 @@ export default function Dashboard() {
           </ErrorBoundary>
         </section>
 
-        {/* Divider */}
         <div className="my-6 h-px bg-zinc-800" />
 
         {/* ── Commander Profile Snapshot ── */}
@@ -670,7 +668,6 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Stats grid */}
             <div className="grid grid-cols-3 gap-3">
               {statsGrid.map(({ label, value }) => (
                 <div key={label} className="bg-zinc-950/50 rounded-lg p-2.5">
@@ -680,7 +677,6 @@ export default function Dashboard() {
               ))}
             </div>
 
-            {/* Footer — Commander Card only */}
             <div className="pt-1 border-t border-zinc-800 flex items-center">
               <button
                 onClick={() => router.push('/card')}
@@ -698,20 +694,13 @@ export default function Dashboard() {
 
           {/* ── Quick links below card ── */}
           <div className="mt-3 flex items-center gap-5 flex-wrap px-1">
-            <button
-              onClick={() => router.push('/profile/edit')}
-              className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1"
-            >
+            <button onClick={() => router.push('/profile/edit')} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1">
               <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
-                <path d="M8.5 1.5l2 2-7 7H1.5v-2l7-7z"
-                  stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M8.5 1.5l2 2-7 7H1.5v-2l7-7z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
               Edit profile
             </button>
-            <button
-              onClick={() => router.push('/how-to')}
-              className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1"
-            >
+            <button onClick={() => router.push('/how-to')} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1">
               <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
                 <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.2"/>
                 <path d="M5 5c0-.55.45-1 1-1s1 .45 1 1c0 .42-.27.78-.67.92V8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
@@ -719,35 +708,23 @@ export default function Dashboard() {
               </svg>
               How to use
             </button>
-            <button
-              onClick={() => router.push('/contact')}
-              className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1"
-            >
+            <button onClick={() => router.push('/contact')} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1">
               <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
-                <path d="M1 2.5h10a.5.5 0 01.5.5v6a.5.5 0 01-.5.5H1a.5.5 0 01-.5-.5V3a.5.5 0 01.5-.5z"
-                  stroke="currentColor" strokeWidth="1.2" />
+                <path d="M1 2.5h10a.5.5 0 01.5.5v6a.5.5 0 01-.5.5H1a.5.5 0 01-.5-.5V3a.5.5 0 01.5-.5z" stroke="currentColor" strokeWidth="1.2" />
                 <path d="M1 3l5 4 5-4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
               </svg>
               Contact
             </button>
-            {/* Affiliate link — contextual on status */}
             {affiliateStatus === 'approved' && (
-              <button
-                onClick={() => router.push('/affiliate/dashboard')}
-                className="text-xs text-green-700 hover:text-green-500 transition-colors flex items-center gap-1"
-              >
+              <button onClick={() => router.push('/affiliate/dashboard')} className="text-xs text-green-700 hover:text-green-500 transition-colors flex items-center gap-1">
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
-                  <path d="M6 1l1.5 3 3.5.5-2.5 2.5.5 3.5L6 9l-3 1.5.5-3.5L1 4.5 4.5 4z"
-                    stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+                  <path d="M6 1l1.5 3 3.5.5-2.5 2.5.5 3.5L6 9l-3 1.5.5-3.5L1 4.5 4.5 4z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
                 </svg>
                 Affiliate Dashboard
               </button>
             )}
             {affiliateStatus === 'none' && (
-              <button
-                onClick={() => router.push('/affiliate')}
-                className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors flex items-center gap-1"
-              >
+              <button onClick={() => router.push('/affiliate')} className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors flex items-center gap-1">
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
                   <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.2"/>
                   <path d="M6 4v4M4 6h4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
@@ -755,7 +732,6 @@ export default function Dashboard() {
                 Become an Affiliate
               </button>
             )}
-            {/* pending: silent */}
           </div>
         </section>
       </main>
@@ -769,6 +745,7 @@ export default function Dashboard() {
           reportsUsedThisPeriod={battleReportQuota.used_this_period}
           reportsLimitThisPeriod={battleReportQuota.limit}
           resetsOn={battleReportQuota.resets_on}
+          accessToken={accessToken}
           onReportComplete={handleReportComplete}
         />
       </ErrorBoundary>
@@ -777,18 +754,10 @@ export default function Dashboard() {
       <div className="fixed bottom-6 right-4 z-30">
         <button
           onClick={() => router.push('/buddy')}
-          className="
-            flex items-center gap-2.5
-            bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm
-            px-5 py-3 rounded-full shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50
-            transition-all duration-200 active:scale-95
-          "
+          className="flex items-center gap-2.5 bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm px-5 py-3 rounded-full shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 transition-all duration-200 active:scale-95"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16">
-            <path
-              d="M14 8c0 3.314-2.686 6-6 6a5.97 5.97 0 01-3.2-.928L2 14l.928-2.8A5.97 5.97 0 012 8c0-3.314 2.686-6 6-6s6 2.686 6 6z"
-              stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"
-            />
+            <path d="M14 8c0 3.314-2.686 6-6 6a5.97 5.97 0 01-3.2-.928L2 14l.928-2.8A5.97 5.97 0 012 8c0-3.314 2.686-6 6-6s6 2.686 6 6z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           Ask Buddy
         </button>
