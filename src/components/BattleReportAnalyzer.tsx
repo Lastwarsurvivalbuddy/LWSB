@@ -169,15 +169,25 @@ const card = {
   textMuted: '#8b929f', green: '#22c55e', red: '#ef4444', yellow: '#f59e0b',
 };
 
-async function fileToBase64(file: File): Promise<{ base64: string; mediaType: ImageFile['mediaType'] }> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      resolve({ base64: result.split(',')[1], mediaType: file.type as ImageFile['mediaType'] });
+// Compresses image to max 1200px wide at 0.82 JPEG quality.
+// Reduces iPhone screenshots from ~3MB to ~150KB — keeps total POST well under Vercel's 4.5MB limit.
+async function compressImage(file: File): Promise<{ base64: string; mediaType: ImageFile['mediaType'] }> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const MAX = 1200;
+      const ratio = Math.min(MAX / img.width, MAX / img.height, 1);
+      canvas.width = Math.round(img.width * ratio);
+      canvas.height = Math.round(img.height * ratio);
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+      resolve({ base64: dataUrl.split(',')[1], mediaType: 'image/jpeg' });
     };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
+    img.src = url;
   });
 }
 
@@ -318,7 +328,7 @@ export default function BattleReportAnalyzer({
     const newImages: ImageFile[] = await Promise.all(
       valid.map(async (file) => {
         const preview = URL.createObjectURL(file);
-        const { base64, mediaType } = await fileToBase64(file);
+        const { base64, mediaType } = await compressImage(file);
         return { id: `${Date.now()}-${Math.random()}`, file, preview, base64, mediaType };
       })
     );
