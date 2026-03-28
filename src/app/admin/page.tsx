@@ -87,6 +87,17 @@ interface UserRow {
   referredBy: string | null
 }
 
+interface NewsItem {
+  id: string
+  created_at: string
+  badge: string
+  message: string
+  link: string | null
+  active: boolean
+}
+
+const BADGE_OPTIONS = ['KB UPDATE', 'NEW', 'FIXED', 'EVENT']
+
 const PAYOUT_METHOD_LABELS: Record<string, string> = {
   paypal: 'PayPal',
   wise: 'Wise',
@@ -101,7 +112,7 @@ export default function MissionControlPage() {
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<StatsData | null>(null)
   const [statsError, setStatsError] = useState('')
-  const [activeTab, setActiveTab] = useState<'overview' | 'submissions' | 'affiliates' | 'users'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'submissions' | 'affiliates' | 'users' | 'news'>('overview')
   const [token, setToken] = useState<string | null>(null)
 
   // Submissions state
@@ -133,6 +144,16 @@ export default function MissionControlPage() {
   const [usersTierFilter, setUsersTierFilter] = useState('all')
   const [usersFlaggedOnly, setUsersFlaggedOnly] = useState(false)
   const [usersSort, setUsersSort] = useState<{ col: keyof UserRow; dir: 'asc' | 'desc' }>({ col: 'joined', dir: 'desc' })
+
+  // News state
+  const [newsItems, setNewsItems] = useState<NewsItem[]>([])
+  const [newsLoading, setNewsLoading] = useState(false)
+  const [newsBadge, setNewsBadge] = useState('KB UPDATE')
+  const [newsMessage, setNewsMessage] = useState('')
+  const [newsLink, setNewsLink] = useState('')
+  const [newsActing, setNewsActing] = useState(false)
+  const [newsDeleteActing, setNewsDeleteActing] = useState<string | null>(null)
+  const [newsToggleActing, setNewsToggleActing] = useState<string | null>(null)
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -184,7 +205,6 @@ export default function MissionControlPage() {
       setPayoutInputs(inputs)
       setNotesInputs(notes)
 
-      // Batch-fetch payout data for all approved affiliates (powers the ledger)
       const approved = list.filter(a => a.status === 'approved')
       if (approved.length > 0) {
         setLedgerLoading(true)
@@ -249,6 +269,16 @@ export default function MissionControlPage() {
     setUsersLoading(false)
   }, [])
 
+  const fetchNews = useCallback(async () => {
+    setNewsLoading(true)
+    const res = await fetch('/api/site-news')
+    if (res.ok) {
+      const data = await res.json()
+      setNewsItems(data.news ?? [])
+    }
+    setNewsLoading(false)
+  }, [])
+
   useEffect(() => {
     if (authorized && token) fetchStats(token)
   }, [authorized, token, fetchStats])
@@ -260,6 +290,10 @@ export default function MissionControlPage() {
   useEffect(() => {
     if (authorized && token && activeTab === 'users') fetchUsers(token, 0, usersTierFilter, usersFlaggedOnly)
   }, [authorized, token, activeTab]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (authorized && activeTab === 'news') fetchNews()
+  }, [authorized, activeTab, fetchNews])
 
   async function handleAction(id: string, action: 'approved' | 'rejected') {
     if (!token) return
@@ -347,6 +381,52 @@ export default function MissionControlPage() {
     }
   }
 
+  async function handleNewsPost() {
+    if (!token || !newsMessage.trim()) return
+    setNewsActing(true)
+    const res = await fetch('/api/site-news', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        badge: newsBadge,
+        message: newsMessage.trim(),
+        link: newsLink.trim() || null,
+        active: true,
+      }),
+    })
+    if (res.ok) {
+      setNewsMessage('')
+      setNewsLink('')
+      setNewsBadge('KB UPDATE')
+      await fetchNews()
+    }
+    setNewsActing(false)
+  }
+
+  async function handleNewsToggle(item: NewsItem) {
+    if (!token) return
+    setNewsToggleActing(item.id)
+    await fetch('/api/site-news', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ id: item.id, active: !item.active }),
+    })
+    setNewsItems(prev => prev.map(n => n.id === item.id ? { ...n, active: !n.active } : n))
+    setNewsToggleActing(null)
+  }
+
+  async function handleNewsDelete(id: string) {
+    if (!token) return
+    setNewsDeleteActing(id)
+    await fetch('/api/site-news', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ id }),
+    })
+    setNewsItems(prev => prev.filter(n => n.id !== id))
+    setNewsDeleteActing(null)
+  }
+
   function sortedUsers() {
     return [...users].sort((a, b) => {
       const av = a[usersSort.col] ?? ''
@@ -432,6 +512,16 @@ export default function MissionControlPage() {
     return 'text-zinc-500 bg-zinc-800/50 border-zinc-700'
   }
 
+  const newsBadgeStyle = (badge: string) => {
+    const map: Record<string, string> = {
+      'KB UPDATE': 'bg-amber-500/15 border-amber-500/40 text-amber-400',
+      'NEW':       'bg-sky-500/15 border-sky-500/40 text-sky-400',
+      'FIXED':     'bg-green-500/15 border-green-500/40 text-green-400',
+      'EVENT':     'bg-purple-500/15 border-purple-500/40 text-purple-400',
+    }
+    return map[badge] ?? 'bg-zinc-700/40 border-zinc-600 text-zinc-400'
+  }
+
   const SortIcon = ({ col }: { col: keyof UserRow }) => (
     <span className="ml-0.5 text-zinc-600">
       {usersSort.col === col ? (usersSort.dir === 'asc' ? '↑' : '↓') : '↕'}
@@ -465,7 +555,7 @@ export default function MissionControlPage() {
       {/* ── Tab bar ── */}
       <div className="border-b border-zinc-800 bg-zinc-950">
         <div className="max-w-5xl mx-auto px-4 flex gap-0">
-          {(['overview', 'submissions', 'affiliates', 'users'] as const).map(tab => (
+          {(['overview', 'submissions', 'affiliates', 'users', 'news'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -479,6 +569,7 @@ export default function MissionControlPage() {
               {tab === 'submissions' && `Submissions (${pending.length})`}
               {tab === 'affiliates' && `Affiliates${pendingAffiliates > 0 ? ` (${pendingAffiliates})` : ''}`}
               {tab === 'users' && `Users${usersTotal > 0 ? ` (${usersTotal})` : ''}`}
+              {tab === 'news' && `News${newsItems.length > 0 ? ` (${newsItems.filter(n => n.active).length})` : ''}`}
             </button>
           ))}
         </div>
@@ -788,7 +879,6 @@ export default function MissionControlPage() {
                         </tr>
                       ))}
                     </tbody>
-                    {/* Totals row */}
                     {!ledgerLoading && ledgerRows.some(r => r.owed !== null) && (
                       <tfoot>
                         <tr className="border-t-2 border-zinc-700 bg-zinc-900/60">
@@ -852,8 +942,6 @@ export default function MissionControlPage() {
 
               return (
                 <div key={aff.id} className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-5 mb-4">
-
-                  {/* Header */}
                   <div className="flex items-start justify-between gap-3 mb-3 flex-wrap">
                     <div>
                       <div className="flex items-center gap-2 mb-1">
@@ -875,13 +963,11 @@ export default function MissionControlPage() {
                     </span>
                   </div>
 
-                  {/* Promo method */}
                   <div className="bg-zinc-950/60 rounded-xl p-3 mb-4">
                     <p className="text-[10px] text-zinc-600 font-mono uppercase tracking-wide mb-1">How they&apos;ll promote</p>
                     <p className="text-sm text-zinc-300 leading-relaxed">{aff.promo_method}</p>
                   </div>
 
-                  {/* Approved */}
                   {aff.status === 'approved' && (
                     <>
                       <div className="flex items-center gap-3 mb-3 bg-zinc-950/40 rounded-xl p-3">
@@ -916,7 +1002,6 @@ export default function MissionControlPage() {
 
                           {pd && payoutDataLoading !== aff.id && (
                             <>
-                              {/* ── Send payment to ── */}
                               <div className="mb-4">
                                 <p className="text-[10px] text-zinc-600 font-mono uppercase tracking-wide mb-2">Send Payment To</p>
                                 {aff.payout_method ? (
@@ -937,7 +1022,6 @@ export default function MissionControlPage() {
                                 )}
                               </div>
 
-                              {/* Balance summary */}
                               <div className="grid grid-cols-3 gap-3 mb-4">
                                 {[
                                   { label: 'Total Earned', value: `$${pd.totalEarned.toFixed(2)}`, color: 'text-zinc-300' },
@@ -958,7 +1042,6 @@ export default function MissionControlPage() {
                                 </p>
                               )}
 
-                              {/* Mark paid form */}
                               <div className="border-t border-zinc-800 pt-3 mb-3">
                                 <p className="text-[11px] text-zinc-500 font-mono uppercase tracking-wide mb-2">Mark as Paid</p>
                                 <div className="grid grid-cols-3 gap-2 mb-2">
@@ -1029,7 +1112,6 @@ export default function MissionControlPage() {
                     </>
                   )}
 
-                  {/* Pending */}
                   {aff.status === 'pending' && (
                     <div className="border-t border-zinc-800 pt-4 mt-2">
                       <div className="grid grid-cols-2 gap-3 mb-3">
@@ -1257,6 +1339,127 @@ export default function MissionControlPage() {
                 )}
               </div>
             )}
+          </>
+        )}
+
+        {/* ── NEWS TAB ── */}
+        {activeTab === 'news' && (
+          <>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-base font-bold text-amber-400">📢 Site News</h2>
+                <p className="text-xs text-zinc-500 mt-0.5">Manage what players see on the dashboard</p>
+              </div>
+              <button
+                onClick={fetchNews}
+                className="text-xs font-bold px-3 py-1.5 rounded-lg border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-colors"
+              >
+                ↻ Refresh
+              </button>
+            </div>
+
+            {/* ── Compose form ── */}
+            <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-5 mb-6">
+              <p className="text-xs font-bold text-zinc-300 mb-4">Post new item</p>
+
+              {/* Badge picker */}
+              <div className="flex gap-2 mb-4 flex-wrap">
+                {BADGE_OPTIONS.map(b => (
+                  <button
+                    key={b}
+                    onClick={() => setNewsBadge(b)}
+                    className={`text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded border transition-colors ${
+                      newsBadge === b
+                        ? newsBadgeStyle(b)
+                        : 'border-zinc-700 text-zinc-500 hover:text-zinc-300'
+                    }`}
+                  >
+                    {b}
+                  </button>
+                ))}
+              </div>
+
+              <textarea
+                value={newsMessage}
+                onChange={e => setNewsMessage(e.target.value)}
+                placeholder="e.g. Easter event pack data loaded into Buddy's knowledge base"
+                rows={3}
+                className="w-full bg-zinc-950 border border-zinc-700 rounded-xl text-white text-sm p-3 mb-3 resize-none focus:outline-none focus:border-amber-500/60 placeholder:text-zinc-600"
+              />
+
+              <input
+                type="text"
+                value={newsLink}
+                onChange={e => setNewsLink(e.target.value)}
+                placeholder="Link (optional) — e.g. /war-room or /upgrade"
+                className="w-full bg-zinc-950 border border-zinc-700 rounded-xl text-white text-sm px-3 py-2 mb-4 focus:outline-none focus:border-amber-500/60 placeholder:text-zinc-600"
+              />
+
+              <button
+                onClick={handleNewsPost}
+                disabled={newsActing || !newsMessage.trim()}
+                className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm transition-colors disabled:opacity-40"
+              >
+                {newsActing ? '…' : '📢 Post to Dashboard'}
+              </button>
+            </div>
+
+            {/* ── Existing items ── */}
+            {newsLoading && (
+              <div className="flex items-center justify-center py-16">
+                <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+
+            {!newsLoading && newsItems.length === 0 && (
+              <div className="text-center py-16">
+                <p className="text-zinc-600 text-sm">No news items yet. Post the first one above.</p>
+              </div>
+            )}
+
+            {!newsLoading && newsItems.map(item => (
+              <div
+                key={item.id}
+                className={`flex items-start gap-3 bg-zinc-900/50 border rounded-xl px-4 py-3 mb-3 transition-colors ${
+                  item.active ? 'border-zinc-800' : 'border-zinc-800/40 opacity-50'
+                }`}
+              >
+                <span className={`mt-0.5 flex-shrink-0 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border whitespace-nowrap ${newsBadgeStyle(item.badge)}`}>
+                  {item.badge}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-zinc-300 leading-relaxed">{item.message}</p>
+                  {item.link && (
+                    <p className="text-[10px] text-zinc-600 font-mono mt-0.5">→ {item.link}</p>
+                  )}
+                  <p className="text-[10px] text-zinc-700 font-mono mt-1">
+                    {new Date(item.created_at).toLocaleDateString()} · {item.active ? 'visible' : 'hidden'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => handleNewsToggle(item)}
+                    disabled={newsToggleActing === item.id}
+                    title={item.active ? 'Hide from dashboard' : 'Show on dashboard'}
+                    className={`text-xs px-2.5 py-1 rounded-lg border transition-colors disabled:opacity-40 ${
+                      item.active
+                        ? 'border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500'
+                        : 'border-green-700/50 text-green-600 hover:text-green-400'
+                    }`}
+                  >
+                    {newsToggleActing === item.id ? '…' : item.active ? 'Hide' : 'Show'}
+                  </button>
+                  <button
+                    onClick={() => handleNewsDelete(item.id)}
+                    disabled={newsDeleteActing === item.id}
+                    title="Delete permanently"
+                    className="text-xs px-2.5 py-1 rounded-lg border border-zinc-800 text-zinc-600 hover:text-red-400 hover:border-red-800/50 transition-colors disabled:opacity-40"
+                  >
+                    {newsDeleteActing === item.id ? '…' : '✕'}
+                  </button>
+                </div>
+              </div>
+            ))}
           </>
         )}
 

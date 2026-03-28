@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import DailyActionPlan from '@/components/DailyActionPlan'
 import DailyBriefing from '@/components/DailyBriefing'
+import SiteNews from '@/components/SiteNews'
 import PackScanner from '@/components/PackScanner'
 import TeachBuddy from '@/components/TeachBuddy'
 import ServerPulse from '@/components/ServerPulse'
@@ -126,11 +127,8 @@ export default function Dashboard() {
         const { data: { session } } = await supabase.auth.getSession()
         if (!session) { router.push('/signin'); return }
 
-        // Store access token — passed to BattleReportAnalyzer to avoid
-        // getSession() calls inside the component (throws on mobile Chrome)
         setAccessToken(session.access_token)
 
-        // Admin check — UUID only, no PII
         const adminUserId = process.env.NEXT_PUBLIC_ADMIN_USER_ID
         if (adminUserId && session.user.id === adminUserId) {
           setIsAdmin(true)
@@ -157,7 +155,6 @@ export default function Dashboard() {
           last_checkin_date: streakData?.last_checkin_date ?? null,
         })
 
-        // Load battle report quota
         const tier = data.subscription_tier ?? 'free'
         if (tier !== 'free') {
           try {
@@ -177,11 +174,10 @@ export default function Dashboard() {
               })
             }
           } catch {
-            // Non-fatal — quota display degrades gracefully
+            // Non-fatal
           }
         }
 
-        // Affiliate status check
         try {
           const affiliateRes = await fetch('/api/affiliate/dashboard', {
             headers: { Authorization: `Bearer ${session.access_token}` },
@@ -431,7 +427,7 @@ export default function Dashboard() {
           </button>
         )}
 
-        {/* ── Today's Orders + Watch Out ── */}
+        {/* ── Today's Orders + Watch Out + Site News ── */}
         <section className="pt-6">
           <ErrorBoundary label="Daily Action Plan">
             <DailyActionPlan profile={profile} />
@@ -441,6 +437,9 @@ export default function Dashboard() {
               <DailyBriefing />
             </ErrorBoundary>
           </div>
+          <ErrorBoundary label="Site News">
+            <SiteNews />
+          </ErrorBoundary>
         </section>
 
         {/* ── BATTLE REPORT ANALYZER CARD ── */}
