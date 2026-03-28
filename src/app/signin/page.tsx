@@ -3,12 +3,14 @@
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import WelcomeCommander from '@/components/WelcomeCommander'
 
 export default function SignIn() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showSplash, setShowSplash] = useState(false)
   const router = useRouter()
 
   const handleSignIn = async () => {
@@ -16,10 +18,17 @@ export default function SignIn() {
     const { error } = await supabase!.auth.signInWithPassword({ email, password })
     if (error) {
       setMessage(error.message)
+      setLoading(false)
     } else {
-      router.push('/dashboard')
+      // Show splash — onComplete fires router.push
+      setShowSplash(true)
     }
-    setLoading(false)
+  }
+
+  if (showSplash) {
+    return (
+      <WelcomeCommander onComplete={() => router.push('/dashboard')} />
+    )
   }
 
   return (
