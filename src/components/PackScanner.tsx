@@ -24,10 +24,16 @@ const verdictConfig: Record<string, { label: string; color: string; bg: string; 
 };
 
 function parseAnalysis(raw: string) {
-  const sections: { packIdentified: string; reasons: string[]; spendCallout: string } = {
+  const sections: {
+    packIdentified: string;
+    reasons: string[];
+    spendCallout: string;
+    disclaimer: string;
+  } = {
     packIdentified: '',
     reasons: [],
     spendCallout: '',
+    disclaimer: '',
   };
 
   const packMatch = raw.match(/PACK IDENTIFIED:\s*(.+?)(?:\n|REASON:)/);
@@ -41,8 +47,11 @@ function parseAnalysis(raw: string) {
       .filter(l => l.length > 0);
   }
 
-  const spendMatch = raw.match(/SPEND TIER CALLOUT:\s*(.+)/);
+  const spendMatch = raw.match(/SPEND TIER CALLOUT:\s*([\s\S]+?)(?:\nDISCLAIMER:|$)/);
   if (spendMatch) sections.spendCallout = spendMatch[1].trim();
+
+  const disclaimerMatch = raw.match(/DISCLAIMER:\s*([\s\S]+?)$/);
+  if (disclaimerMatch) sections.disclaimer = disclaimerMatch[1].trim();
 
   return sections;
 }
@@ -236,7 +245,9 @@ export default function PackScanner({ subscriptionTier }: PackScannerProps) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <div>
                 <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>📦 Pack Scanner</div>
-                <div style={{ fontSize: '12px', color: '#666', marginTop: '2px' }}>Upload a pack screenshot for a verdict</div>
+                <div style={{ fontSize: '12px', color: '#666', marginTop: '2px' }}>
+                  Upload a pack screenshot for a verdict
+                </div>
               </div>
               <button
                 onClick={handleClose}
@@ -248,33 +259,45 @@ export default function PackScanner({ subscriptionTier }: PackScannerProps) {
 
             {/* Upload Area */}
             {!imagePreview && (
-              <label
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  border: '2px dashed #333',
-                  borderRadius: '8px',
-                  padding: '32px 16px',
-                  cursor: 'pointer',
-                  color: '#666',
+              <>
+                <label
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: '2px dashed #333',
+                    borderRadius: '8px',
+                    padding: '32px 16px',
+                    cursor: 'pointer',
+                    color: '#666',
+                    textAlign: 'center',
+                    marginBottom: '10px',
+                    transition: 'border-color 0.2s',
+                  }}
+                >
+                  <span style={{ fontSize: '32px', marginBottom: '8px' }}>📷</span>
+                  <span style={{ fontSize: '14px', color: '#888' }}>Tap to upload pack screenshot</span>
+                  <span style={{ fontSize: '11px', color: '#555', marginTop: '4px' }}>JPG or PNG · Crop to a single pack</span>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleFileChange}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+                {/* Crop reminder */}
+                <div style={{
+                  fontSize: '11px',
+                  color: '#555',
                   textAlign: 'center',
                   marginBottom: '16px',
-                  transition: 'border-color 0.2s',
-                }}
-              >
-                <span style={{ fontSize: '32px', marginBottom: '8px' }}>📷</span>
-                <span style={{ fontSize: '14px', color: '#888' }}>Tap to upload pack screenshot</span>
-                <span style={{ fontSize: '11px', color: '#555', marginTop: '4px' }}>JPG or PNG</span>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  onChange={handleFileChange}
-                  style={{ display: 'none' }}
-                />
-              </label>
+                  fontStyle: 'italic',
+                }}>
+                  Crop to the single pack you want analyzed. Do not upload a screenshot showing multiple packs.
+                </div>
+              </>
             )}
 
             {/* Image Preview */}
@@ -404,10 +427,25 @@ export default function PackScanner({ subscriptionTier }: PackScannerProps) {
                     padding: '10px 12px',
                     fontSize: '12px',
                     color: '#999',
-                    marginBottom: '14px',
+                    marginBottom: '12px',
                     fontStyle: 'italic',
                   }}>
                     💰 {parsed.spendCallout}
+                  </div>
+                )}
+
+                {/* Disclaimer */}
+                {parsed.disclaimer && (
+                  <div style={{
+                    borderTop: '1px solid #222',
+                    paddingTop: '12px',
+                    marginBottom: '14px',
+                    fontSize: '11px',
+                    color: '#555',
+                    fontStyle: 'italic',
+                    lineHeight: '1.5',
+                  }}>
+                    {parsed.disclaimer}
                   </div>
                 )}
 
