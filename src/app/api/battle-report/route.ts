@@ -30,6 +30,7 @@ interface ImagePayload {
 interface BattleReportRequest {
   images: ImagePayload[];
   intake: IntakeAnswers;
+  playerContext?: string;
 }
 
 interface SubscriptionRow {
@@ -71,23 +72,13 @@ function getDisplayLimit(tier: string): string {
 // ─────────────────────────────────────────────────────────────
 // BILLING PERIOD HELPERS
 // ─────────────────────────────────────────────────────────────
-
-// Returns the start/end of the current calendar month in UTC.
-// Used as fallback when no Stripe billing period is available
-// (Founding Members, pre-webhook legacy rows).
 function getCalendarMonthBounds(): { periodStart: string; periodEnd: string } {
   const now = new Date();
   const periodStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
-  const periodEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toISOString();
+  const periodEnd   = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toISOString();
   return { periodStart, periodEnd };
 }
 
-// Returns the billing window to count reports against.
-// Priority order:
-//   1. Stripe period_start/period_end — set on every invoice.paid for Pro/Elite
-//   2. Signup-date anchor — used for Founding Members (one-time payment, no Stripe period)
-//      e.g. signed up April 12 → window is the 12th of each month to the 12th of next month
-//   3. Calendar month fallback — safety net for legacy rows with no data
 function getBillingWindow(
   sub: SubscriptionRow,
   signupDate?: string | null
@@ -99,41 +90,34 @@ function getBillingWindow(
 
   // Founding Member — anchor to signup date day-of-month
   if (signupDate) {
-    const signup = new Date(signupDate);
-    const anchorDay = signup.getUTCDate(); // e.g. 12 for April 12
-    const now = new Date();
-    const nowYear = now.getUTCFullYear();
-    const nowMonth = now.getUTCMonth();
-    const nowDay = now.getUTCDate();
+    const signup    = new Date(signupDate);
+    const anchorDay = signup.getUTCDate();
+    const now       = new Date();
+    const nowYear   = now.getUTCFullYear();
+    const nowMonth  = now.getUTCMonth();
+    const nowDay    = now.getUTCDate();
 
-    // If we're on or after the anchor day this month, period started this month
-    // If we're before the anchor day, period started last month
-    let periodStartYear = nowYear;
+    let periodStartYear  = nowYear;
     let periodStartMonth = nowMonth;
+
     if (nowDay < anchorDay) {
-      // Before anchor day — current period started last month
       periodStartMonth = nowMonth - 1;
       if (periodStartMonth < 0) {
         periodStartMonth = 11;
-        periodStartYear = nowYear - 1;
+        periodStartYear  = nowYear - 1;
       }
     }
 
-    // Clamp anchor day to valid days in the start month (e.g. Feb 30 → Feb 28)
     const daysInStartMonth = new Date(Date.UTC(periodStartYear, periodStartMonth + 1, 0)).getUTCDate();
-    const clampedStart = Math.min(anchorDay, daysInStartMonth);
-    const periodStart = new Date(Date.UTC(periodStartYear, periodStartMonth, clampedStart)).toISOString();
+    const clampedStart     = Math.min(anchorDay, daysInStartMonth);
+    const periodStart      = new Date(Date.UTC(periodStartYear, periodStartMonth, clampedStart)).toISOString();
 
-    // Period end = same anchor day next month
-    let periodEndYear = periodStartYear;
+    let periodEndYear  = periodStartYear;
     let periodEndMonth = periodStartMonth + 1;
-    if (periodEndMonth > 11) {
-      periodEndMonth = 0;
-      periodEndYear = periodStartYear + 1;
-    }
+    if (periodEndMonth > 11) { periodEndMonth = 0; periodEndYear = periodStartYear + 1; }
     const daysInEndMonth = new Date(Date.UTC(periodEndYear, periodEndMonth + 1, 0)).getUTCDate();
-    const clampedEnd = Math.min(anchorDay, daysInEndMonth);
-    const periodEnd = new Date(Date.UTC(periodEndYear, periodEndMonth, clampedEnd)).toISOString();
+    const clampedEnd     = Math.min(anchorDay, daysInEndMonth);
+    const periodEnd      = new Date(Date.UTC(periodEndYear, periodEndMonth, clampedEnd)).toISOString();
 
     return { periodStart, periodEnd, source: 'signup_anchor' };
   }
@@ -142,19 +126,20 @@ function getBillingWindow(
   return { ...getCalendarMonthBounds(), source: 'calendar' };
 }
 
-// Human-readable reset date for error messages
 function formatResetDate(periodEnd: string): string {
   return new Date(periodEnd).toLocaleDateString('en-US', {
-    month: 'long', day: 'numeric', timeZone: 'UTC',
+    month: 'long',
+    day: 'numeric',
+    timeZone: 'UTC',
   });
 }
 
 // ─────────────────────────────────────────────────────────────
-// MAIN HANDLER
+// POST — analyze a battle report
 // ─────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   try {
-    // ── 1. Auth ──────────────────────────────────────────────
+    // ── 1. Auth ─────────────────────────────────────────────
     const authHeader = req.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -165,9 +150,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // ── 2. Parse body ─────────────────────────────────────────
+    // ── 2. Parse body ────────────────────────────────────────
     const body: BattleReportRequest = await req.json();
-    const { images, intake } = body;
+    const { images, intake, playerContext } = body;
 
     if (!images || images.length === 0) {
       return NextResponse.json({ error: 'No images provided' }, { status: 400 });
@@ -179,16 +164,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Intake answers required' }, { status: 400 });
     }
 
-    // ── 3. Subscription tier + billing period ─────────────────
-    // NOTE: .maybeSingle() instead of .single() — returns null (not error) when no row exists.
-    // A user with no subscription row is treated as free tier.
+    // Sanitize playerContext — empty string becomes undefined
+    const sanitizedContext = playerContext?.trim() || undefined;
+
+    // ── 3. Subscription tier + billing period ────────────────
     const { data: subData } = await getServerSupabase()
       .from('subscriptions')
       .select('tier, period_start, period_end')
       .eq('user_id', user.id)
       .maybeSingle() as { data: SubscriptionRow | null };
 
-    const tier = subData?.tier ?? 'free';
+    const tier         = subData?.tier ?? 'free';
     const monthlyLimit = getMonthlyLimit(tier);
 
     if (monthlyLimit === 0) {
@@ -199,13 +185,12 @@ export async function POST(req: NextRequest) {
       }, { status: 403 });
     }
 
-    // ── 4. Monthly quota check (billing period aware) ─────────
+    // ── 4. Monthly quota check (billing period aware) ────────
     const { periodStart, periodEnd } = getBillingWindow(
       subData ?? { tier: 'free', period_start: null, period_end: null },
       user.created_at
     );
 
-    // Count reports submitted within the current billing period
     const { count: periodCount, error: countError } = await getServerSupabase()
       .from('battle_reports')
       .select('id', { count: 'exact', head: true })
@@ -233,7 +218,7 @@ export async function POST(req: NextRequest) {
       }, { status: 429 });
     }
 
-    // ── 5. Load player profile ────────────────────────────────
+    // ── 5. Load player profile ───────────────────────────────
     const { data: profileData } = await getServerSupabase()
       .from('commander_profile')
       .select('hq_level, troop_type, troop_tier, squad_power, server_day, spend_style, hero_power, beginner_mode')
@@ -241,20 +226,20 @@ export async function POST(req: NextRequest) {
       .maybeSingle() as { data: ProfileRow | null };
 
     const playerProfile = {
-      hq_level:      profileData?.hq_level      ?? undefined,
-      troop_type:    profileData?.troop_type     ?? undefined,
-      troop_tier:    profileData?.troop_tier     ?? undefined,
-      squad_power:   profileData?.squad_power    ?? undefined,
-      server_day:    profileData?.server_day     ?? undefined,
-      spend_style:   profileData?.spend_style    ?? undefined,
-      hero_power:    profileData?.hero_power     ?? undefined,
-      beginner_mode: profileData?.beginner_mode  ?? false,
+      hq_level:     profileData?.hq_level     ?? undefined,
+      troop_type:   profileData?.troop_type    ?? undefined,
+      troop_tier:   profileData?.troop_tier    ?? undefined,
+      squad_power:  profileData?.squad_power   ?? undefined,
+      server_day:   profileData?.server_day    ?? undefined,
+      spend_style:  profileData?.spend_style   ?? undefined,
+      hero_power:   profileData?.hero_power    ?? undefined,
+      beginner_mode: profileData?.beginner_mode ?? false,
     };
 
-    // ── 6. Build system prompt ────────────────────────────────
-    const systemPrompt = buildBattleReportSystemPrompt(playerProfile, intake);
+    // ── 6. Build system prompt ───────────────────────────────
+    const systemPrompt = buildBattleReportSystemPrompt(playerProfile, intake, sanitizedContext);
 
-    // ── 7. Build Claude Vision message content ────────────────
+    // ── 7. Build Claude Vision message content ───────────────
     type ContentBlock =
       | { type: 'image'; source: { type: 'base64'; media_type: string; data: string } }
       | { type: 'text'; text: string };
@@ -273,18 +258,16 @@ export async function POST(req: NextRequest) {
 
     contentBlocks.push({
       type: 'text' as const,
-      text: `Please analyze these ${images.length} battle report screenshot(s).
-
-Player confirmed:
+      text: `Please analyze these ${images.length} battle report screenshot(s). Player confirmed:
 - Report type: ${intake.report_type}
-- Tactics cards active: ${tacticsCardsSummary}
+- Tactics cards active: ${tacticsCardsSummary}${sanitizedContext ? `\n- Player context: ${sanitizedContext}` : ''}
 
 Read ALL screenshots as a set. Determine troop types directly from the per-type damage percentages on Screen 2. Screen 1 contains the opponent's name and displayed power — extract these carefully.
 
 Return ONLY valid JSON matching the schema in your instructions. No markdown, no preamble, no explanation outside the JSON object.`,
     });
 
-    // ── 8. Claude API call ────────────────────────────────────
+    // ── 8. Claude API call ───────────────────────────────────
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
@@ -318,7 +301,7 @@ Return ONLY valid JSON matching the schema in your instructions. No markdown, no
       return NextResponse.json({ error: 'Empty response from AI. Please try again.' }, { status: 502 });
     }
 
-    // ── 9. Parse structured JSON from Claude ──────────────────
+    // ── 9. Parse structured JSON from Claude ─────────────────
     let analysis: Record<string, unknown>;
     try {
       const cleaned = rawText
@@ -334,17 +317,17 @@ Return ONLY valid JSON matching the schema in your instructions. No markdown, no
       }, { status: 422 });
     }
 
-    // ── 10. Save report to battle_reports table ───────────────
-    const outcome       = (analysis.outcome       as string) ?? 'Unknown';
-    const verdict       = (analysis.verdict       as string) ?? 'Analysis complete';
-    const reportType    = (analysis.report_type   as string) ?? intake.report_type;
-    const opponentName  = (analysis.opponent_name  as string) ?? 'Unknown';
+    // ── 10. Save report to battle_reports table ──────────────
+    const outcome      = (analysis.outcome      as string) ?? 'Unknown';
+    const verdict      = (analysis.verdict      as string) ?? 'Analysis complete';
+    const reportType   = (analysis.report_type  as string) ?? intake.report_type;
+    const opponentName = (analysis.opponent_name as string) ?? 'Unknown';
     const opponentPower = (analysis.opponent_power as string) ?? 'not visible';
 
     await getServerSupabase()
       .from('battle_reports')
       .insert({
-        user_id:     user.id,
+        user_id: user.id,
         outcome,
         report_type: reportType,
         verdict,
@@ -352,22 +335,22 @@ Return ONLY valid JSON matching the schema in your instructions. No markdown, no
         images_count: images.length,
         intake_data: {
           ...intake,
-          opponent_name:  opponentName,
+          opponent_name: opponentName,
           opponent_power: opponentPower,
         },
       });
 
-    // ── 11. Return success ────────────────────────────────────
+    // ── 11. Return success ───────────────────────────────────
     const resetDate = formatResetDate(periodEnd);
     return NextResponse.json({
       success: true,
       analysis,
       meta: {
-        images_analyzed:           images.length,
-        reports_used_this_period:  currentCount + 1,
-        reports_remaining:         Math.max(0, monthlyLimit - (currentCount + 1)),
-        display_limit:             getDisplayLimit(tier),
-        resets_on:                 resetDate,
+        images_analyzed: images.length,
+        reports_used_this_period: currentCount + 1,
+        reports_remaining: Math.max(0, monthlyLimit - (currentCount + 1)),
+        display_limit: getDisplayLimit(tier),
+        resets_on: resetDate,
         tier,
       },
     });
@@ -414,26 +397,27 @@ export async function GET(req: NextRequest) {
     }) => {
       const intakeData = (r.intake_data as Record<string, unknown>) ?? {};
       return {
-        id:             r.id,
-        created_at:     r.created_at,
-        outcome:        r.outcome,
-        report_type:    r.report_type,
-        verdict:        r.verdict,
-        images_count:   r.images_count,
+        id: r.id,
+        created_at: r.created_at,
+        outcome: r.outcome,
+        report_type: r.report_type,
+        verdict: r.verdict,
+        images_count: r.images_count,
         opponent_name:  (intakeData.opponent_name  as string) ?? 'Unknown',
         opponent_power: (intakeData.opponent_power as string) ?? 'not visible',
       };
     });
 
-    // ── Quota summary ─────────────────────────────────────────
+    // ── Quota summary ────────────────────────────────────────
     const { data: subData } = await getServerSupabase()
       .from('subscriptions')
       .select('tier, period_start, period_end')
       .eq('user_id', user.id)
       .maybeSingle() as { data: SubscriptionRow | null };
 
-    const tier = subData?.tier ?? 'free';
+    const tier         = subData?.tier ?? 'free';
     const monthlyLimit = getMonthlyLimit(tier);
+
     const { periodStart, periodEnd } = getBillingWindow(
       subData ?? { tier: 'free', period_start: null, period_end: null },
       user.created_at
@@ -447,19 +431,19 @@ export async function GET(req: NextRequest) {
       .lt('created_at', periodEnd);
 
     const usedThisPeriod = periodCount ?? 0;
-    const resetDate = formatResetDate(periodEnd);
+    const resetDate      = formatResetDate(periodEnd);
 
     return NextResponse.json({
       reports: normalizedReports,
       quota: {
         tier,
         used_this_period: usedThisPeriod,
-        limit:            monthlyLimit,
-        display_limit:    getDisplayLimit(tier),
-        remaining:        Math.max(0, monthlyLimit - usedThisPeriod),
-        can_analyze:      tier !== 'free' && usedThisPeriod < monthlyLimit,
-        resets_on:        resetDate,
-        resets_at:        periodEnd,
+        limit: monthlyLimit,
+        display_limit: getDisplayLimit(tier),
+        remaining: Math.max(0, monthlyLimit - usedThisPeriod),
+        can_analyze: tier !== 'free' && usedThisPeriod < monthlyLimit,
+        resets_on: resetDate,
+        resets_at: periodEnd,
       },
     });
   } catch (error) {

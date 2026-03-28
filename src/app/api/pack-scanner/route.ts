@@ -16,12 +16,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const token = authHeader.replace('Bearer ', '');
-
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
-
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -44,13 +42,16 @@ export async function POST(req: NextRequest) {
 
     // --- Parse body ---
     const body = await req.json();
-    const { screenshot_base64, screenshot_media_type } = body;
+    const { screenshot_base64, screenshot_media_type, playerContext } = body;
 
     if (!screenshot_base64) {
       return NextResponse.json({ error: 'No screenshot provided' }, { status: 400 });
     }
 
     const mediaType = screenshot_media_type ?? 'image/jpeg';
+
+    // Sanitize playerContext — empty string becomes undefined
+    const sanitizedContext = typeof playerContext === 'string' ? playerContext.trim() || undefined : undefined;
 
     // --- Load commander profile ---
     const { data: profile } = await supabase
@@ -73,24 +74,16 @@ export async function POST(req: NextRequest) {
       .single();
 
     const questionLimits: Record<string, number> = {
-      free:     0,
-      pro:      30,
-      elite:    100,
-      founding: 9999,
-      alliance: 100,
+      free: 0, pro: 30, elite: 100, founding: 9999, alliance: 100,
     };
     const screenshotLimits: Record<string, number> = {
-      free:     0,
-      pro:      10,
-      elite:    20,
-      founding: 9999,
-      alliance: 20,
+      free: 0, pro: 10, elite: 20, founding: 9999, alliance: 20,
     };
 
-    const currentQuestions  = usage?.question_count   ?? 0;
+    const currentQuestions  = usage?.question_count  ?? 0;
     const currentScreenshots = usage?.screenshot_count ?? 0;
-    const questionLimit     = questionLimits[tier.toLowerCase()]   ?? 0;
-    const screenshotLimit   = screenshotLimits[tier.toLowerCase()] ?? 0;
+    const questionLimit      = questionLimits[tier.toLowerCase()]  ?? 0;
+    const screenshotLimit    = screenshotLimits[tier.toLowerCase()] ?? 0;
 
     if (currentQuestions >= questionLimit) {
       return NextResponse.json(
@@ -106,17 +99,19 @@ export async function POST(req: NextRequest) {
     }
 
     // --- Build system prompt ---
-    // FIX: use server_day (not computed_server_day) and spend_style (not spend_tier)
-    const systemPrompt = buildPackScannerPrompt({
-      commander_tag: profile.commander_tag ?? 'Commander',
-      spend_style:   profile.spend_style,
-      hq_level:      profile.hq_level,
-      season:        profile.season,
-      troop_tier:    profile.troop_tier,
-      troop_type:    profile.troop_type,
-      server_day:    profile.server_day,
-      subscription_tier: tier,
-    });
+    const systemPrompt = buildPackScannerPrompt(
+      {
+        commander_tag:     profile.commander_tag ?? 'Commander',
+        spend_style:       profile.spend_style,
+        hq_level:          profile.hq_level,
+        season:            profile.season,
+        troop_tier:        profile.troop_tier,
+        troop_type:        profile.troop_type,
+        server_day:        profile.server_day,
+        subscription_tier: tier,
+      },
+      sanitizedContext
+    );
 
     // --- Call Claude API ---
     const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
@@ -170,7 +165,7 @@ export async function POST(req: NextRequest) {
       await supabase
         .from('daily_usage')
         .update({
-          question_count:   currentQuestions   + 1,
+          question_count:   currentQuestions  + 1,
           screenshot_count: currentScreenshots + 1,
         })
         .eq('user_id', user.id)
@@ -191,7 +186,6 @@ export async function POST(req: NextRequest) {
       analysis: rawText,
       questions_remaining: questionLimit - currentQuestions - 1,
     });
-
   } catch (err) {
     console.error('Pack scanner error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

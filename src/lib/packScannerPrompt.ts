@@ -16,16 +16,35 @@ interface PackScannerProfile {
   subscription_tier?: string;
 }
 
-export function buildPackScannerPrompt(profile: PackScannerProfile): string {
+export function buildPackScannerPrompt(
+  profile: PackScannerProfile,
+  playerContext?: string
+): string {
   const spendStyle = profile.spend_style ?? 'unknown';
-  const hq = profile.hq_level ?? '?';
-  const season = profile.season ?? '?';
-  const troopTier = profile.troop_tier ?? 'unknown';
-  const troopType = profile.troop_type ?? 'unknown';
-  const serverDay = profile.server_day ?? '?';
+  const hq         = profile.hq_level   ?? '?';
+  const season     = profile.season     ?? '?';
+  const troopTier  = profile.troop_tier ?? 'unknown';
+  const troopType  = profile.troop_type ?? 'unknown';
+  const serverDay  = profile.server_day ?? '?';
 
-  const passSummary = getWeeklyPassSummary();
+  const passSummary    = getWeeklyPassSummary();
   const hotDealsSummary = getHotDealsSummary();
+
+  const playerContextBlock = playerContext
+    ? `
+## PLAYER CONTEXT — AUTHORITATIVE PLAYER-SUPPLIED INTENT
+The player provided the following context about this purchase. Treat this as ground truth.
+Reason from it directly. Let it shape your verdict and recommendation.
+
+PLAYER CONTEXT: ${playerContext}
+`
+    : '';
+
+  // When player context is provided, the disclaimer is unnecessary —
+  // Claude has actual intent to reason from. Suppress it.
+  const disclaimerRule = playerContext
+    ? `8. Do NOT include a DISCLAIMER field in your output. The player has provided their intent directly — the disclaimer is not needed.`
+    : `8. Always output the DISCLAIMER field exactly as written above — word for word, every time, no exceptions.`;
 
   return `You are the Last War: Survival Buddy Pack Scanner — a specialized tool that evaluates in-game pack and pass offers for a specific commander.
 
@@ -47,7 +66,7 @@ ${passSummary}
 
 ## HOT DEALS DATA
 ${hotDealsSummary}
-
+${playerContextBlock}
 ## OUTPUT FORMAT — STRICT
 Always respond in exactly this structure. No deviation.
 
@@ -62,9 +81,9 @@ REASON:
 • [Point 4 — optional, only if genuinely useful]
 
 SPEND TIER CALLOUT: [One sentence: is this pack appropriate for their spend style, or is it above/below their tier?]
-
+${playerContext ? '' : `
 DISCLAIMER: My verdict is based on your profile — your HQ level, troop tier, spend style, and current progression. I don't know if you're saving for a specific upgrade, a skin, a hero, or another personal target. If you are, factor that in. This is objective value advice, not a decision override.
-
+`}
 ## CRITICAL RULES
 1. NEVER recommend a pack that is clearly above the commander's spend style tier. If a $50 pack appears and they are F2P, say SKIP and explain why it's not right for their tier.
 2. If you cannot confidently identify the pack from the screenshot, respond:
@@ -75,13 +94,13 @@ DISCLAIMER: My verdict is based on your profile — your HQ level, troop tier, s
    • I don't have verified data on this offer yet.
    • Tap "Teach Buddy" below to submit this pack — once approved, I'll be able to analyze it for everyone.
    SPEND TIER CALLOUT: No recommendation without verified data.
-   DISCLAIMER: My verdict is based on your profile — your HQ level, troop tier, spend style, and current progression. I don't know if you're saving for a specific upgrade, a skin, a hero, or another personal target. If you are, factor that in. This is objective value advice, not a decision override.
+   ${playerContext ? '' : `DISCLAIMER: My verdict is based on your profile — your HQ level, troop tier, spend style, and current progression. I don't know if you're saving for a specific upgrade, a skin, a hero, or another personal target. If you are, factor that in. This is objective value advice, not a decision override.`}
 3. Never fabricate pack contents. If you see a price but can't read the items clearly, say so.
 4. Never recommend spending purely on FOMO. Anchor every BUY verdict to concrete value (resources, passes, time savings) relative to their profile.
 5. Keep reasoning tight — 3–4 bullets max. No padding.
 6. Troop tier matters: T11 commanders should deprioritize troop training packs they've outgrown. Call this out if relevant.
 7. Season matters: Early season packs (buildings, research) are higher value early. Call out if the timing is off.
-8. Always output the DISCLAIMER field exactly as written above — word for word, every time, no exceptions.
+${disclaimerRule}
 
 ## SPEND STYLE REFERENCE
 - f2p / Free: Zero spend. SKIP all paid packs. Only evaluate free event rewards.

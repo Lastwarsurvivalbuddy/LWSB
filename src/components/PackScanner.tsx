@@ -1,5 +1,4 @@
 'use client';
-
 // src/components/PackScanner.tsx
 // Pack Scanner modal — Pro / Elite / Founding / Alliance only
 // Free users see the button and clicking routes to /upgrade
@@ -66,6 +65,7 @@ export default function PackScanner({ subscriptionTier }: PackScannerProps) {
   const [verdict, setVerdict] = useState<Verdict>(null);
   const [analysis, setAnalysis] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
+  const [playerContext, setPlayerContext] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isAllowed = ALLOWED_TIERS.includes(subscriptionTier?.toLowerCase() ?? '');
@@ -77,6 +77,7 @@ export default function PackScanner({ subscriptionTier }: PackScannerProps) {
     setVerdict(null);
     setAnalysis('');
     setError(null);
+    setPlayerContext('');
   }
 
   function handleClose() {
@@ -86,14 +87,11 @@ export default function PackScanner({ subscriptionTier }: PackScannerProps) {
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-
     setError(null);
     setVerdict(null);
     setAnalysis('');
-
     const mediaType = file.type || 'image/jpeg';
     setImageMediaType(mediaType);
-
     const reader = new FileReader();
     reader.onload = (event) => {
       const result = event.target?.result as string;
@@ -106,19 +104,16 @@ export default function PackScanner({ subscriptionTier }: PackScannerProps) {
 
   async function handleScan() {
     if (!imageBase64) return;
-
     setIsScanning(true);
     setError(null);
     setVerdict(null);
     setAnalysis('');
-
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
         setError('Session expired. Please sign in again.');
         return;
       }
-
       const res = await fetch('/api/pack-scanner', {
         method: 'POST',
         headers: {
@@ -128,11 +123,10 @@ export default function PackScanner({ subscriptionTier }: PackScannerProps) {
         body: JSON.stringify({
           screenshot_base64: imageBase64,
           screenshot_media_type: imageMediaType,
+          playerContext: playerContext.trim() || undefined,
         }),
       });
-
       const data = await res.json();
-
       if (!res.ok) {
         if (data.error === 'daily_limit_reached' || data.error === 'screenshot_limit_reached') {
           setError(data.message ?? 'Daily limit reached.');
@@ -143,7 +137,6 @@ export default function PackScanner({ subscriptionTier }: PackScannerProps) {
         }
         return;
       }
-
       setVerdict(data.verdict as Verdict);
       setAnalysis(data.analysis ?? '');
     } catch {
@@ -159,11 +152,13 @@ export default function PackScanner({ subscriptionTier }: PackScannerProps) {
     setVerdict(null);
     setAnalysis('');
     setError(null);
+    setPlayerContext('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
   const parsed = verdict && analysis ? parseAnalysis(analysis) : null;
   const vc = verdict ? verdictConfig[verdict] : null;
+  const hasContext = playerContext.trim().length > 0;
 
   return (
     <>
@@ -260,22 +255,20 @@ export default function PackScanner({ subscriptionTier }: PackScannerProps) {
             {/* Upload Area */}
             {!imagePreview && (
               <>
-                <label
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: '2px dashed #333',
-                    borderRadius: '8px',
-                    padding: '32px 16px',
-                    cursor: 'pointer',
-                    color: '#666',
-                    textAlign: 'center',
-                    marginBottom: '10px',
-                    transition: 'border-color 0.2s',
-                  }}
-                >
+                <label style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '2px dashed #333',
+                  borderRadius: '8px',
+                  padding: '32px 16px',
+                  cursor: 'pointer',
+                  color: '#666',
+                  textAlign: 'center',
+                  marginBottom: '10px',
+                  transition: 'border-color 0.2s',
+                }}>
                   <span style={{ fontSize: '32px', marginBottom: '8px' }}>📷</span>
                   <span style={{ fontSize: '14px', color: '#888' }}>Tap to upload pack screenshot</span>
                   <span style={{ fontSize: '11px', color: '#555', marginTop: '4px' }}>JPG or PNG · Crop to a single pack</span>
@@ -303,6 +296,7 @@ export default function PackScanner({ subscriptionTier }: PackScannerProps) {
             {/* Image Preview */}
             {imagePreview && !verdict && (
               <div style={{ marginBottom: '16px' }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={imagePreview}
                   alt="Pack screenshot"
@@ -315,6 +309,32 @@ export default function PackScanner({ subscriptionTier }: PackScannerProps) {
                     background: '#111',
                   }}
                 />
+
+                {/* Context box */}
+                <div style={{ marginTop: '12px' }}>
+                  <div style={{ fontSize: '12px', color: '#888', marginBottom: '6px', fontWeight: 600 }}>
+                    Add context <span style={{ fontWeight: 400, color: '#555' }}>(optional)</span>
+                  </div>
+                  <textarea
+                    value={playerContext}
+                    onChange={e => setPlayerContext(e.target.value)}
+                    placeholder="e.g. Saving for HQ upgrade, already own this hero, working with a $20/mo budget"
+                    rows={2}
+                    style={{
+                      width: '100%',
+                      background: '#111',
+                      border: '1px solid #333',
+                      borderRadius: '6px',
+                      padding: '8px 10px',
+                      fontSize: '12px',
+                      color: '#ccc',
+                      resize: 'none',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+
                 <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
                   <button
                     onClick={handleScan}
@@ -380,12 +400,9 @@ export default function PackScanner({ subscriptionTier }: PackScannerProps) {
                   textAlign: 'center',
                 }}>
                   <div style={{ fontSize: '28px', marginBottom: '4px' }}>{vc.emoji}</div>
-                  <div style={{
-                    fontSize: '26px',
-                    fontWeight: 800,
-                    color: vc.color,
-                    letterSpacing: '0.1em',
-                  }}>{vc.label}</div>
+                  <div style={{ fontSize: '26px', fontWeight: 800, color: vc.color, letterSpacing: '0.1em' }}>
+                    {vc.label}
+                  </div>
                   {parsed.packIdentified && (
                     <div style={{ fontSize: '12px', color: '#888', marginTop: '6px' }}>
                       {parsed.packIdentified}
@@ -434,8 +451,8 @@ export default function PackScanner({ subscriptionTier }: PackScannerProps) {
                   </div>
                 )}
 
-                {/* Disclaimer */}
-                {parsed.disclaimer && (
+                {/* Disclaimer — suppressed when playerContext was provided */}
+                {parsed.disclaimer && !hasContext && (
                   <div style={{
                     borderTop: '1px solid #222',
                     paddingTop: '12px',

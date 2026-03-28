@@ -239,7 +239,7 @@ export const TACTICS_CARDS = {
       effect:
         'As attacker: +10% HP/ATK/DEF base stats. Passive: after each PvP world map win, +6% morale (stacks 5x, expires on base return).',
       combat_implication:
-        'At 5 stacks = +30% morale advantage before the next fight even starts. DEVASTATING in kill events. Explains otherwise inexplicable losses.',
+        'At 5 stacks = +30% morale advantage before the next fight even starts. DEVASTATING in PVP events. Explains otherwise inexplicable losses.',
     },
     {
       name: 'Windrusher – Morale Boost',
@@ -309,7 +309,7 @@ export const TACTICS_CARDS = {
   coaching_implication: `
     Tactics Cards are INVISIBLE in battle reports. They explain gaps that pure power analysis cannot.
     Key questions to ask after analyzing a report:
-    1. Did attacker have Warmind Morale Boost stacked? (serial attacker in kill event)
+    1. Did attacker have Warmind Morale Boost stacked? (serial attacker in PVP event)
     2. Did defender have Buluwark stacks? (hard garrison defense)
     3. Did loser have Damage Reduction Reversal? (type mismatch but cards partially compensated)
     4. Is the attacker running Efficient Unity? (4-hero mono + Murphy with +20% instead of +15%)
@@ -700,7 +700,7 @@ export const COACHING_ACTIONS = {
     'Always scout before attacking. A well-scouted counter formation beats 2x raw power.',
     'Use radar missions to generate recon data passively.',
     'Scout wall squad composition — identifies troop type and formation bonus.',
-    'Never attack blind in Kill Event. You will regret it.',
+    'Never attack blind in PVP Event. You will regret it.',
   ],
   troop_strength_gap: [
     'Your opponent fielded stronger troops. The gap could be a larger march size, higher troop tier, or both — the report does not show which.',
@@ -785,7 +785,8 @@ export function buildBattleReportSystemPrompt(
   intake: {
     report_type: string;
     tactics_cards: string[];
-  }
+  },
+  playerContext?: string
 ): string {
   const isArena =
     intake.report_type.toLowerCase().includes('arena');
@@ -933,7 +934,7 @@ MORALE CASCADE DIAGNOSIS:
 - Near-equal power, same type matchup, but one side wiped — morale cascade
 - Formula: Morale Bonus = 1 + (Your Morale - Enemy Morale) / 100
 - Invisible in screenshots — diagnosed from asymmetric loss pattern
-- Warmind Morale Boost stacking explains serial-attacker dominance in Kill Events
+- Warmind Morale Boost stacking explains serial-attacker dominance in PVP Events
 
 TROOP STRENGTH GAP (applies to ALL modes including Arena):
 - Screen 2 shows troop counts / troop strength for both sides
@@ -1287,13 +1288,22 @@ TROOP STRENGTH GAP:
 
 SCOUT DISCIPLINE:
 - "Always scout before attacking — type counter is a 44% effective power swing. A scout costs nothing."
-- "Never attack blind in Kill Event."
+- "Never attack blind in PVP Event."
 
 ARENA FIX:
 - "Arena is 100% hero-driven — no troops, no type counter, no formation bonus. Focus on EW levels, decoration upgrades, and hero investment."
 - "Get Arena squad EWs to Level 20 — that's skills at level 36 and the 7.5% stat boost across all heroes of that type."
 `;
+// ── PLAYER CONTEXT INJECTION ─────────────────────────────
+  const playerContextBlock = playerContext
+    ? `
+## PLAYER CONTEXT — AUTHORITATIVE PLAYER-SUPPLIED INTENT
+The player provided the following context about this report. Treat this as ground truth.
+Reason from it directly. Let it shape your coaching focus and verdict framing.
 
+PLAYER CONTEXT: ${playerContext}
+`
+    : '';
   // ── COACHING OUTPUT RULES ────────────────────────────────
   const coachingRules = `
 ## COACHING RULES — NON-NEGOTIABLE
@@ -1401,6 +1411,7 @@ ${arenaInstructions}
 ${pvpTroopInstructions}
 ${pveInstructions}
 ${knowledgeBase}
+${playerContextBlock}
 ${coachingRules}
 ${outputSchema}`;
 }
