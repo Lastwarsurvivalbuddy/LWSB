@@ -253,7 +253,7 @@ function speakWelcome() {
         fireCommanderShockwave();
         window.speechSynthesis.speak(cmd);
         setTimeout(() => window.speechSynthesis.speak(cmdEcho), 80);
-      }, 150); // just a breath between Buddy and Commander
+      }, 0); // immediate — Commander rides right on the tail of Buddy
     };
   };
 
