@@ -32,20 +32,43 @@ function playTronSound() {
     master.gain.linearRampToValueAtTime(0.85, ctx.currentTime + 0.04);
     master.gain.setValueAtTime(0.85, ctx.currentTime + 5.8);
     master.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 7.2);
-    master.connect(compressor);
 
-    // Sub bass — twin detuned
-    [36, 38.5].forEach((freq) => {
+    // Low shelf EQ — boosts everything under 200hz by +10db
+    // This is the "add bass" node — sits on the master bus
+    const bassShelf = ctx.createBiquadFilter();
+    bassShelf.type = "lowshelf";
+    bassShelf.frequency.value = 200;
+    bassShelf.gain.value = 10;
+    master.connect(bassShelf);
+    bassShelf.connect(compressor);
+
+    // Sub bass — three detuned sines now instead of two, tuned lower
+    // 28hz added — pure felt-not-heard sub. Phones with a sub will rattle.
+    [28, 34, 38].forEach((freq, i) => {
       const sub = ctx.createOscillator();
       const subGain = ctx.createGain();
       sub.type = "sine";
       sub.frequency.setValueAtTime(freq, ctx.currentTime);
-      sub.frequency.exponentialRampToValueAtTime(freq * 1.4, ctx.currentTime + 2.0);
-      subGain.gain.setValueAtTime(0.7, ctx.currentTime);
-      subGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 3.5);
+      sub.frequency.exponentialRampToValueAtTime(freq * 1.5, ctx.currentTime + 2.0);
+      subGain.gain.setValueAtTime(0.85 - i * 0.08, ctx.currentTime);
+      subGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 3.8);
       sub.connect(subGain); subGain.connect(master);
-      sub.start(ctx.currentTime); sub.stop(ctx.currentTime + 3.6);
+      sub.start(ctx.currentTime); sub.stop(ctx.currentTime + 3.9);
     });
+
+    // Bass sustain layer — 55hz sine that holds through the chord
+    // Fills the gap after the sub fades — keeps the bottom end present
+    const bassHold = ctx.createOscillator();
+    const bassHoldGain = ctx.createGain();
+    bassHold.type = "sine";
+    bassHold.frequency.setValueAtTime(55, ctx.currentTime + 1.0);
+    bassHold.frequency.exponentialRampToValueAtTime(65, ctx.currentTime + 3.0);
+    bassHoldGain.gain.setValueAtTime(0, ctx.currentTime + 1.0);
+    bassHoldGain.gain.linearRampToValueAtTime(0.55, ctx.currentTime + 2.2);
+    bassHoldGain.gain.setValueAtTime(0.55, ctx.currentTime + 5.5);
+    bassHoldGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 7.2);
+    bassHold.connect(bassHoldGain); bassHoldGain.connect(master);
+    bassHold.start(ctx.currentTime + 1.0); bassHold.stop(ctx.currentTime + 7.3);
 
     // Sweep
     const sweep = ctx.createOscillator();
