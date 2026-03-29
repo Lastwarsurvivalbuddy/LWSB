@@ -919,7 +919,8 @@
     };
     u4.onend = function() { setTimeout(function() { window.speechSynthesis.speak(u5); }, 300); };
     u5.onend = function() { setTimeout(fizzleOut, 1200); };
-    window.speechSynthesis.speak(u1);
+    // Small delay so boot lines finish before she speaks
+    setTimeout(function() { window.speechSynthesis.speak(u1); }, 1600);
   }
   function speakDistress() {}
   function speakBuddy() {}
@@ -967,8 +968,8 @@
       }, line.delay);
     });
 
-    // Voice chain — onend for mobile compatibility
-    setTimeout(startVoiceSequence, 1600);
+    // Call immediately — mobile blocks speech after any delay
+    startVoiceSequence();
     // Fallback fizzle
     setTimeout(fizzleOut, 20000);
   }
