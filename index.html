@@ -783,6 +783,11 @@
     </div>
   </div>
 
+  <!-- Skip button — appears after 3s -->
+  <div id="lwsb-skip" style="display:none;position:fixed;bottom:28px;width:100%;text-align:center;z-index:5;">
+    <button onclick="document.getElementById('lwsb-skip').style.display='none';lwsbFizzle();" style="background:none;border:1px solid #440000;border-radius:4px;padding:6px 18px;color:#661100;font-family:'Courier New',monospace;font-size:11px;letter-spacing:0.2em;cursor:pointer;">SKIP →</button>
+  </div>
+
 </div>
 
 <script>
@@ -885,46 +890,29 @@
   }
 
   // ── HER VOICE — scared, feminine, desperate ──────────────────────────────────
-  // Pre-load voices at page load so they're ready at gesture time
-  var cachedFemale = null;
-  var cachedDeep = null;
-  function loadVoices() {
-    var voices = window.speechSynthesis.getVoices();
-    if (voices.length === 0) return;
-    cachedFemale = voices.find(function(v) {
-      return /samantha|karen|victoria|moira|fiona|google uk english female|microsoft zira|microsoft hazel/i.test(v.name);
-    }) || null;
-    cachedDeep = voices.find(function(v) {
-      return /microsoft david|alex|google uk english male|daniel|reed|fred/i.test(v.name);
-    }) || null;
-  }
-  if (window.speechSynthesis) {
-    loadVoices();
-    window.speechSynthesis.onvoiceschanged = loadVoices;
-  }
-
   function startVoiceSequence() {
     if (!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
-
-    // Re-try voice load in case they weren't ready at page load
-    if (!cachedFemale || !cachedDeep) loadVoices();
-
-    function makeU(text, pitch, rate, vol, voice) {
+    var voices = window.speechSynthesis.getVoices();
+    var female = voices.find(function(v) {
+      return /samantha|karen|victoria|moira|fiona|google uk english female|microsoft zira|microsoft hazel/i.test(v.name);
+    });
+    var deep = voices.find(function(v) {
+      return /microsoft david|alex|google uk english male|daniel|reed|fred/i.test(v.name);
+    });
+    function makeU(text, pitch, rate, voice) {
       var u = new SpeechSynthesisUtterance(text);
-      u.pitch = pitch; u.rate = rate; u.volume = vol;
+      u.pitch = pitch; u.rate = rate; u.volume = 1;
       if (voice) u.voice = voice;
       return u;
     }
-
-    var u1 = makeU('Please...', 1.4, 0.4, 0.6, cachedFemale);
-    var u2 = makeU('if anyone... can hear this...', 1.3, 0.38, 0.55, cachedFemale);
-    var u3 = makeU('we need... help.', 1.2, 0.35, 0.5, cachedFemale);
-    var u4 = makeU('Welcome to Buddy,', 0, 0.6, 1.0, cachedDeep);
-    var u5 = makeU('Commander...', 0, 0.42, 1.0, cachedDeep);
-
-    u1.onend = function() { setTimeout(function() { window.speechSynthesis.speak(u2); }, 600); };
-    u2.onend = function() { setTimeout(function() { window.speechSynthesis.speak(u3); }, 500); };
+    var u1 = makeU('Please...', 1.1, 0.52, female);
+    var u2 = makeU('if anyone can hear this...', 1.1, 0.62, female);
+    var u3 = makeU('we need help.', 1.05, 0.48, female);
+    var u4 = makeU('Welcome to Buddy,', 0, 0.6, deep);
+    var u5 = makeU('Commander...', 0, 0.42, deep);
+    u1.onend = function() { setTimeout(function() { window.speechSynthesis.speak(u2); }, 400); };
+    u2.onend = function() { setTimeout(function() { window.speechSynthesis.speak(u3); }, 400); };
     u3.onend = function() {
       var cur = document.getElementById('lwsb-inline-cursor');
       if (cur) cur.remove();
@@ -932,16 +920,16 @@
       var s = document.getElementById('lwsb-stamp-wrap');
       if (d) d.style.display = 'block';
       if (s) s.style.display = 'block';
-      setTimeout(function() { window.speechSynthesis.speak(u4); }, 1000);
+      setTimeout(function() { window.speechSynthesis.speak(u4); }, 800);
     };
     u4.onend = function() { setTimeout(function() { window.speechSynthesis.speak(u5); }, 300); };
     u5.onend = function() { setTimeout(fizzleOut, 1200); };
-
-    setTimeout(function() { window.speechSynthesis.speak(u1); }, 1600);
+    window.speechSynthesis.speak(u1);
   }
-    function speakDistress() {}
+  function speakDistress() {}
   function speakBuddy() {}
 
+  window.lwsbFizzle = function() { fizzleOut(); };
   function fizzleOut() {
     var el = document.getElementById('lwsb-preloader');
     if (!el) return;
@@ -987,6 +975,11 @@
 
     // Voice chain — onend for mobile compatibility
     setTimeout(startVoiceSequence, 1600);
+    // Show skip button after 3s for users with sound off
+    setTimeout(function() {
+      var skip = document.getElementById('lwsb-skip');
+      if (skip) skip.style.display = 'block';
+    }, 3000);
     // Fallback fizzle
     setTimeout(fizzleOut, 20000);
   }
