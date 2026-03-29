@@ -204,18 +204,19 @@ function speakWelcome() {
     // This is Vader. Not chaos — absolute zero.
     // Pitch floored. Rate as slow as the browser will go.
     // The coldness comes from the SILENCE around it, not layers on top of it.
-    const cmd = new SpeechSynthesisUtterance("Commander.");
+    // Ellipsis makes the TTS engine trail off — lands like a period, not an opener.
+    const cmd = new SpeechSynthesisUtterance("Commander...");
     cmd.pitch = 0;
-    cmd.rate = 0.45;   // floor — each syllable lands like a verdict
+    cmd.rate = 0.42;   // slightly slower than before — sinks rather than punches
     cmd.volume = 1;
     if (voice) cmd.voice = voice;
 
     // Single room-echo — one ghost at 80ms, near-zero volume
     // Creates depth and space. The word echoing in a vast dark room.
     // That's the Vader quality. Not glitch. VOID.
-    const cmdEcho = new SpeechSynthesisUtterance("Commander.");
+    const cmdEcho = new SpeechSynthesisUtterance("Commander...");
     cmdEcho.pitch = 0;
-    cmdEcho.rate = 0.45;
+    cmdEcho.rate = 0.42;
     cmdEcho.volume = 0.12; // barely audible — just the room talking back
     if (voice) cmdEcho.voice = voice;
 
