@@ -533,24 +533,24 @@
     animation: lwsb-screen-jitter 13s infinite;
   }
   .lwsb-line {
-    font-size: clamp(11px,1.45vw,13px); line-height: 1.95; letter-spacing: 0.04em;
+    font-size: clamp(13px,1.7vw,15px); line-height: 1.95; letter-spacing: 0.04em;
     animation: lwsb-fade-line 0.07s ease-out both; min-height: 1.95em; white-space: pre;
   }
   .lwsb-line.dim   { color: #bb3300; text-shadow: 0 0 6px #882200, 0 0 12px #551100; }
   .lwsb-line.mid   { color: #ee4400; text-shadow: 0 0 8px #cc3300, 0 0 16px #882200; }
   .lwsb-line.blank { color: transparent; min-height: 1.0em; }
   .lwsb-line.sys     { color: #ff6633; text-shadow: 0 0 8px #ff4400, 0 0 20px #cc2200; }
-  .lwsb-line.sys-dim { color: #cc4400; text-shadow: 0 0 6px #aa3300, 0 0 12px #771100; font-size: clamp(9px,1.2vw,11px); letter-spacing: 0.1em; }
+  .lwsb-line.sys-dim { color: #cc4400; text-shadow: 0 0 6px #aa3300, 0 0 12px #771100; font-size: clamp(11px,1.4vw,13px); letter-spacing: 0.1em; }
   #lwsb-divider { display: none; border: none; border-top: 1px solid #3a0000; box-shadow: 0 0 8px #220000; margin: 20px 0; width: 100%; }
   #lwsb-stamp-wrap { display: none; }
   #lwsb-stamp-text {
-    color: #ff2200; font-size: clamp(30px,5.5vw,68px); font-weight: bold; letter-spacing: 0.1em;
-    text-shadow: 0 0 14px #ff2200, 0 0 36px #cc1100, 0 0 70px #880000, 0 0 110px #440000;
+    color: #00ff88; font-size: clamp(30px,5.5vw,68px); font-weight: bold; letter-spacing: 0.1em;
+    text-shadow: 0 0 14px #00ff88, 0 0 36px #00cc66, 0 0 70px #008844, 0 0 110px #004422;
     animation: lwsb-stamp 0.55s cubic-bezier(0.22,1,0.36,1) both, lwsb-stamp-glow 2.8s 0.6s infinite;
   }
   #lwsb-stamp-sub {
-    display: none; color: #551100; font-size: clamp(8px,1vw,10px); letter-spacing: 0.3em;
-    text-shadow: 0 0 5px #330000; margin-top: 10px; animation: lwsb-fade-line 0.6s ease-out both;
+    display: none; color: #008844; font-size: clamp(8px,1vw,10px); letter-spacing: 0.3em;
+    text-shadow: 0 0 5px #004422; margin-top: 10px; animation: lwsb-fade-line 0.6s ease-out both;
   }
   #lwsb-skip { display: none; position: fixed; bottom: 22px; width: 100%; text-align: center; z-index: 10; }
   #lwsb-skip button {
@@ -567,8 +567,8 @@
     100% { opacity: 1; letter-spacing: 0.1em;  transform: scale(1.0); }
   }
   @keyframes lwsb-stamp-glow {
-    0%,100% { text-shadow: 0 0 14px #ff2200, 0 0 36px #cc1100, 0 0 70px #880000; }
-    50%      { text-shadow: 0 0 22px #ff3300, 0 0 55px #dd1100, 0 0 100px #990000, 0 0 150px #550000; }
+    0%,100% { text-shadow: 0 0 14px #00ff88, 0 0 36px #00cc66, 0 0 70px #008844; }
+    50%      { text-shadow: 0 0 22px #00ffaa, 0 0 55px #00ee77, 0 0 100px #00aa55, 0 0 150px #006633; }
   }
   @keyframes lwsb-screen-jitter {
     0%,100% { transform: translate(0,0); } 24% { transform: translate(-1px,0); }
