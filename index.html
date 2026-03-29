@@ -810,6 +810,7 @@
   function playSound() {
     try {
       var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      ctx.resume().then(function() {
 
       var comp = ctx.createDynamicsCompressor();
       comp.threshold.value = -18; comp.ratio.value = 3;
@@ -886,6 +887,7 @@
       });
 
       setTimeout(function() { ctx.close(); }, 6500);
+      }); // end resume
     } catch(e) {}
   }
 
@@ -894,15 +896,10 @@
     if (!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
 
-    // Get voices — try Google UK English Female first, Zira is a last resort
-    var vv = window.speechSynthesis.getVoices();
-    var female = vv.find(function(v) { return /google uk english female/i.test(v.name); })
-              || vv.find(function(v) { return /samantha|karen|victoria|moira|fiona/i.test(v.name); })
-              || vv.find(function(v) { return /microsoft zira|microsoft hazel/i.test(v.name); })
-              || null;
-    var deep   = vv.find(function(v) { return /google uk english male/i.test(v.name); })
-              || vv.find(function(v) { return /microsoft david|alex|daniel|reed|fred/i.test(v.name); })
-              || null;
+    // Use pre-loaded voices (loaded at page start via onvoiceschanged)
+    _loadVoices(); // re-try in case voices weren't ready at page load
+    var female = _femaleVoice;
+    var deep   = _deepVoice;
 
     function makeU(text, pitch, rate, vol, voice) {
       var u = new SpeechSynthesisUtterance(text);
@@ -948,6 +945,25 @@
   }
 
   // ── RUN SEQUENCE (fires after user gesture) ───────────────────────────────────
+  // Pre-load voices at page load for mobile
+  var _femaleVoice = null;
+  var _deepVoice   = null;
+  function _loadVoices() {
+    var vv = window.speechSynthesis.getVoices();
+    if (!vv.length) return;
+    _femaleVoice = vv.find(function(v){ return /google uk english female/i.test(v.name); })
+                || vv.find(function(v){ return /samantha|karen|victoria|moira|fiona/i.test(v.name); })
+                || vv.find(function(v){ return /microsoft zira|microsoft hazel/i.test(v.name); })
+                || null;
+    _deepVoice   = vv.find(function(v){ return /google uk english male/i.test(v.name); })
+                || vv.find(function(v){ return /microsoft david|alex|daniel|reed|fred/i.test(v.name); })
+                || null;
+  }
+  if (window.speechSynthesis) {
+    _loadVoices();
+    window.speechSynthesis.onvoiceschanged = _loadVoices;
+  }
+
   function runSequence() {
     var entryEl  = document.getElementById('lwsb-entry');
     var bootEl   = document.getElementById('lwsb-boot');
