@@ -187,56 +187,49 @@ function speakWelcome() {
     const voice = getVoice();
 
     // ── "WELCOME TO BUDDY," ──
-    // Primary — floored pitch, barely alive
+    // Cold, deliberate. One ghost echo at low volume for transmission feel.
     const primary = new SpeechSynthesisUtterance("Welcome to Buddy,");
     primary.pitch = 0;
     primary.rate = 0.6;
     primary.volume = 1;
     if (voice) primary.voice = voice;
 
-    // Ghost 1 — transmission echo, wider gap than before
     const ghost = new SpeechSynthesisUtterance("Welcome to Buddy,");
     ghost.pitch = 0.08;
     ghost.rate = 0.62;
-    ghost.volume = 0.28;
+    ghost.volume = 0.22;
     if (voice) ghost.voice = voice;
 
-    // ── "COMMANDER." — THREE LAYERS, COLLAPSING ──
-    // Primary — slowest rate possible, pitch zero, full volume
-    // Sounds like the word is being dredged up from the abyss
-    const cmd1 = new SpeechSynthesisUtterance("Commander.");
-    cmd1.pitch = 0;
-    cmd1.rate = 0.5;   // as slow as it goes
-    cmd1.volume = 1;
-    if (voice) cmd1.voice = voice;
+    // ── "COMMANDER." — ONE VOICE. SURGICAL. INEVITABLE. ──
+    // This is Vader. Not chaos — absolute zero.
+    // Pitch floored. Rate as slow as the browser will go.
+    // The coldness comes from the SILENCE around it, not layers on top of it.
+    const cmd = new SpeechSynthesisUtterance("Commander.");
+    cmd.pitch = 0;
+    cmd.rate = 0.45;   // floor — each syllable lands like a verdict
+    cmd.volume = 1;
+    if (voice) cmd.voice = voice;
 
-    // Ghost 1 — fires 200ms behind, slightly failing
-    const cmd2 = new SpeechSynthesisUtterance("Commander.");
-    cmd2.pitch = 0.06;
-    cmd2.rate = 0.53;
-    cmd2.volume = 0.38;
-    if (voice) cmd2.voice = voice;
-
-    // Ghost 2 — fires 420ms behind, barely there, the dying echo
-    // This one sounds like the system is shutting down mid-word
-    const cmd3 = new SpeechSynthesisUtterance("Commander.");
-    cmd3.pitch = 0.0;
-    cmd3.rate = 0.48;
-    cmd3.volume = 0.18;
-    if (voice) cmd3.voice = voice;
+    // Single room-echo — one ghost at 80ms, near-zero volume
+    // Creates depth and space. The word echoing in a vast dark room.
+    // That's the Vader quality. Not glitch. VOID.
+    const cmdEcho = new SpeechSynthesisUtterance("Commander.");
+    cmdEcho.pitch = 0;
+    cmdEcho.rate = 0.45;
+    cmdEcho.volume = 0.12; // barely audible — just the room talking back
+    if (voice) cmdEcho.voice = voice;
 
     // Fire "Welcome to Buddy,"
     window.speechSynthesis.speak(primary);
     setTimeout(() => window.speechSynthesis.speak(ghost), 160);
 
-    // Hard pause — then COMMANDER collapses in with all three layers
+    // Tighter pause — 400ms. Still a beat. Hits faster.
     primary.onend = () => {
       setTimeout(() => {
-        fireCommanderShockwave(); // sub-bass hit synced to voice
-        window.speechSynthesis.speak(cmd1);
-        setTimeout(() => window.speechSynthesis.speak(cmd2), 200);
-        setTimeout(() => window.speechSynthesis.speak(cmd3), 420);
-      }, 750);
+        fireCommanderShockwave();             // sub-bass shockwave synced to voice
+        window.speechSynthesis.speak(cmd);
+        setTimeout(() => window.speechSynthesis.speak(cmdEcho), 80); // void echo
+      }, 400);
     };
   };
 
