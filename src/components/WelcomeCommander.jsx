@@ -247,14 +247,14 @@ function speakWelcome() {
     window.speechSynthesis.speak(primary);
     setTimeout(() => window.speechSynthesis.speak(ghost), 160);
 
-    // Half pause — 200ms. Verdict, not a speech.
-    primary.onend = () => {
-      setTimeout(() => {
-        fireCommanderShockwave();
-        window.speechSynthesis.speak(cmd);
-        setTimeout(() => window.speechSynthesis.speak(cmdEcho), 80);
-      }, 0); // immediate — Commander rides right on the tail of Buddy
-    };
+    // Don't use onend — it fires late and adds a full second of dead air.
+    // Instead fire Commander at a fixed offset from when speech starts.
+    // "Welcome to Buddy," at rate 0.6 ≈ 2200ms. Fire Commander right after.
+    setTimeout(() => {
+      fireCommanderShockwave();
+      window.speechSynthesis.speak(cmd);
+      setTimeout(() => window.speechSynthesis.speak(cmdEcho), 80);
+    }, 2200);
   };
 
   if (window.speechSynthesis.getVoices().length > 0) {
