@@ -253,7 +253,7 @@ function speakWelcome() {
         fireCommanderShockwave();
         window.speechSynthesis.speak(cmd);
         setTimeout(() => window.speechSynthesis.speak(cmdEcho), 80);
-      }, 200);
+      }, 150); // just a breath between Buddy and Commander
     };
   };
 
@@ -415,6 +415,119 @@ function PixelDissolve({ onDone }) {
   );
 }
 
+// ─── CRT FIZZLE / SHORT-OUT ──────────────────────────────────────────────────
+// Screen loses power — static burst, horizontal collapse, hard black
+function CRTFizzle({ onDone }) {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    const W = canvas.width  = window.innerWidth;
+    const H = canvas.height = window.innerHeight;
+
+    let frame = 0;
+    let raf;
+    const TOTAL_FRAMES = 48; // ~800ms at 60fps
+
+    const draw = () => {
+      const p = frame / TOTAL_FRAMES; // 0 → 1
+      ctx.fillStyle = "#000000";
+      ctx.fillRect(0, 0, W, H);
+
+      // Phase 1 (0–0.3): Heavy static noise — the power flickering
+      if (p < 0.3) {
+        const intensity = p / 0.3;
+        const blockSize = 4;
+        for (let y = 0; y < H; y += blockSize) {
+          for (let x = 0; x < W; x += blockSize) {
+            if (Math.random() > 0.45) {
+              const brightness = Math.random();
+              // Mostly red/dark — stays in palette
+              const r = Math.floor(brightness * 200 * (1 - intensity * 0.6));
+              const g = 0;
+              const b = 0;
+              ctx.fillStyle = `rgb(${r},${g},${b})`;
+              ctx.fillRect(x, y, blockSize, blockSize);
+            }
+          }
+        }
+        // Bright horizontal glitch lines
+        const numLines = Math.floor(Math.random() * 6);
+        for (let i = 0; i < numLines; i++) {
+          const y = Math.random() * H;
+          ctx.fillStyle = `rgba(255,30,0,${Math.random() * 0.8})`;
+          ctx.fillRect(0, y, W, Math.random() * 3 + 1);
+        }
+      }
+
+      // Phase 2 (0.3–0.7): Screen collapses to horizontal line — CRT power death
+      else if (p < 0.7) {
+        const collapseP = (p - 0.3) / 0.4; // 0 → 1
+        // Height of visible band shrinks toward center
+        const bandH = Math.max(1, H * (1 - collapseP));
+        const bandY = (H - bandH) / 2;
+
+        // Remaining content — bright scanline
+        const gradient = ctx.createLinearGradient(0, bandY, 0, bandY + bandH);
+        gradient.addColorStop(0,   "rgba(255,20,0,0)");
+        gradient.addColorStop(0.5, `rgba(255,60,0,${0.9 - collapseP * 0.5})`);
+        gradient.addColorStop(1,   "rgba(255,20,0,0)");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, bandY, W, bandH);
+
+        // Horizontal noise on the band
+        if (bandH > 2) {
+          for (let x = 0; x < W; x += 3) {
+            if (Math.random() > 0.5) {
+              ctx.fillStyle = `rgba(255,${Math.floor(Math.random()*40)},0,${Math.random() * 0.6})`;
+              ctx.fillRect(x, bandY, 3, bandH);
+            }
+          }
+        }
+      }
+
+      // Phase 3 (0.7–1.0): Single bright line shrinks to a dot then gone
+      else {
+        const dotP = (p - 0.7) / 0.3;
+        const lineW = Math.max(0, W * (1 - dotP));
+        const lineX = (W - lineW) / 2;
+        const lineH = Math.max(1, 3 * (1 - dotP));
+        const alpha = 1 - dotP;
+        ctx.fillStyle = `rgba(255,80,0,${alpha})`;
+        ctx.fillRect(lineX, H / 2 - lineH / 2, lineW, lineH);
+
+        // Final bright flash at center
+        if (dotP > 0.8) {
+          const flashAlpha = (1 - dotP) / 0.2;
+          ctx.fillStyle = `rgba(255,100,50,${flashAlpha * 0.4})`;
+          ctx.fillRect(W / 2 - 20, H / 2 - 2, 40, 4);
+        }
+      }
+
+      frame++;
+      if (frame <= TOTAL_FRAMES) {
+        raf = requestAnimationFrame(draw);
+      } else {
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(0, 0, W, H);
+        setTimeout(onDone, 60);
+      }
+    };
+
+    raf = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{ position: "fixed", inset: 0, zIndex: 9999, display: "block" }}
+    />
+  );
+}
+
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
 export default function WelcomeCommander({ onComplete }) {
   // phase: "boot" → "dissolve" → "welcome" → "done"
@@ -423,7 +536,6 @@ export default function WelcomeCommander({ onComplete }) {
   const [showBuddy, setShowBuddy]         = useState(false);
   const [showCommander, setShowCommander] = useState(false);
   const [showSub, setShowSub]             = useState(false);
-  const [exiting, setExiting]             = useState(false);
   const [cursorVisible, setCursorVisible] = useState(true);
 
   useEffect(() => {
@@ -451,16 +563,22 @@ export default function WelcomeCommander({ onComplete }) {
 
     setTimeout(() => setShowCommander(true), 500);
     setTimeout(() => setShowSub(true), 1200);
-    setTimeout(() => setExiting(true), TOTAL_DURATION - 2900 - 600);
+    // Give Commander plenty of time to finish the full word before fizzle
+    setTimeout(() => setPhase("fizzle"), TOTAL_DURATION - 2900);
     setTimeout(() => {
       window.speechSynthesis?.cancel();
       onComplete?.();
-    }, TOTAL_DURATION - 2900);
+    }, TOTAL_DURATION - 2900 + 800); // fizzle runs 800ms then done
   };
 
   // ── DISSOLVE PHASE ──
   if (phase === "dissolve") {
     return <PixelDissolve onDone={handleDissolveDone} />;
+  }
+
+  // ── FIZZLE PHASE — CRT shorting out ──
+  if (phase === "fizzle") {
+    return <CRTFizzle onDone={() => { window.speechSynthesis?.cancel(); onComplete?.(); }} />;
   }
 
   // ── WELCOME PHASE ──
@@ -477,8 +595,6 @@ export default function WelcomeCommander({ onComplete }) {
         justifyContent: "center",
         fontFamily: "'Courier New', Courier, monospace",
         overflow: "hidden",
-        opacity: exiting ? 0 : 1,
-        transition: exiting ? "opacity 0.7s ease-in" : "none",
       }}>
         <style>{`
           @keyframes bigFlicker {
