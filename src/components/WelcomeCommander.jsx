@@ -247,13 +247,13 @@ function speakWelcome() {
     window.speechSynthesis.speak(primary);
     setTimeout(() => window.speechSynthesis.speak(ghost), 160);
 
-    // Tighter pause — 400ms. Still a beat. Hits faster.
+    // Half pause — 200ms. Verdict, not a speech.
     primary.onend = () => {
       setTimeout(() => {
-        fireCommanderShockwave();             // sub-bass shockwave synced to voice
+        fireCommanderShockwave();
         window.speechSynthesis.speak(cmd);
-        setTimeout(() => window.speechSynthesis.speak(cmdEcho), 80); // void echo
-      }, 400);
+        setTimeout(() => window.speechSynthesis.speak(cmdEcho), 80);
+      }, 200);
     };
   };
 
@@ -449,8 +449,8 @@ export default function WelcomeCommander({ onComplete }) {
     setShowBuddy(true);
     speakWelcome();
 
-    setTimeout(() => setShowCommander(true), 1000);
-    setTimeout(() => setShowSub(true), 1700);
+    setTimeout(() => setShowCommander(true), 500);
+    setTimeout(() => setShowSub(true), 1200);
     setTimeout(() => setExiting(true), TOTAL_DURATION - 2900 - 600);
     setTimeout(() => {
       window.speechSynthesis?.cancel();
