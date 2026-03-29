@@ -885,51 +885,44 @@
   }
 
   // ── HER VOICE — scared, feminine, desperate ──────────────────────────────────
-  function speakDistress() {
+  function startVoiceSequence() {
     if (!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
     var voices = window.speechSynthesis.getVoices();
     var female = voices.find(function(v) {
       return /samantha|karen|victoria|moira|fiona|google uk english female|microsoft zira|microsoft hazel/i.test(v.name);
     });
-    function say(text, pitch, rate, delay) {
-      setTimeout(function() {
-        var u = new SpeechSynthesisUtterance(text);
-        u.pitch = pitch; u.rate = rate; u.volume = 1;
-        if (female) u.voice = female;
-        window.speechSynthesis.speak(u);
-      }, delay);
-    }
-    var go = function() {
-      voices = window.speechSynthesis.getVoices();
-      female = voices.find(function(v) {
-        return /samantha|karen|victoria|moira|fiona|google uk english female|microsoft zira|microsoft hazel/i.test(v.name);
-      });
-      say('Please...', 1.1, 0.52, 0);
-      say('if anyone can hear this...', 1.1, 0.62, 2000);
-      say('we need help.', 1.05, 0.48, 4800);
-    };
-    if (window.speechSynthesis.getVoices().length > 0) { go(); }
-    else { window.speechSynthesis.onvoiceschanged = go; }
-  }
-
-  function speakBuddy() {
-    if (!('speechSynthesis' in window)) return;
-    var voices = window.speechSynthesis.getVoices();
     var deep = voices.find(function(v) {
       return /microsoft david|alex|google uk english male|daniel|reed|fred/i.test(v.name);
     });
-    function say(text, pitch, rate, delay) {
-      setTimeout(function() {
-        var u = new SpeechSynthesisUtterance(text);
-        u.pitch = pitch; u.rate = rate; u.volume = 1;
-        if (deep) u.voice = deep;
-        window.speechSynthesis.speak(u);
-      }, delay);
+    function makeU(text, pitch, rate, voice) {
+      var u = new SpeechSynthesisUtterance(text);
+      u.pitch = pitch; u.rate = rate; u.volume = 1;
+      if (voice) u.voice = voice;
+      return u;
     }
-    say('Welcome to Buddy,', 0, 0.6, 0);
-    say('Commander...', 0, 0.42, 2800);
+    var u1 = makeU('Please...', 1.1, 0.52, female);
+    var u2 = makeU('if anyone can hear this...', 1.1, 0.62, female);
+    var u3 = makeU('we need help.', 1.05, 0.48, female);
+    var u4 = makeU('Welcome to Buddy,', 0, 0.6, deep);
+    var u5 = makeU('Commander...', 0, 0.42, deep);
+    u1.onend = function() { setTimeout(function() { window.speechSynthesis.speak(u2); }, 400); };
+    u2.onend = function() { setTimeout(function() { window.speechSynthesis.speak(u3); }, 400); };
+    u3.onend = function() {
+      var cur = document.getElementById('lwsb-inline-cursor');
+      if (cur) cur.remove();
+      var d = document.getElementById('lwsb-divider');
+      var s = document.getElementById('lwsb-stamp-wrap');
+      if (d) d.style.display = 'block';
+      if (s) s.style.display = 'block';
+      setTimeout(function() { window.speechSynthesis.speak(u4); }, 800);
+    };
+    u4.onend = function() { setTimeout(function() { window.speechSynthesis.speak(u5); }, 300); };
+    u5.onend = function() { setTimeout(fizzleOut, 1200); };
+    window.speechSynthesis.speak(u1);
   }
+  function speakDistress() {}
+  function speakBuddy() {}
 
   function fizzleOut() {
     var el = document.getElementById('lwsb-preloader');
@@ -974,22 +967,10 @@
       }, line.delay);
     });
 
-    // Her voice — distress call
-    setTimeout(speakDistress, 1600);
-
-    // BUDDY ONLINE stamps in
-    setTimeout(function() {
-      var cur = document.getElementById('lwsb-inline-cursor');
-      if (cur) cur.remove();
-      dividerEl.style.display = 'block';
-      stampEl.style.display   = 'block';
-    }, 4000);
-
-    // Buddy voice — the answer
-    setTimeout(speakBuddy, 7800);
-
-    // Fizzle out
-    setTimeout(fizzleOut, 13000);
+    // Voice chain — onend for mobile compatibility
+    setTimeout(startVoiceSequence, 1600);
+    // Fallback fizzle
+    setTimeout(fizzleOut, 20000);
   }
 
   // ── WAIT FOR USER GESTURE ─────────────────────────────────────────────────────
@@ -1008,275 +989,7 @@
 
 })();
 </script>
- 
-(function() {
 
-  // ── BOOT LINES ──────────────────────────────────────────────────────────────
-  const LINES = [
-    { text: "SIGNAL DETECTED...",             delay: 0,    highlight: false },
-    { text: "TRIANGULATING SOURCE...",        delay: 200,  highlight: false },
-    { text: "FREQUENCY LOCKED.........OK",    delay: 420,  highlight: false },
-    { text: "ESTABLISHING LINK.........OK",   delay: 660,  highlight: false },
-    { text: "DECRYPTING PAYLOAD........OK",   delay: 900,  highlight: false },
-    { text: "",                               delay: 1080, highlight: false },
-    { text: "> TRANSMISSION INCOMING",        delay: 1200, highlight: true  },
-  ];
-
-  // ── TRON SOUND (shorter version — sub hit + sweep, no full chord) ──────────
-  function playPreloadSound() {
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-
-      const compressor = ctx.createDynamicsCompressor();
-      compressor.threshold.value = -18;
-      compressor.ratio.value = 3;
-      compressor.connect(ctx.destination);
-
-      const master = ctx.createGain();
-      master.gain.setValueAtTime(0, ctx.currentTime);
-      master.gain.linearRampToValueAtTime(0.8, ctx.currentTime + 0.04);
-      master.gain.setValueAtTime(0.8, ctx.currentTime + 3.0);
-      master.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 4.8);
-
-      // Low shelf EQ — bass boost
-      const bassShelf = ctx.createBiquadFilter();
-      bassShelf.type = 'lowshelf';
-      bassShelf.frequency.value = 200;
-      bassShelf.gain.value = 10;
-      master.connect(bassShelf);
-      bassShelf.connect(compressor);
-
-      // Three sub sines — gut punch
-      [28, 34, 38].forEach((freq, i) => {
-        const sub = ctx.createOscillator();
-        const subGain = ctx.createGain();
-        sub.type = 'sine';
-        sub.frequency.setValueAtTime(freq, ctx.currentTime);
-        sub.frequency.exponentialRampToValueAtTime(freq * 1.3, ctx.currentTime + 1.8);
-        subGain.gain.setValueAtTime(0.75 - i * 0.08, ctx.currentTime);
-        subGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 3.0);
-        sub.connect(subGain); subGain.connect(master);
-        sub.start(ctx.currentTime); sub.stop(ctx.currentTime + 3.1);
-      });
-
-      // Bass sustain
-      const bassHold = ctx.createOscillator();
-      const bassHoldGain = ctx.createGain();
-      bassHold.type = 'sine';
-      bassHold.frequency.value = 55;
-      bassHoldGain.gain.setValueAtTime(0, ctx.currentTime + 0.8);
-      bassHoldGain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + 1.8);
-      bassHoldGain.gain.setValueAtTime(0.4, ctx.currentTime + 3.2);
-      bassHoldGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 4.8);
-      bassHold.connect(bassHoldGain); bassHoldGain.connect(master);
-      bassHold.start(ctx.currentTime + 0.8); bassHold.stop(ctx.currentTime + 5.0);
-
-      // Sawtooth sweep — the rising build
-      const sweep = ctx.createOscillator();
-      const sweepGain = ctx.createGain();
-      const sweepFilter = ctx.createBiquadFilter();
-      sweep.type = 'sawtooth';
-      sweep.frequency.setValueAtTime(55, ctx.currentTime);
-      sweep.frequency.exponentialRampToValueAtTime(1100, ctx.currentTime + 1.8);
-      sweepFilter.type = 'bandpass';
-      sweepFilter.frequency.setValueAtTime(120, ctx.currentTime);
-      sweepFilter.frequency.exponentialRampToValueAtTime(1800, ctx.currentTime + 1.8);
-      sweepFilter.Q.value = 3.0;
-      sweepGain.gain.setValueAtTime(0.4, ctx.currentTime);
-      sweepGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 2.0);
-      sweep.connect(sweepFilter); sweepFilter.connect(sweepGain); sweepGain.connect(master);
-      sweep.start(ctx.currentTime); sweep.stop(ctx.currentTime + 2.1);
-
-      // Impact crack
-      const crackSize = ctx.sampleRate * 0.1;
-      const crackBuf = ctx.createBuffer(1, crackSize, ctx.sampleRate);
-      const cd = crackBuf.getChannelData(0);
-      for (let i = 0; i < crackSize; i++) cd[i] = Math.random() * 2 - 1;
-      const crack = ctx.createBufferSource();
-      crack.buffer = crackBuf;
-      const cf = ctx.createBiquadFilter();
-      cf.type = 'highpass'; cf.frequency.value = 2800;
-      const cg = ctx.createGain();
-      cg.gain.setValueAtTime(0.2, ctx.currentTime);
-      cg.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
-      crack.connect(cf); cf.connect(cg); cg.connect(master);
-      crack.start(ctx.currentTime);
-
-      // Resolve chord — three voices lock in at the end of sweep
-      // Shorter than login — just the resolution, not the full build
-      [440, 554.37, 659.25].forEach((freq, i) => {
-        const osc = ctx.createOscillator();
-        const oscGain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq * 0.5, ctx.currentTime + 1.0);
-        osc.frequency.exponentialRampToValueAtTime(freq, ctx.currentTime + 2.0 + i * 0.08);
-        oscGain.gain.setValueAtTime(0, ctx.currentTime + 1.0);
-        oscGain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + 2.2 + i * 0.06);
-        oscGain.gain.setValueAtTime(0.15, ctx.currentTime + 3.5);
-        oscGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 4.8);
-        osc.connect(oscGain); oscGain.connect(master);
-        osc.start(ctx.currentTime + 1.0); osc.stop(ctx.currentTime + 5.0);
-      });
-
-      setTimeout(() => ctx.close(), 6000);
-    } catch(e) {}
-  }
-
-  // ── HER VOICE — hot, scared, desperate ──────────────────────────────────────
-  function speakDistress() {
-    if (!('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
-
-    const say = (text, pitch, rate, vol, delayMs) => {
-      setTimeout(() => {
-        const u = new SpeechSynthesisUtterance(text);
-        u.pitch  = pitch;
-        u.rate   = rate;
-        u.volume = vol;
-        // Prefer a female voice
-        const voices = window.speechSynthesis.getVoices();
-        const female = voices.find(v =>
-          /samantha|karen|victoria|moira|fiona|google uk english female|microsoft zira|microsoft hazel|female/i.test(v.name)
-        );
-        if (female) u.voice = female;
-        window.speechSynthesis.speak(u);
-      }, delayMs);
-    };
-
-    const go = () => {
-      // Primary — pitched up (feminine), slow (scared), full volume
-      say("Please...", 1.1, 0.55, 1.0, 0);
-      // Ghost — slight offset for tremor effect
-      say("Please...", 1.15, 0.57, 0.2, 90);
-
-      // "if anyone can hear this" — slightly faster, desperate
-      say("if anyone can hear this...", 1.1, 0.65, 1.0, 1100);
-      say("if anyone can hear this...", 1.18, 0.67, 0.18, 1200);
-
-      // "we need help" — slower again, drops at the end
-      say("we need help.", 1.05, 0.5, 1.0, 2800);
-      say("we need help.", 1.1, 0.52, 0.15, 2900);
-    };
-
-    if (window.speechSynthesis.getVoices().length > 0) {
-      go();
-    } else {
-      window.speechSynthesis.onvoiceschanged = go;
-    }
-  }
-
-  // ── BUDDY RESPONSE VOICE ─────────────────────────────────────────────────────
-  function speakBuddyResponse() {
-    if (!('speechSynthesis' in window)) return;
-
-    const say = (text, pitch, rate, vol, delayMs) => {
-      setTimeout(() => {
-        const u = new SpeechSynthesisUtterance(text);
-        u.pitch  = pitch;
-        u.rate   = rate;
-        u.volume = vol;
-        const voices = window.speechSynthesis.getVoices();
-        const deep = voices.find(v =>
-          /microsoft david|alex|google uk english male|daniel|reed|fred/i.test(v.name)
-        );
-        if (deep) u.voice = deep;
-        window.speechSynthesis.speak(u);
-      }, delayMs);
-    };
-
-    // Cold. Certain. The answer.
-    say("Welcome to Buddy,", 0, 0.6, 1.0, 0);
-    say("Welcome to Buddy,", 0.08, 0.62, 0.22, 160);
-    // Commander — full word, trails off
-    say("Commander...", 0, 0.42, 1.0, 2200);
-    say("Commander...", 0, 0.42, 0.12, 2280);
-  }
-
-  // ── CURSOR BLINK ─────────────────────────────────────────────────────────────
-  let cursorEl = null;
-  let cursorInterval = null;
-  function startCursor(parentEl) {
-    cursorEl = document.createElement('span');
-    cursorEl.className = 'lwsb-cursor';
-    parentEl.appendChild(cursorEl);
-    let vis = true;
-    cursorInterval = setInterval(() => {
-      vis = !vis;
-      cursorEl.style.opacity = vis ? '1' : '0';
-    }, 530);
-  }
-  function stopCursor() {
-    if (cursorInterval) clearInterval(cursorInterval);
-    if (cursorEl) cursorEl.remove();
-  }
-
-  // ── FIZZLE EXIT ───────────────────────────────────────────────────────────────
-  function fizzleOut() {
-    const el = document.getElementById('lwsb-preloader');
-    if (!el) return;
-    el.classList.add('fizzle');
-    setTimeout(() => {
-      el.style.display = 'none';
-      window.speechSynthesis && window.speechSynthesis.cancel();
-    }, 750);
-  }
-
-  // ── MAIN SEQUENCE ─────────────────────────────────────────────────────────────
-  function runPreloader() {
-    const linesEl   = document.getElementById('lwsb-lines');
-    const dividerEl = document.getElementById('lwsb-divider');
-    const stampEl   = document.getElementById('lwsb-stamp-wrap');
-
-    // Sound fires immediately
-    playPreloadSound();
-
-    // Boot lines
-    let lastLineEl = null;
-    LINES.forEach((line, i) => {
-      setTimeout(() => {
-        const div = document.createElement('div');
-        div.className = 'lwsb-boot-line' + (line.highlight ? ' highlight' : '');
-        div.textContent = line.text;
-        linesEl.appendChild(div);
-        lastLineEl = div;
-
-        // Cursor on last line
-        if (i === LINES.length - 1) {
-          startCursor(div);
-        }
-      }, line.delay);
-    });
-
-    // Her voice fires at 1600ms — distress call
-    setTimeout(() => {
-      speakDistress();
-    }, 1600);
-
-    // BUDDY ONLINE stamps in at 3800ms — after her voice finishes
-    setTimeout(() => {
-      stopCursor();
-      dividerEl.style.display = 'block';
-      stampEl.style.display   = 'block';
-    }, 3800);
-
-    // Buddy voice responds at 4100ms — cold, certain
-    setTimeout(() => {
-      speakBuddyResponse();
-    }, 4100);
-
-    // Fizzle out at 7500ms — after Buddy finishes speaking
-    setTimeout(fizzleOut, 13000);
-  }
-
-  // Fire on DOMContentLoaded
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', runPreloader);
-  } else {
-    runPreloader();
-  }
-
-})();
-</script>
   <div class="bg-layer" aria-hidden="true"></div>
   <div class="grid-overlay" aria-hidden="true"></div>
   <div class="scanlines" aria-hidden="true"></div>
