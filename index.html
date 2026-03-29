@@ -888,55 +888,49 @@
   function speakDistress() {
     if (!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
-
-    function say(text, pitch, rate, vol, delay) {
+    var voices = window.speechSynthesis.getVoices();
+    var female = voices.find(function(v) {
+      return /samantha|karen|victoria|moira|fiona|google uk english female|microsoft zira|microsoft hazel/i.test(v.name);
+    });
+    function say(text, pitch, rate, delay) {
       setTimeout(function() {
         var u = new SpeechSynthesisUtterance(text);
-        u.pitch = pitch; u.rate = rate; u.volume = vol;
-        var voices = window.speechSynthesis.getVoices();
-        var female = voices.find(function(v) {
-          return /samantha|karen|victoria|moira|fiona|google uk english female|microsoft zira|microsoft hazel/i.test(v.name);
-        });
+        u.pitch = pitch; u.rate = rate; u.volume = 1;
         if (female) u.voice = female;
         window.speechSynthesis.speak(u);
       }, delay);
     }
-
-    // Pitched up, slow, trembling ghost layer behind each phrase
-    say('Please...', 1.1, 0.52, 1.0, 0);
-    say('Please...', 1.18, 0.54, 0.18, 90);
-
-    say('if anyone can hear this...', 1.1, 0.62, 1.0, 1100);
-    say('if anyone can hear this...', 1.2, 0.64, 0.16, 1200);
-
-    say('we need help.', 1.05, 0.48, 1.0, 2900);
-    say('we need help.', 1.12, 0.5, 0.14, 3000);
+    var go = function() {
+      voices = window.speechSynthesis.getVoices();
+      female = voices.find(function(v) {
+        return /samantha|karen|victoria|moira|fiona|google uk english female|microsoft zira|microsoft hazel/i.test(v.name);
+      });
+      say('Please...', 1.1, 0.52, 0);
+      say('if anyone can hear this...', 1.1, 0.62, 2000);
+      say('we need help.', 1.05, 0.48, 4800);
+    };
+    if (window.speechSynthesis.getVoices().length > 0) { go(); }
+    else { window.speechSynthesis.onvoiceschanged = go; }
   }
 
-  // ── BUDDY RESPONSE VOICE — cold, certain, robotic ────────────────────────────
   function speakBuddy() {
     if (!('speechSynthesis' in window)) return;
-
-    function say(text, pitch, rate, vol, delay) {
+    var voices = window.speechSynthesis.getVoices();
+    var deep = voices.find(function(v) {
+      return /microsoft david|alex|google uk english male|daniel|reed|fred/i.test(v.name);
+    });
+    function say(text, pitch, rate, delay) {
       setTimeout(function() {
         var u = new SpeechSynthesisUtterance(text);
-        u.pitch = pitch; u.rate = rate; u.volume = vol;
-        var voices = window.speechSynthesis.getVoices();
-        var deep = voices.find(function(v) {
-          return /microsoft david|alex|google uk english male|daniel|reed|fred/i.test(v.name);
-        });
+        u.pitch = pitch; u.rate = rate; u.volume = 1;
         if (deep) u.voice = deep;
         window.speechSynthesis.speak(u);
       }, delay);
     }
-
-    say('Welcome to Buddy,', 0, 0.6, 1.0, 0);
-    say('Welcome to Buddy,', 0.08, 0.62, 0.22, 160);
-    say('Commander...', 0, 0.42, 1.0, 2200);
-    say('Commander...', 0, 0.42, 0.12, 2280);
+    say('Welcome to Buddy,', 0, 0.6, 0);
+    say('Commander...', 0, 0.42, 2800);
   }
 
-  // ── FIZZLE EXIT ───────────────────────────────────────────────────────────────
   function fizzleOut() {
     var el = document.getElementById('lwsb-preloader');
     if (!el) return;
@@ -992,10 +986,10 @@
     }, 4000);
 
     // Buddy voice — the answer
-    setTimeout(speakBuddy, 4300);
+    setTimeout(speakBuddy, 7800);
 
     // Fizzle out
-    setTimeout(fizzleOut, 7800);
+    setTimeout(fizzleOut, 13000);
   }
 
   // ── WAIT FOR USER GESTURE ─────────────────────────────────────────────────────
@@ -1014,7 +1008,7 @@
 
 })();
 </script>
-<script>
+ 
 (function() {
 
   // ── BOOT LINES ──────────────────────────────────────────────────────────────
@@ -1271,7 +1265,7 @@
     }, 4100);
 
     // Fizzle out at 7500ms — after Buddy finishes speaking
-    setTimeout(fizzleOut, 7500);
+    setTimeout(fizzleOut, 13000);
   }
 
   // Fire on DOMContentLoaded
