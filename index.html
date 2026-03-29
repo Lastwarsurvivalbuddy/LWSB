@@ -810,6 +810,7 @@
   function playSound() {
     try {
       var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      ctx.resume().then(function() {
 
       var comp = ctx.createDynamicsCompressor();
       comp.threshold.value = -18; comp.ratio.value = 3;
@@ -886,50 +887,80 @@
       });
 
       setTimeout(function() { ctx.close(); }, 6500);
+      }); // end resume().then
     } catch(e) {}
   }
 
-  // ── HER VOICE — scared, feminine, desperate ──────────────────────────────────
+  // ── VOICE SYSTEM ────────────────────────────────────────────────────────────────
+  // Voices pre-cached at page load via onvoiceschanged — required for mobile
+  var cachedFemale = null;
+  var cachedDeep   = null;
+  function cacheVoices() {
+    var vv = window.speechSynthesis.getVoices();
+    if (!vv.length) return;
+    cachedFemale = vv.find(function(v) {
+      return /samantha|karen|victoria|moira|fiona|google uk english female|microsoft zira|microsoft hazel/i.test(v.name);
+    }) || null;
+    cachedDeep = vv.find(function(v) {
+      return /microsoft david|alex|google uk english male|daniel|reed|fred/i.test(v.name);
+    }) || null;
+  }
+  if (window.speechSynthesis) {
+    cacheVoices();
+    window.speechSynthesis.onvoiceschanged = cacheVoices;
+  }
+
   function startVoiceSequence() {
     if (!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
-    var voices = window.speechSynthesis.getVoices();
-    var female = voices.find(function(v) {
-      return /samantha|karen|victoria|moira|fiona|google uk english female|microsoft zira|microsoft hazel/i.test(v.name);
-    });
-    var deep = voices.find(function(v) {
-      return /microsoft david|alex|google uk english male|daniel|reed|fred/i.test(v.name);
-    });
-    function makeU(text, pitch, rate, voice) {
+    cacheVoices(); // re-try in case first call was too early
+
+    function makeU(text, pitch, rate, vol, voice) {
       var u = new SpeechSynthesisUtterance(text);
-      u.pitch = pitch; u.rate = rate; u.volume = 1;
+      u.pitch  = pitch;
+      u.rate   = rate;
+      u.volume = vol;
       if (voice) u.voice = voice;
       return u;
     }
-    var u1 = makeU('Please...', 1.1, 0.52, female);
-    var u2 = makeU('if anyone can hear this...', 1.1, 0.62, female);
-    var u3 = makeU('we need help.', 1.05, 0.48, female);
-    var u4 = makeU('Welcome to Buddy,', 0, 0.6, deep);
-    var u5 = makeU('Commander...', 0, 0.42, deep);
-    u1.onend = function() { setTimeout(function() { window.speechSynthesis.speak(u2); }, 400); };
-    u2.onend = function() { setTimeout(function() { window.speechSynthesis.speak(u3); }, 400); };
+
+    // Her voice — scared, whispering, desperate
+    var u1 = makeU('Please...',                    1.2,  0.72, 0.65, cachedFemale);
+    var u2 = makeU('if anyone... can hear this...', 1.15, 0.75, 0.6,  cachedFemale);
+    var u3 = makeU('we need... help.',              1.1,  0.68, 0.55, cachedFemale);
+    // Buddy — cold, certain
+    var u4 = makeU('Welcome to Buddy,',  0,    0.6,  1.0, cachedDeep);
+    var u5 = makeU('Commander...',       0,    0.42, 1.0, cachedDeep);
+
+    // Chain via onend — mobile requires this, setTimeout breaks gesture chain
+    u1.onend = function() {
+      setTimeout(function() { window.speechSynthesis.speak(u2); }, 400);
+    };
+    u2.onend = function() {
+      setTimeout(function() { window.speechSynthesis.speak(u3); }, 400);
+    };
     u3.onend = function() {
+      // Stamp in BUDDY ONLINE
       var cur = document.getElementById('lwsb-inline-cursor');
       if (cur) cur.remove();
       var d = document.getElementById('lwsb-divider');
       var s = document.getElementById('lwsb-stamp-wrap');
       if (d) d.style.display = 'block';
       if (s) s.style.display = 'block';
-      setTimeout(function() { window.speechSynthesis.speak(u4); }, 800);
+      setTimeout(function() { window.speechSynthesis.speak(u4); }, 1000);
     };
-    u4.onend = function() { setTimeout(function() { window.speechSynthesis.speak(u5); }, 300); };
-    u5.onend = function() { setTimeout(fizzleOut, 1200); };
-    window.speechSynthesis.speak(u1);
-  }
-  function speakDistress() {}
-  function speakBuddy() {}
+    u4.onend = function() {
+      setTimeout(function() { window.speechSynthesis.speak(u5); }, 300);
+    };
+    u5.onend = function() {
+      setTimeout(fizzleOut, 1200);
+    };
 
-  window.lwsbFizzle = function() { fizzleOut(); };
+    // Delay first utterance so boot lines finish — but voice is already queued
+    // inside the gesture call so mobile allows it
+    setTimeout(function() { window.speechSynthesis.speak(u1); }, 1600);
+  }
+
   function fizzleOut() {
     var el = document.getElementById('lwsb-preloader');
     if (!el) return;
@@ -973,8 +1004,8 @@
       }, line.delay);
     });
 
-    // Voice chain — onend for mobile compatibility
-    setTimeout(startVoiceSequence, 1600);
+    // Call immediately inside gesture — mobile requires this
+    startVoiceSequence();
     // Show skip button after 3s for users with sound off
     setTimeout(function() {
       var skip = document.getElementById('lwsb-skip');
