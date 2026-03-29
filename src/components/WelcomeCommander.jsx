@@ -129,6 +129,49 @@ function playTronSound() {
 }
 
 // ─── GLITCHED DOUBLE VOICE ───────────────────────────────────────────────────
+// Sub-bass shockwave that fires when COMMANDER hits
+function fireCommanderShockwave() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const master = ctx.createGain();
+    master.gain.setValueAtTime(0.0, ctx.currentTime);
+    master.gain.linearRampToValueAtTime(0.9, ctx.currentTime + 0.02);
+    master.gain.setValueAtTime(0.9, ctx.currentTime + 0.3);
+    master.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 2.2);
+    master.connect(ctx.destination);
+
+    // Deep sub thud — the shockwave
+    [28, 32, 36].forEach((freq, i) => {
+      const sub = ctx.createOscillator();
+      const subGain = ctx.createGain();
+      sub.type = "sine";
+      sub.frequency.setValueAtTime(freq, ctx.currentTime);
+      sub.frequency.exponentialRampToValueAtTime(freq * 0.6, ctx.currentTime + 1.8);
+      subGain.gain.setValueAtTime(0.6 - i * 0.1, ctx.currentTime);
+      subGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 2.0);
+      sub.connect(subGain); subGain.connect(master);
+      sub.start(ctx.currentTime); sub.stop(ctx.currentTime + 2.1);
+    });
+
+    // Mid distortion crack on impact
+    const crackSize = ctx.sampleRate * 0.08;
+    const crackBuf = ctx.createBuffer(1, crackSize, ctx.sampleRate);
+    const cd = crackBuf.getChannelData(0);
+    for (let i = 0; i < crackSize; i++) cd[i] = (Math.random() * 2 - 1);
+    const crack = ctx.createBufferSource();
+    crack.buffer = crackBuf;
+    const cf = ctx.createBiquadFilter();
+    cf.type = "lowpass"; cf.frequency.value = 800;
+    const cg = ctx.createGain();
+    cg.gain.setValueAtTime(0.4, ctx.currentTime);
+    cg.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+    crack.connect(cf); cf.connect(cg); cg.connect(master);
+    crack.start(ctx.currentTime);
+
+    setTimeout(() => ctx.close(), 3000);
+  } catch (e) {}
+}
+
 function speakWelcome() {
   if (!("speechSynthesis" in window)) return;
   window.speechSynthesis.cancel();
@@ -143,46 +186,57 @@ function speakWelcome() {
   const speak = () => {
     const voice = getVoice();
 
-    // Primary voice — slow, deep, cold
+    // ── "WELCOME TO BUDDY," ──
+    // Primary — floored pitch, barely alive
     const primary = new SpeechSynthesisUtterance("Welcome to Buddy,");
     primary.pitch = 0;
-    primary.rate = 0.65;
+    primary.rate = 0.6;
     primary.volume = 1;
     if (voice) primary.voice = voice;
 
-    // Ghost voice — fires 120ms later, slightly higher pitch, slightly faster
-    // Creates the corrupted-transmission glitch double effect
+    // Ghost 1 — transmission echo, wider gap than before
     const ghost = new SpeechSynthesisUtterance("Welcome to Buddy,");
-    ghost.pitch = 0.15;
-    ghost.rate = 0.68;
-    ghost.volume = 0.35;
+    ghost.pitch = 0.08;
+    ghost.rate = 0.62;
+    ghost.volume = 0.28;
     if (voice) ghost.voice = voice;
 
-    // COMMANDER — fires after hard pause, same double treatment
-    const primary2 = new SpeechSynthesisUtterance("Commander.");
-    primary2.pitch = 0;
-    primary2.rate = 0.6;
-    primary2.volume = 1;
-    if (voice) primary2.voice = voice;
+    // ── "COMMANDER." — THREE LAYERS, COLLAPSING ──
+    // Primary — slowest rate possible, pitch zero, full volume
+    // Sounds like the word is being dredged up from the abyss
+    const cmd1 = new SpeechSynthesisUtterance("Commander.");
+    cmd1.pitch = 0;
+    cmd1.rate = 0.5;   // as slow as it goes
+    cmd1.volume = 1;
+    if (voice) cmd1.voice = voice;
 
-    const ghost2 = new SpeechSynthesisUtterance("Commander.");
-    ghost2.pitch = 0.12;
-    ghost2.rate = 0.63;
-    ghost2.volume = 0.3;
-    if (voice) ghost2.voice = voice;
+    // Ghost 1 — fires 200ms behind, slightly failing
+    const cmd2 = new SpeechSynthesisUtterance("Commander.");
+    cmd2.pitch = 0.06;
+    cmd2.rate = 0.53;
+    cmd2.volume = 0.38;
+    if (voice) cmd2.voice = voice;
 
-    // Fire primary line 1
+    // Ghost 2 — fires 420ms behind, barely there, the dying echo
+    // This one sounds like the system is shutting down mid-word
+    const cmd3 = new SpeechSynthesisUtterance("Commander.");
+    cmd3.pitch = 0.0;
+    cmd3.rate = 0.48;
+    cmd3.volume = 0.18;
+    if (voice) cmd3.voice = voice;
+
+    // Fire "Welcome to Buddy,"
     window.speechSynthesis.speak(primary);
+    setTimeout(() => window.speechSynthesis.speak(ghost), 160);
 
-    // Ghost layer — slight delay for the glitch separation
-    setTimeout(() => window.speechSynthesis.speak(ghost), 120);
-
-    // Hard pause then COMMANDER
+    // Hard pause — then COMMANDER collapses in with all three layers
     primary.onend = () => {
       setTimeout(() => {
-        window.speechSynthesis.speak(primary2);
-        setTimeout(() => window.speechSynthesis.speak(ghost2), 130);
-      }, 700);
+        fireCommanderShockwave(); // sub-bass hit synced to voice
+        window.speechSynthesis.speak(cmd1);
+        setTimeout(() => window.speechSynthesis.speak(cmd2), 200);
+        setTimeout(() => window.speechSynthesis.speak(cmd3), 420);
+      }, 750);
     };
   };
 
