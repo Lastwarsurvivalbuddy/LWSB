@@ -579,6 +579,442 @@
 </head>
 <body>
   <!--
+  LWSB SPLASH PRELOADER v2
+  ========================
+  Drop this entire block at the very TOP of <body> in your index.html.
+  Your existing page content sits below it — nothing else changes.
+
+  SEQUENCE:
+  Phase 1 — PRESS ANY KEY screen (waits for user gesture = audio unlocked)
+  Phase 2 — Boot lines type out
+  Phase 3 — Her voice: "Please... if anyone can hear this... we need help."
+  Phase 4 — BUDDY ONLINE stamps in
+  Phase 5 — Buddy voice: "Welcome to Buddy, Commander."
+  Phase 6 — CRT fizzle short-out → page appears
+-->
+
+<style>
+  body { margin: 0; }
+
+  #lwsb-preloader {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    background: #0a0000;
+    font-family: 'Courier New', Courier, monospace;
+    overflow: hidden;
+  }
+
+  /* ── Shared overlays ── */
+  .lwsb-scanlines {
+    position: fixed; inset: 0; pointer-events: none; z-index: 2;
+    background: repeating-linear-gradient(
+      0deg, transparent, transparent 2px,
+      rgba(0,0,0,0.18) 2px, rgba(0,0,0,0.18) 4px
+    );
+    animation: lwsb-scan 0.1s linear infinite;
+  }
+  .lwsb-vignette {
+    position: fixed; inset: 0; pointer-events: none; z-index: 3;
+    background: radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.92) 100%);
+  }
+  .lwsb-glow {
+    position: fixed; inset: 0; pointer-events: none; z-index: 1;
+    background: radial-gradient(ellipse at center, rgba(160,0,0,0.07) 0%, transparent 70%);
+  }
+
+  /* ── PHASE 1: Press any key ── */
+  #lwsb-entry {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 4;
+    cursor: pointer;
+    user-select: none;
+  }
+  #lwsb-entry-logo {
+    color: #cc1100;
+    font-size: clamp(13px, 2vw, 18px);
+    letter-spacing: 0.3em;
+    text-shadow: 0 0 6px #cc1100, 0 0 14px #880000;
+    margin-bottom: 48px;
+    animation: lwsb-flicker 5s infinite;
+  }
+  #lwsb-entry-prompt {
+    color: #ff2200;
+    font-size: clamp(14px, 2.2vw, 20px);
+    letter-spacing: 0.2em;
+    text-shadow: 0 0 8px #ff2200, 0 0 20px #cc1100;
+    animation: lwsb-flicker 5s infinite, lwsb-glow-pulse 1.5s ease-in-out infinite;
+  }
+  .lwsb-blink-cursor {
+    display: inline-block;
+    width: 10px;
+    height: 1.1em;
+    background: #ff2200;
+    vertical-align: middle;
+    margin-left: 3px;
+    box-shadow: 0 0 6px #ff2200;
+    animation: lwsb-blink 0.53s step-end infinite;
+  }
+
+  /* ── PHASE 2+: Boot sequence ── */
+  #lwsb-boot {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 48px 56px;
+    z-index: 4;
+  }
+  .lwsb-boot-line {
+    color: #cc1100;
+    font-size: 13px;
+    line-height: 1.9;
+    letter-spacing: 0.05em;
+    text-shadow: 0 0 4px #cc1100, 0 0 8px #880000;
+    animation: lwsb-fade-line 0.08s ease-out both;
+    min-height: 1.9em;
+  }
+  .lwsb-boot-line.hl {
+    color: #ff4422;
+    font-weight: bold;
+    text-shadow: 0 0 8px #ff2200, 0 0 18px #ff2200;
+    animation: lwsb-fade-line 0.08s ease-out both, lwsb-phosphor 1.5s infinite;
+  }
+  #lwsb-inline-cursor {
+    display: inline-block;
+    width: 9px; height: 13px;
+    background: #cc1100;
+    margin-left: 4px;
+    vertical-align: middle;
+    box-shadow: 0 0 6px #cc1100;
+    animation: lwsb-blink 0.53s step-end infinite;
+  }
+  #lwsb-divider {
+    display: none;
+    border: none;
+    border-top: 1px solid #660000;
+    box-shadow: 0 0 8px #440000;
+    margin: 20px 0;
+    width: 100%;
+  }
+  #lwsb-stamp-wrap {
+    display: none;
+  }
+  #lwsb-stamp-text {
+    color: #ff2200;
+    font-size: clamp(28px, 5vw, 64px);
+    font-weight: bold;
+    letter-spacing: 0.08em;
+    text-shadow: 0 0 10px #ff2200, 0 0 28px #cc1100, 0 0 50px #880000;
+    animation: lwsb-stamp 0.5s cubic-bezier(0.22,1,0.36,1) both,
+               lwsb-phosphor 2s 0.5s infinite;
+  }
+
+  /* ── Keyframes ── */
+  @keyframes lwsb-scan {
+    0%   { background-position: 0 0; }
+    100% { background-position: 0 4px; }
+  }
+  @keyframes lwsb-flicker {
+    0%,100% { opacity: 1; }
+    3%  { opacity: 0.82; } 5%  { opacity: 1; }
+    31% { opacity: 0.88; } 32% { opacity: 1; }
+    71% { opacity: 0.75; } 72% { opacity: 1; }
+  }
+  @keyframes lwsb-blink {
+    0%,100% { opacity: 1; }
+    50%      { opacity: 0; }
+  }
+  @keyframes lwsb-glow-pulse {
+    0%,100% { text-shadow: 0 0 8px #ff2200, 0 0 20px #cc1100; }
+    50%      { text-shadow: 0 0 14px #ff3300, 0 0 35px #dd1100, 0 0 5px #ff6644; }
+  }
+  @keyframes lwsb-fade-line {
+    0%   { opacity: 0; }
+    100% { opacity: 1; }
+  }
+  @keyframes lwsb-phosphor {
+    0%,100% { text-shadow: 0 0 6px #ff2200, 0 0 14px #ff2200; }
+    50%      { text-shadow: 0 0 12px #ff2200, 0 0 30px #ff2200, 0 0 5px #ff6644; }
+  }
+  @keyframes lwsb-stamp {
+    0%   { opacity: 0; letter-spacing: 0.5em; transform: scale(1.05); }
+    60%  { opacity: 1; letter-spacing: 0.1em;  transform: scale(1.0); }
+    100% { opacity: 1; letter-spacing: 0.08em; transform: scale(1.0); }
+  }
+  @keyframes lwsb-fizzle {
+    0%   { opacity: 1; transform: scaleY(1); filter: brightness(1); }
+    15%  { opacity: 0.8; transform: scaleY(0.98); filter: brightness(1.6); }
+    35%  { opacity: 0.6; transform: scaleY(0.5);  filter: brightness(2.2); }
+    55%  { opacity: 0.3; transform: scaleY(0.08); filter: brightness(3); }
+    75%  { opacity: 0.5; transform: scaleY(0.02); filter: brightness(4); }
+    100% { opacity: 0;   transform: scaleY(0);    filter: brightness(0); }
+  }
+</style>
+
+<div id="lwsb-preloader">
+
+  <!-- Shared overlays -->
+  <div class="lwsb-scanlines"></div>
+  <div class="lwsb-vignette"></div>
+  <div class="lwsb-glow"></div>
+
+  <!-- Phase 1: Press any key -->
+  <div id="lwsb-entry">
+    <div id="lwsb-entry-logo">// LAST WAR: SURVIVAL BUDDY</div>
+    <div id="lwsb-entry-prompt">
+      PRESS ANY KEY TO CONTINUE<span class="lwsb-blink-cursor"></span>
+    </div>
+  </div>
+
+  <!-- Phase 2+: Boot sequence -->
+  <div id="lwsb-boot">
+    <div id="lwsb-lines"></div>
+    <hr id="lwsb-divider">
+    <div id="lwsb-stamp-wrap">
+      <div id="lwsb-stamp-text">BUDDY ONLINE</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+
+  var fired = false;
+
+  // ── BOOT LINES ──────────────────────────────────────────────────────────────
+  var LINES = [
+    { text: 'SIGNAL DETECTED...',           delay: 0,    hl: false },
+    { text: 'TRIANGULATING SOURCE...',      delay: 220,  hl: false },
+    { text: 'FREQUENCY LOCKED.........OK',  delay: 450,  hl: false },
+    { text: 'ESTABLISHING LINK.........OK', delay: 700,  hl: false },
+    { text: 'DECRYPTING PAYLOAD........OK', delay: 960,  hl: false },
+    { text: '',                             delay: 1140, hl: false },
+    { text: '> TRANSMISSION INCOMING',      delay: 1280, hl: true  },
+  ];
+
+  // ── TRON SOUND ───────────────────────────────────────────────────────────────
+  function playSound() {
+    try {
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+      var comp = ctx.createDynamicsCompressor();
+      comp.threshold.value = -18; comp.ratio.value = 3;
+      comp.connect(ctx.destination);
+
+      var master = ctx.createGain();
+      master.gain.setValueAtTime(0, ctx.currentTime);
+      master.gain.linearRampToValueAtTime(0.8, ctx.currentTime + 0.04);
+      master.gain.setValueAtTime(0.8, ctx.currentTime + 3.0);
+      master.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 5.0);
+
+      var shelf = ctx.createBiquadFilter();
+      shelf.type = 'lowshelf'; shelf.frequency.value = 200; shelf.gain.value = 10;
+      master.connect(shelf); shelf.connect(comp);
+
+      // Sub sines
+      [28, 34, 38].forEach(function(f, i) {
+        var o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(f, ctx.currentTime);
+        o.frequency.exponentialRampToValueAtTime(f * 1.3, ctx.currentTime + 1.8);
+        g.gain.setValueAtTime(0.75 - i * 0.08, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 3.2);
+        o.connect(g); g.connect(master);
+        o.start(ctx.currentTime); o.stop(ctx.currentTime + 3.3);
+      });
+
+      // Bass sustain
+      var bh = ctx.createOscillator(), bhg = ctx.createGain();
+      bh.type = 'sine'; bh.frequency.value = 55;
+      bhg.gain.setValueAtTime(0, ctx.currentTime + 0.8);
+      bhg.gain.linearRampToValueAtTime(0.4, ctx.currentTime + 1.8);
+      bhg.gain.setValueAtTime(0.4, ctx.currentTime + 3.5);
+      bhg.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 5.0);
+      bh.connect(bhg); bhg.connect(master);
+      bh.start(ctx.currentTime + 0.8); bh.stop(ctx.currentTime + 5.1);
+
+      // Sawtooth sweep
+      var sw = ctx.createOscillator(), swg = ctx.createGain(), swf = ctx.createBiquadFilter();
+      sw.type = 'sawtooth';
+      sw.frequency.setValueAtTime(55, ctx.currentTime);
+      sw.frequency.exponentialRampToValueAtTime(1100, ctx.currentTime + 1.8);
+      swf.type = 'bandpass'; swf.Q.value = 3.0;
+      swf.frequency.setValueAtTime(120, ctx.currentTime);
+      swf.frequency.exponentialRampToValueAtTime(1800, ctx.currentTime + 1.8);
+      swg.gain.setValueAtTime(0.4, ctx.currentTime);
+      swg.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 2.0);
+      sw.connect(swf); swf.connect(swg); swg.connect(master);
+      sw.start(ctx.currentTime); sw.stop(ctx.currentTime + 2.1);
+
+      // Impact crack
+      var cs = ctx.sampleRate * 0.1, cb = ctx.createBuffer(1, cs, ctx.sampleRate);
+      var cd = cb.getChannelData(0);
+      for (var i = 0; i < cs; i++) cd[i] = Math.random() * 2 - 1;
+      var cn = ctx.createBufferSource(), cf = ctx.createBiquadFilter(), cg = ctx.createGain();
+      cn.buffer = cb; cf.type = 'highpass'; cf.frequency.value = 2800;
+      cg.gain.setValueAtTime(0.2, ctx.currentTime);
+      cg.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+      cn.connect(cf); cf.connect(cg); cg.connect(master);
+      cn.start(ctx.currentTime);
+
+      // Resolve chord
+      [440, 554.37, 659.25].forEach(function(f, i) {
+        var o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(f * 0.5, ctx.currentTime + 1.0);
+        o.frequency.exponentialRampToValueAtTime(f, ctx.currentTime + 2.0 + i * 0.08);
+        g.gain.setValueAtTime(0, ctx.currentTime + 1.0);
+        g.gain.linearRampToValueAtTime(0.14, ctx.currentTime + 2.2 + i * 0.06);
+        g.gain.setValueAtTime(0.14, ctx.currentTime + 3.8);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 5.0);
+        o.connect(g); g.connect(master);
+        o.start(ctx.currentTime + 1.0); o.stop(ctx.currentTime + 5.1);
+      });
+
+      setTimeout(function() { ctx.close(); }, 6500);
+    } catch(e) {}
+  }
+
+  // ── HER VOICE — scared, feminine, desperate ──────────────────────────────────
+  function speakDistress() {
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+
+    function say(text, pitch, rate, vol, delay) {
+      setTimeout(function() {
+        var u = new SpeechSynthesisUtterance(text);
+        u.pitch = pitch; u.rate = rate; u.volume = vol;
+        var voices = window.speechSynthesis.getVoices();
+        var female = voices.find(function(v) {
+          return /samantha|karen|victoria|moira|fiona|google uk english female|microsoft zira|microsoft hazel/i.test(v.name);
+        });
+        if (female) u.voice = female;
+        window.speechSynthesis.speak(u);
+      }, delay);
+    }
+
+    // Pitched up, slow, trembling ghost layer behind each phrase
+    say('Please...', 1.1, 0.52, 1.0, 0);
+    say('Please...', 1.18, 0.54, 0.18, 90);
+
+    say('if anyone can hear this...', 1.1, 0.62, 1.0, 1100);
+    say('if anyone can hear this...', 1.2, 0.64, 0.16, 1200);
+
+    say('we need help.', 1.05, 0.48, 1.0, 2900);
+    say('we need help.', 1.12, 0.5, 0.14, 3000);
+  }
+
+  // ── BUDDY RESPONSE VOICE — cold, certain, robotic ────────────────────────────
+  function speakBuddy() {
+    if (!('speechSynthesis' in window)) return;
+
+    function say(text, pitch, rate, vol, delay) {
+      setTimeout(function() {
+        var u = new SpeechSynthesisUtterance(text);
+        u.pitch = pitch; u.rate = rate; u.volume = vol;
+        var voices = window.speechSynthesis.getVoices();
+        var deep = voices.find(function(v) {
+          return /microsoft david|alex|google uk english male|daniel|reed|fred/i.test(v.name);
+        });
+        if (deep) u.voice = deep;
+        window.speechSynthesis.speak(u);
+      }, delay);
+    }
+
+    say('Welcome to Buddy,', 0, 0.6, 1.0, 0);
+    say('Welcome to Buddy,', 0.08, 0.62, 0.22, 160);
+    say('Commander...', 0, 0.42, 1.0, 2200);
+    say('Commander...', 0, 0.42, 0.12, 2280);
+  }
+
+  // ── FIZZLE EXIT ───────────────────────────────────────────────────────────────
+  function fizzleOut() {
+    var el = document.getElementById('lwsb-preloader');
+    if (!el) return;
+    el.style.animation = 'lwsb-fizzle 0.75s ease-in forwards';
+    setTimeout(function() {
+      el.style.display = 'none';
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+    }, 800);
+  }
+
+  // ── RUN SEQUENCE (fires after user gesture) ───────────────────────────────────
+  function runSequence() {
+    var entryEl  = document.getElementById('lwsb-entry');
+    var bootEl   = document.getElementById('lwsb-boot');
+    var linesEl  = document.getElementById('lwsb-lines');
+    var dividerEl= document.getElementById('lwsb-divider');
+    var stampEl  = document.getElementById('lwsb-stamp-wrap');
+
+    // Swap screens
+    entryEl.style.display = 'none';
+    bootEl.style.display  = 'flex';
+
+    // Sound fires immediately — user gesture unlocks it
+    playSound();
+
+    // Boot lines
+    LINES.forEach(function(line, i) {
+      setTimeout(function() {
+        var div = document.createElement('div');
+        div.className = 'lwsb-boot-line' + (line.hl ? ' hl' : '');
+        div.textContent = line.text;
+
+        // Cursor on last line
+        if (i === LINES.length - 1) {
+          var cur = document.createElement('span');
+          cur.id = 'lwsb-inline-cursor';
+          div.appendChild(cur);
+        }
+
+        linesEl.appendChild(div);
+      }, line.delay);
+    });
+
+    // Her voice — distress call
+    setTimeout(speakDistress, 1600);
+
+    // BUDDY ONLINE stamps in
+    setTimeout(function() {
+      var cur = document.getElementById('lwsb-inline-cursor');
+      if (cur) cur.remove();
+      dividerEl.style.display = 'block';
+      stampEl.style.display   = 'block';
+    }, 4000);
+
+    // Buddy voice — the answer
+    setTimeout(speakBuddy, 4300);
+
+    // Fizzle out
+    setTimeout(fizzleOut, 7800);
+  }
+
+  // ── WAIT FOR USER GESTURE ─────────────────────────────────────────────────────
+  function onGesture(e) {
+    if (fired) return;
+    fired = true;
+    document.removeEventListener('click',      onGesture);
+    document.removeEventListener('touchstart', onGesture);
+    document.removeEventListener('keydown',    onGesture);
+    runSequence();
+  }
+
+  document.addEventListener('click',      onGesture);
+  document.addEventListener('touchstart', onGesture);
+  document.addEventListener('keydown',    onGesture);
+
+})();
+</script>
+  <!--
   LWSB SPLASH PRELOADER v1
   ========================
   Drop this entire block at the very TOP of <body> in your index.html.
