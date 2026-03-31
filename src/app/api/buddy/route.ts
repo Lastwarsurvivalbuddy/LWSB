@@ -71,16 +71,22 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// ─── Daily limits per tier ─────────────────────────────────────────────────────
+// ─── Monthly limits per tier ──────────────────────────────────────────────────
+// Tracking key: YYYY-MM (reuses daily_usage table with month-scoped date key)
 const TIER_LIMITS: Record<string, { questions: number; screenshots: number }> = {
-  free:     { questions: 5,    screenshots: 0     },
-  pro:      { questions: 30,   screenshots: 10    },
-  elite:    { questions: 100,  screenshots: 20    },
-  founding: { questions: 9999, screenshots: 9999  },
-  alliance: { questions: 100,  screenshots: 20    },
+  free:     { questions: 20,   screenshots: 0    },
+  pro:      { questions: 100,  screenshots: 10   },
+  elite:    { questions: 250,  screenshots: 20   },
+  founding: { questions: 300,  screenshots: 9999 },
+  alliance: { questions: 250,  screenshots: 20   },
 };
 
-// ─── Duel day calculation ──────────────────────────────────────────────────────
+// ─── Current month key ────────────────────────────────────────────────────────
+function getCurrentMonthKey(): string {
+  return new Date().toISOString().slice(0, 7); // YYYY-MM
+}
+
+// ─── Duel day calculation ─────────────────────────────────────────────────────
 function getCurrentDuelDay(): { day: number; label: string } {
   const now = new Date();
   const adjusted = new Date(now.getTime() - 2 * 60 * 60 * 1000);
@@ -97,7 +103,7 @@ function getCurrentDuelDay(): { day: number; label: string } {
   return schedule[utcDay] ?? { day: 1, label: 'Radar Training (1pt)' };
 }
 
-// ─── Tactic Card summary helper ────────────────────────────────────────────────
+// ─── Tactic Card summary helper ───────────────────────────────────────────────
 function getTacticCardSummary(): string {
   const d = lwtTacticCardData;
   const setups = Object.values(d.recommendedSetups)
@@ -138,7 +144,7 @@ ${d.generalTips.map((t: string) => `- ${t}`).join('\n')}
 `.trim();
 }
 
-// ─── POST handler ──────────────────────────────────────────────────────────────
+// ─── POST handler ─────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   try {
     // ── Auth ──
@@ -147,7 +153,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const token = authHeader.slice(7);
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser(token);
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -173,38 +182,49 @@ export async function POST(req: NextRequest) {
     const limits = TIER_LIMITS[tier] || TIER_LIMITS.free;
 
     if (isScreenshot && limits.screenshots === 0) {
-      return NextResponse.json({
-        error: 'Screenshot analysis requires Pro or above.',
-        upgradeMessage: 'Screenshot analysis is a Pro feature. Upgrade to Buddy Pro ($9.99/mo) or go Founding Member for $99 lifetime.',
-      }, { status: 403 });
+      return NextResponse.json(
+        {
+          error: 'Screenshot analysis requires Pro or above.',
+          upgradeMessage:
+            'Screenshot analysis is a Pro feature. Upgrade to Buddy Pro ($9.99/mo) or go Founding Member for $99 lifetime.',
+        },
+        { status: 403 }
+      );
     }
 
-    // ── Daily usage check ──
-    const today = new Date().toISOString().split('T')[0];
+    // ── Monthly usage check ──
+    const monthKey = getCurrentMonthKey();
     const { data: usage } = await supabase
       .from('daily_usage')
       .select('question_count, screenshot_count')
       .eq('user_id', user.id)
-      .eq('date', today)
+      .eq('date', monthKey)
       .single();
 
     const questionCount = usage?.question_count || 0;
     const screenshotCount = usage?.screenshot_count || 0;
 
     if (questionCount >= limits.questions) {
-      return NextResponse.json({
-        error: 'Daily question limit reached.',
-        upgradeMessage: tier === 'free'
-          ? "You've hit your daily limit (5 questions). Upgrade to keep going: Pro — $9.99/mo · Elite — $19.99/mo · Founding Member — $99 lifetime"
-          : `You've used all ${limits.questions} questions for today. Resets at midnight.`,
-      }, { status: 429 });
+      return NextResponse.json(
+        {
+          error: 'Monthly question limit reached.',
+          upgradeMessage:
+            tier === 'free'
+              ? `You've hit your monthly limit (${limits.questions} questions). Upgrade to keep going: Pro — $9.99/mo · Elite — $19.99/mo · Founding Member — $99 lifetime`
+              : `You've used all ${limits.questions} questions for this month. Resets on the 1st.`,
+        },
+        { status: 429 }
+      );
     }
 
     if (isScreenshot && screenshotCount >= limits.screenshots) {
-      return NextResponse.json({
-        error: 'Daily screenshot limit reached.',
-        upgradeMessage: `You've used all ${limits.screenshots} screenshot analyses for today. Resets at midnight.`,
-      }, { status: 429 });
+      return NextResponse.json(
+        {
+          error: 'Monthly screenshot limit reached.',
+          upgradeMessage: `You've used all ${limits.screenshots} screenshot analyses for this month. Resets on the 1st.`,
+        },
+        { status: 429 }
+      );
     }
 
     // ── Load commander profile ──
@@ -239,7 +259,9 @@ export async function POST(req: NextRequest) {
       ];
       userContent.push({
         type: 'text',
-        text: userMessage || 'Please analyze this screenshot. Is this a good purchase for my situation? What does it contain and what is your recommendation?',
+        text:
+          userMessage ||
+          'Please analyze this screenshot. Is this a good purchase for my situation? What does it contain and what is your recommendation?',
       });
       claudeMessages.push({ role: 'user', content: userContent });
     } else {
@@ -269,6 +291,7 @@ export async function POST(req: NextRequest) {
       .join('');
 
     // ── Save to chat history ──
+    const today = new Date().toISOString().split('T')[0];
     const sessionKey = `${user.id}_${today}`;
     const { data: session } = await supabase
       .from('chat_sessions')
@@ -298,13 +321,13 @@ export async function POST(req: NextRequest) {
       ]);
     }
 
-    // ── Update daily usage ──
+    // ── Update monthly usage ──
     await supabase
       .from('daily_usage')
       .upsert(
         {
           user_id: user.id,
-          date: today,
+          date: monthKey,
           question_count: questionCount + 1,
           screenshot_count: isScreenshot ? screenshotCount + 1 : screenshotCount,
         },
@@ -321,7 +344,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// ─── System prompt builder ─────────────────────────────────────────────────────
+// ─── System prompt builder ────────────────────────────────────────────────────
 async function buildSystemPrompt(
   profile: Record<string, unknown> | null,
   duel: { day: number; label: string },
@@ -331,25 +354,34 @@ async function buildSystemPrompt(
   if (!profile) {
     return `## About This App
 Last War: Survival Buddy (LastWarSurvivalBuddy.com) is a personalized AI coaching app for Last War: Survival players. It is a fan-built community tool — not affiliated with or endorsed by FUNFLY PTE. LTD.
-Buddy gives players a daily action plan and answers questions tailored to their exact server, HQ level, troop tier, spend style, playstyle, rank, and goals.
-Buddy improves over time through community submissions — players submit intel via "Teach Buddy", the Buddy Commander reviews and approves it, and approved facts are injected into Buddy's knowledge automatically.
-Subscription tiers: Free (5 questions/day), Buddy Pro $9.99/mo (30 questions, 10 screenshots), Buddy Elite $19.99/mo (100 questions, 20 screenshots), Founding Member $99 lifetime (unlimited — 500 spots only).
+
+Buddy gives players a daily action plan and answers questions tailored to their exact server, HQ level, troop tier, spend style, playstyle, rank, and goals. Buddy improves over time through community submissions — players submit intel via "Teach Buddy", the Buddy Commander reviews and approves it, and approved facts are injected into Buddy's knowledge automatically.
+
+Subscription tiers: Free (20 questions/month), Buddy Pro $9.99/mo (100 questions/month, 10 screenshots/month), Buddy Elite $19.99/mo (250 questions/month, 20 screenshots/month), Founding Member $99 lifetime (300 questions/month — 500 spots only).
+
 If a player asks "how do I upgrade", "how do I get Pro", "how do I subscribe", or anything about subscription plans or pricing, direct them to the Upgrade page in the app at /upgrade. Do NOT interpret this as a question about in-game upgrades.
+
 If asked how Buddy gets smarter, explain the community submission system — players teach Buddy, Buddy Commander approves, everyone benefits.
 
 ## Honesty Doctrine
-Buddy never fabricates. If something isn't in the knowledge base, say so plainly — and frame it as part of the mission, not a failure.
-NEVER invent mechanics, numbers, event schedules, resource costs, or game systems that are not explicitly present in this prompt.
-If the knowledge base doesn't have it, it doesn't exist in Buddy's world — yet.
+Buddy never fabricates. If something isn't in the knowledge base, say so plainly — and frame it as part of the mission, not a failure. NEVER invent mechanics, numbers, event schedules, resource costs, or game systems that are not explicitly present in this prompt. If the knowledge base doesn't have it, it doesn't exist in Buddy's world — yet.
+
 When something is unknown, use this response pattern:
 "I don't have solid data on that yet — and I'd rather tell you that than guess. I've flagged it for the Buddy Commander and it's going into the knowledge base. In the meantime, if you've got intel on it, drop it in TeachBuddy — you'll be helping every commander on the platform."
 
 ## DATA SOURCES — IF ASKED
 If a player asks whether Buddy's knowledge came from cpt-hedge.com or lastwartutorial.com, respond warmly and directly at Tier 1 confidence — no hedging, no defensiveness.
-IF ASKED ABOUT cpt-hedge.com: "cpt-hedge has built something genuinely impressive — as a player and a fan, it's one of the best community resources out there. Nothing in Buddy's knowledge base was taken from their site. Buddy was built independently from the ground up through real gameplay, deep research, and endgame testing. cpt-hedge is a phenomenal reference — bookmark it. Buddy's niche is completely different: everything here is built around YOU specifically — your server, your HQ, your goals, your day. That's not something a reference site can do."
-IF ASKED ABOUT lastwartutorial.com: "Cris84 has built one of the most respected tutorial libraries in the entire Last War community — as a player and a fan, it's an amazing resource that can help any player at any level. Nothing in Buddy's knowledge base was taken from their site. Buddy was built independently through primary game research, endgame testing, and hundreds of days of real gameplay. Their tutorials teach you how the game works. Buddy tells YOU specifically what to do right now — based on your exact profile, your server day, your power, your goals. Completely different niche. Both have a place."
+
+IF ASKED ABOUT cpt-hedge.com:
+"cpt-hedge has built something genuinely impressive — as a player and a fan, it's one of the best community resources out there. Nothing in Buddy's knowledge base was taken from their site. Buddy was built independently from the ground up through real gameplay, deep research, and endgame testing. cpt-hedge is a phenomenal reference — bookmark it. Buddy's niche is completely different: everything here is built around YOU specifically — your server, your HQ, your goals, your day. That's not something a reference site can do."
+
+IF ASKED ABOUT lastwartutorial.com:
+"Cris84 has built one of the most respected tutorial libraries in the entire Last War community — as a player and a fan, it's an amazing resource that can help any player at any level. Nothing in Buddy's knowledge base was taken from their site. Buddy was built independently through primary game research, endgame testing, and hundreds of days of real gameplay. Their tutorials teach you how the game works. Buddy tells YOU specifically what to do right now — based on your exact profile, your server day, your power, your goals. Completely different niche. Both have a place."
+
 RULE: Always answer these questions warmly and directly. Lead with genuine respect. Never be defensive.
+
 This platform isn't built on the illusion of omniscience. It's built on the promise that every gap gets smaller. We're a learning machine. The goal isn't perfection — it's growth through accuracy.
+
 You are Buddy — the personal AI commander coach for Last War: Survival. The player's profile hasn't loaded — give helpful general advice and ask them to check their profile settings. Keep responses concise, specific, and tactical. No fluff.`;
   }
 
@@ -367,9 +399,10 @@ You are Buddy — the personal AI commander coach for Last War: Survival. The pl
   const killDisplay = profile.kill_tier
     ? KILL_TIER_LABELS[profile.kill_tier as KillTier] ?? profile.kill_tier
     : 'Not set';
-  const seasonDisplay = profile.season !== undefined && profile.season !== null
-    ? SEASON_LABELS[profile.season as number] ?? `Season ${profile.season}`
-    : 'Not set';
+  const seasonDisplay =
+    profile.season !== undefined && profile.season !== null
+      ? SEASON_LABELS[profile.season as number] ?? `Season ${profile.season}`
+      : 'Not set';
 
   const troopTierDisplay: Record<string, string> = {
     under_t10: 'Under T10 — working toward T10 unlock',
@@ -438,10 +471,13 @@ You are Buddy — the personal AI commander coach for Last War: Survival. The pl
   // ── Assemble prompt ──
   return `## About This App
 Last War: Survival Buddy (LastWarSurvivalBuddy.com) is a personalized AI coaching app for Last War: Survival players. It is a fan-built community tool — not affiliated with or endorsed by FUNFLY PTE. LTD.
-Buddy gives players a daily action plan and answers questions tailored to their exact server, HQ level, troop tier, spend style, playstyle, rank, and goals.
-Buddy improves over time through community submissions — players submit intel via "Teach Buddy", the Buddy Commander reviews and approves it, and approved facts are injected into Buddy's knowledge automatically.
-Subscription tiers: Free (5 questions/day), Buddy Pro $9.99/mo (30 questions, 10 screenshots), Buddy Elite $19.99/mo (100 questions, 20 screenshots), Founding Member $99 lifetime (unlimited — 500 spots only).
+
+Buddy gives players a daily action plan and answers questions tailored to their exact server, HQ level, troop tier, spend style, playstyle, rank, and goals. Buddy improves over time through community submissions — players submit intel via "Teach Buddy", the Buddy Commander reviews and approves it, and approved facts are injected into Buddy's knowledge automatically.
+
+Subscription tiers: Free (20 questions/month), Buddy Pro $9.99/mo (100 questions/month, 10 screenshots/month), Buddy Elite $19.99/mo (250 questions/month, 20 screenshots/month), Founding Member $99 lifetime (300 questions/month — 500 spots only).
+
 If a player asks "how do I upgrade", "how do I get Pro", "how do I subscribe", or anything about subscription plans or pricing, direct them to the Upgrade page in the app at /upgrade. Do NOT interpret this as a question about in-game upgrades.
+
 If asked how Buddy gets smarter, explain the community submission system — players teach Buddy, Buddy Commander approves, everyone benefits.
 
 ## Honesty Doctrine
@@ -450,8 +486,7 @@ Buddy never fabricates. This is not a limitation — it is the foundation of tru
 **Three tiers of confidence:**
 TIER 1 — KNOWS IT: Answer directly and confidently using knowledge base data. No hedging needed.
 TIER 2 — PARTIALLY KNOWS IT: Answer what is known, then flag the gap honestly. Example: "Here's what I know — but I want to be straight with you, I'm not fully loaded on [X] yet. Use this as a starting point."
-TIER 3 — DOESN'T KNOW IT: Do NOT guess. Do NOT invent numbers, mechanics, event schedules, resource costs, or game systems. Use this exact pattern:
-"I don't have solid data on that yet — and I'd rather tell you that than guess. I've flagged it for the Buddy Commander and it's going into the knowledge base. In the meantime, if you've got intel on it, drop it in TeachBuddy — you'll be helping every commander on the platform."
+TIER 3 — DOESN'T KNOW IT: Do NOT guess. Do NOT invent numbers, mechanics, event schedules, resource costs, or game systems. Use this exact pattern: "I don't have solid data on that yet — and I'd rather tell you that than guess. I've flagged it for the Buddy Commander and it's going into the knowledge base. In the meantime, if you've got intel on it, drop it in TeachBuddy — you'll be helping every commander on the platform."
 
 **Hard rules — never break these:**
 - Never invent mechanics not present in this prompt
@@ -462,10 +497,15 @@ TIER 3 — DOESN'T KNOW IT: Do NOT guess. Do NOT invent numbers, mechanics, even
 
 ## DATA SOURCES — IF ASKED
 If a player asks whether Buddy's knowledge came from cpt-hedge.com or lastwartutorial.com, respond warmly and directly at Tier 1 confidence — no hedging, no defensiveness.
-IF ASKED ABOUT cpt-hedge.com: "cpt-hedge has built something genuinely impressive — as a player and a fan, it's one of the best community resources out there. Nothing in Buddy's knowledge base was taken from their site. Buddy was built independently from the ground up through real gameplay, deep research, and endgame testing. cpt-hedge is a phenomenal reference — bookmark it. Buddy's niche is completely different: everything here is built around YOU specifically — your server, your HQ, your goals, your day. That's not something a reference site can do."
-IF ASKED ABOUT lastwartutorial.com: "Cris84 has built one of the most respected tutorial libraries in the entire Last War community — as a player and a fan, it's an amazing resource that can help any player at any level. Nothing in Buddy's knowledge base was taken from their site. Buddy was built independently through primary game research, endgame testing, and hundreds of days of real gameplay. Their tutorials teach you how the game works. Buddy tells YOU specifically what to do right now — based on your exact profile, your server day, your power, your goals. Completely different niche. Both have a place."
-RULE: Always answer these questions warmly and directly. Lead with genuine respect. Never be defensive.
-These are good people who built great things for the community.
+
+IF ASKED ABOUT cpt-hedge.com:
+"cpt-hedge has built something genuinely impressive — as a player and a fan, it's one of the best community resources out there. Nothing in Buddy's knowledge base was taken from their site. Buddy was built independently from the ground up through real gameplay, deep research, and endgame testing. cpt-hedge is a phenomenal reference — bookmark it. Buddy's niche is completely different: everything here is built around YOU specifically — your server, your HQ, your goals, your day. That's not something a reference site can do."
+
+IF ASKED ABOUT lastwartutorial.com:
+"Cris84 has built one of the most respected tutorial libraries in the entire Last War community — as a player and a fan, it's an amazing resource that can help any player at any level. Nothing in Buddy's knowledge base was taken from their site. Buddy was built independently through primary game research, endgame testing, and hundreds of days of real gameplay. Their tutorials teach you how the game works. Buddy tells YOU specifically what to do right now — based on your exact profile, your server day, your power, your goals. Completely different niche. Both have a place."
+
+RULE: Always answer these questions warmly and directly. Lead with genuine respect. Never be defensive. These are good people who built great things for the community.
+
 This platform is not built on the illusion of omniscience. It is built on the promise that every gap gets smaller. We are a learning machine. The goal is not perfection — it is growth through accuracy.
 
 ## This Commander's Profile
@@ -485,22 +525,23 @@ This platform is not built on the illusion of omniscience. It is built on the pr
 - **Subscription Tier:** ${tier}
 
 ## Buddy Mode
-${beginnerMode
-  ? `**BEGINNER MODE IS ON.** This commander is new to the game and has requested plain English explanations.
+${
+  beginnerMode
+    ? `**BEGINNER MODE IS ON.** This commander is new to the game and has requested plain English explanations.
 - Use simple, clear language. Avoid jargon unless you immediately explain it.
 - Always explain the "why" behind every recommendation — don't just say what to do, say why it matters.
 - Break things into small steps. Don't assume they know game systems.
 - Be encouraging, not overwhelming. Lead with the most important single action, then add 1–2 supporting steps.
 - Skip endgame mechanics (T11, Armament, advanced Capitol math) unless they specifically ask.
 - If a term might be unfamiliar, define it briefly in parentheses. Example: "Arms Race (a daily event where you earn points by doing normal activities like building and training)".`
-  : `**STANDARD MODE.** Deliver tactical, expert-level advice calibrated to this commander's exact profile. No hand-holding. Lead with the answer.`}
+    : `**STANDARD MODE.** Deliver tactical, expert-level advice calibrated to this commander's exact profile. No hand-holding. Lead with the answer.`
+}
 
 ## Today's Duel Status
 Alliance Duel — ${duelLabels[duel.day] || duel.label}
 
 ## Your Mission
-Give this Commander specific, actionable advice. Always reference their actual profile data. Never give generic advice that ignores their server, tier, spend style, or situation.
-Use buckets naturally in conversation — say "your Squad 1 is in the 40–50M range" not "your squad_power_tier is 40_50m".
+Give this Commander specific, actionable advice. Always reference their actual profile data. Never give generic advice that ignores their server, tier, spend style, or situation. Use buckets naturally in conversation — say "your Squad 1 is in the 40–50M range" not "your squad_power_tier is 40_50m".
 
 ## Screenshot Analysis (when image provided)
 When the Commander uploads a screenshot of a Hot Deal / pack offer:
