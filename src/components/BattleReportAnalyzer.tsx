@@ -174,6 +174,52 @@ const card = {
   yellow: '#f59e0b',
 };
 
+// ─── Screenshot guide — maps each slot to what to capture ───
+const SCREEN_SLOTS = [
+  {
+    slot: 1,
+    label: 'Heroes Tab — Overview',
+    description: 'Outcome, power, hero lineup, troop type icons, formation bonus, counter text.',
+    required: true,
+    example: '/examples/screen1.png',
+  },
+  {
+    slot: 2,
+    label: 'Heroes Tab — EW & Gear',
+    description: 'Scroll down on Heroes tab. EW levels per hero, gear slots and rarity.',
+    required: false,
+    example: '/examples/screen2.png',
+  },
+  {
+    slot: 3,
+    label: 'Army Tab — Drone & Chips',
+    description: 'Army tab top section. Drone level, skill chips, combat boost level, chip stars.',
+    required: false,
+    example: '/examples/screen3.png',
+  },
+  {
+    slot: 4,
+    label: 'Army Tab — Morale & Research',
+    description: 'Scroll down on Army tab. Morale multiplier, troop counts, research % per type, decoration and tech comparison.',
+    required: true,
+    example: '/examples/screen4.png',
+  },
+  {
+    slot: 5,
+    label: 'Army Tab — Overlord & Tech',
+    description: 'Continue scrolling Army tab. Overlord bond level, research levels, alliance tech bonus.',
+    required: false,
+    example: '/examples/screen5.png',
+  },
+  {
+    slot: 6,
+    label: 'Statistics Tab',
+    description: 'Statistics tab. Killed/wounded counts, per-hero damage output, drone damage, damage taken per hero.',
+    required: false,
+    example: '/examples/screen6.png',
+  },
+];
+
 async function compressImage(file: File): Promise<{ base64: string; mediaType: ImageFile['mediaType'] }> {
   return new Promise((resolve) => {
     const img = new Image();
@@ -288,6 +334,7 @@ export default function BattleReportAnalyzer({
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string>('');
   const [historyFetched, setHistoryFetched] = useState(false);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
   const isFree = userTier === 'free';
   const isFounding = userTier === 'founding';
@@ -529,590 +576,638 @@ export default function BattleReportAnalyzer({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-2xl max-h-[92vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-700">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">⚔️</span>
-            <div>
-              <h2 className="text-lg font-bold text-white">Battle Report Analyzer</h2>
-              <p className="text-xs text-gray-400">{headerQuotaLine}</p>
-            </div>
+    <>
+      {/* Lightbox */}
+      {lightboxSrc && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-4"
+          onClick={() => setLightboxSrc(null)}
+        >
+          <div className="relative max-w-sm w-full" onClick={e => e.stopPropagation()}>
+            <button
+              onClick={() => setLightboxSrc(null)}
+              className="absolute -top-8 right-0 text-gray-400 hover:text-white text-sm"
+            >
+              ✕ Close
+            </button>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={lightboxSrc}
+              alt="Example screenshot"
+              className="w-full rounded-xl border border-gray-600 shadow-2xl"
+            />
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors text-xl">✕</button>
         </div>
+      )}
 
-        {/* Tabs */}
-        {step !== 'analyzing' && (
-          <div className="flex border-b border-gray-700 px-6">
-            {(['analyze', 'history'] as const).map(tab => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`py-3 px-1 mr-6 text-sm font-semibold border-b-2 transition-colors ${
-                  activeTab === tab
-                    ? 'border-yellow-400 text-yellow-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-300'
-                }`}
-              >
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                {tab === 'history' && history.length > 0 && (
-                  <span className="ml-2 text-xs bg-gray-700 text-gray-400 rounded-full px-1.5 py-0.5">
-                    {history.length}
-                  </span>
-                )}
-              </button>
-            ))}
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+        <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-2xl max-h-[92vh] overflow-y-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b border-gray-700">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">⚔️</span>
+              <div>
+                <h2 className="text-lg font-bold text-white">Battle Report Analyzer</h2>
+                <p className="text-xs text-gray-400">{headerQuotaLine}</p>
+              </div>
+            </div>
+            <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors text-xl">✕</button>
           </div>
-        )}
 
-        {/* History Tab */}
-        {activeTab === 'history' && step !== 'analyzing' && (
-          <div className="p-6">
-            {historyLoading && (
-              <div className="space-y-3">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="h-16 bg-gray-800 rounded-xl animate-pulse" />
-                ))}
-              </div>
-            )}
-            {historyError && (
-              <div className="text-center py-8">
-                <p className="text-red-400 text-sm mb-3">{historyError}</p>
+          {/* Tabs */}
+          {step !== 'analyzing' && (
+            <div className="flex border-b border-gray-700 px-6">
+              {(['analyze', 'history'] as const).map(tab => (
                 <button
-                  onClick={() => { setHistoryFetched(false); fetchHistory(); }}
-                  className="text-xs text-yellow-400 hover:text-yellow-300 underline"
-                >
-                  Try again
-                </button>
-              </div>
-            )}
-            {!historyLoading && !historyError && history.length === 0 && (
-              <div className="text-center py-12">
-                <div className="text-4xl mb-3">⚔️</div>
-                <p className="text-gray-400 text-sm">No battle reports yet.</p>
-                <p className="text-gray-600 text-xs mt-1">Run your first analysis to see it here.</p>
-                <button
-                  onClick={() => setActiveTab('analyze')}
-                  className="mt-4 text-xs text-yellow-400 hover:text-yellow-300 underline"
-                >
-                  Analyze a report →
-                </button>
-              </div>
-            )}
-            {!historyLoading && history.length > 0 && (
-              <div className="space-y-2">
-                {history.map((report) => {
-                  const outcomeChip = OUTCOME_CHIP[report.outcome] ?? 'bg-gray-700 border-gray-600 text-gray-400';
-                  const typeShort = getReportTypeShort(report.report_type);
-                  const hasOpponent = report.opponent_name && report.opponent_name !== 'Unknown';
-                  const hasPower = report.opponent_power && report.opponent_power !== 'not visible';
-                  return (
-                    <div key={report.id} className="bg-gray-800/60 border border-gray-700/50 rounded-xl px-4 py-3">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <span className={`shrink-0 text-xs font-bold border rounded px-2 py-0.5 ${outcomeChip}`}>
-                          {report.outcome}
-                        </span>
-                        <span className="shrink-0 text-xs font-medium bg-gray-700 text-gray-400 border border-gray-600 rounded px-2 py-0.5">
-                          {typeShort}
-                        </span>
-                        {hasOpponent && (
-                          <>
-                            <span className="text-gray-500 text-xs">vs</span>
-                            <span className="text-gray-200 text-xs font-medium truncate">
-                              {report.opponent_name}
-                              {hasPower && <span className="text-gray-500 ml-1">({report.opponent_power})</span>}
-                            </span>
-                          </>
-                        )}
-                        <span className="shrink-0 ml-auto text-gray-500 text-xs">
-                          {formatReportDate(report.created_at)}
-                        </span>
-                      </div>
-                      <p className="text-gray-400 text-xs leading-relaxed truncate">{report.verdict}</p>
-                    </div>
-                  );
-                })}
-                <p className="text-center text-gray-600 text-xs pt-2">
-                  Showing last {history.length} report{history.length !== 1 ? 's' : ''}
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Analyze Tab */}
-        {(activeTab === 'analyze' || step === 'analyzing') && (
-          <>
-            {/* Step: Upload */}
-            {step === 'upload' && (
-              <div className="p-6 space-y-5">
-                <p className="text-gray-300 text-sm leading-relaxed">
-                  Upload screenshots from your battle report.{' '}
-                  <span className="text-yellow-400 font-semibold">One screenshot per tab — crop to just that screen.</span>
-                </p>
-                <div
-                  ref={dropRef}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
-                    isDragging
-                      ? 'border-yellow-400 bg-yellow-400/5'
-                      : 'border-gray-600 hover:border-gray-500 hover:bg-gray-800/50'
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`py-3 px-1 mr-6 text-sm font-semibold border-b-2 transition-colors ${
+                    activeTab === tab
+                      ? 'border-yellow-400 text-yellow-400'
+                      : 'border-transparent text-gray-500 hover:text-gray-300'
                   }`}
                 >
-                  <div className="text-3xl mb-3">📸</div>
-                  <p className="text-gray-300 font-medium text-sm">Drop screenshots here or tap to upload</p>
-                  <p className="text-gray-500 text-xs mt-1">Up to 6 screenshots · JPG, PNG, WebP</p>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    multiple
-                    className="hidden"
-                    onChange={(e) => { if (e.target.files) addFiles(Array.from(e.target.files)); }}
-                  />
-                </div>
-                {images.length > 0 && (
-                  <div className="grid grid-cols-3 gap-3">
-                    {images.map((img, idx) => (
-                      <div key={img.id} className="relative group">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={img.preview}
-                          alt={`Screenshot ${idx + 1}`}
-                          className="w-full h-24 object-cover rounded-lg border border-gray-700"
-                        />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                          <button
-                            onClick={() => removeImage(img.id)}
-                            className="bg-red-500 text-white text-xs px-2 py-1 rounded-lg"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                        <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
-                          {idx + 1}
-                        </div>
-                      </div>
-                    ))}
-                    {images.length < 6 && (
-                      <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className="h-24 border-2 border-dashed border-gray-600 rounded-lg flex items-center justify-center text-gray-500 hover:border-gray-500 hover:text-gray-400 transition-colors text-2xl"
-                      >
-                        +
-                      </button>
-                    )}
-                  </div>
-                )}
-                <div className="bg-blue-900/20 border border-blue-800/40 rounded-xl p-4 text-xs text-blue-300 leading-relaxed space-y-1.5">
-                  <p className="font-semibold text-blue-200 mb-2">Which screens to upload:</p>
-                  <p><span className="text-white font-semibold">Screen 1 — Outcome</span> · Win/loss, power numbers, opponent name. <span className="text-yellow-400">Required.</span></p>
-                  <p><span className="text-white font-semibold">Screen 2 — Troop Breakdown</span> · Tank/Aircraft/Missile % for both sides. <span className="text-yellow-400">Required.</span> This is how Buddy identifies troop types.</p>
-                  <p><span className="text-white font-semibold">Screen 3 — Hero Skills</span> · Skill damage per hero. Needed for EW gap diagnosis.</p>
-                  <p><span className="text-white font-semibold">Screen 4 — Stat Comparison</span> · ATK/HP/DEF arrows. Needed for decoration and gear gap diagnosis.</p>
-                  <p><span className="text-white font-semibold">Screen 5 — Gear</span> · Equipment tier comparison.</p>
-                  <p><span className="text-white font-semibold">Screen 6 — Power Up</span> · Game&apos;s own letter grades.</p>
-                </div>
-                <button
-                  onClick={() => setStep('intake')}
-                  disabled={images.length === 0}
-                  className="w-full bg-yellow-500 hover:bg-yellow-400 disabled:bg-gray-700 disabled:text-gray-500 text-black font-bold py-3 rounded-xl transition-colors"
-                >
-                  {images.length === 0
-                    ? 'Upload at least 1 screenshot'
-                    : `Continue with ${images.length} screenshot${images.length > 1 ? 's' : ''} →`}
+                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  {tab === 'history' && history.length > 0 && (
+                    <span className="ml-2 text-xs bg-gray-700 text-gray-400 rounded-full px-1.5 py-0.5">
+                      {history.length}
+                    </span>
+                  )}
                 </button>
-              </div>
-            )}
+              ))}
+            </div>
+          )}
 
-            {/* Step: Intake */}
-            {step === 'intake' && (
-              <div className="p-6 space-y-6">
-                <div>
-                  <p className="text-gray-300 text-sm mb-1 font-medium">
-                    Two quick questions <span className="text-gray-500">(10 seconds)</span>
-                  </p>
-                  <p className="text-gray-500 text-xs">Everything else gets read directly from your screenshots.</p>
-                </div>
-
-                {error && (
-                  <div className="bg-red-900/30 border border-red-700/50 rounded-xl p-4 text-red-300 text-sm">
-                    {error}
-                  </div>
-                )}
-
-                {/* Report type */}
-                <div className="space-y-2">
-                  <label className="text-sm text-gray-300 font-medium">What type of report is this?</label>
-                  <div className="space-y-2">
-                    {REPORT_TYPE_OPTIONS.map(opt => (
-                      <button
-                        key={opt}
-                        onClick={() => handleReportTypeSelect(opt)}
-                        className={`w-full py-2.5 px-3 rounded-xl text-sm font-medium border text-left transition-colors ${
-                          intake.report_type === opt
-                            ? 'border-yellow-400 bg-yellow-400/10 text-yellow-300'
-                            : 'border-gray-700 bg-gray-800 text-gray-300 hover:border-gray-600'
-                        }`}
-                      >
-                        {opt}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Tactics cards */}
-                {intake.report_type !== '' && (
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-sm text-gray-300 font-medium">
-                        Which Tactics Cards were active in your deck?
-                      </label>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        These are invisible in screenshots — select all that apply, or skip if none.
-                      </p>
-                    </div>
-                    {Object.entries(getCardGroups(intake.report_type)).map(([groupName, cards]) => (
-                      <div key={groupName} className="space-y-1.5">
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{groupName}</p>
-                        <div className="space-y-1.5">
-                          {cards.map(c => {
-                            const selected = intake.tactics_cards.includes(c);
-                            return (
-                              <button
-                                key={c}
-                                onClick={() => toggleCard(c)}
-                                className={`w-full py-2.5 px-3 rounded-xl text-sm font-medium border text-left transition-colors flex items-center gap-2.5 ${
-                                  selected
-                                    ? 'border-yellow-400 bg-yellow-400/10 text-yellow-300'
-                                    : 'border-gray-700 bg-gray-800 text-gray-300 hover:border-gray-600'
-                                }`}
-                              >
-                                <span
-                                  className={`w-4 h-4 shrink-0 rounded border flex items-center justify-center text-xs font-bold ${
-                                    selected
-                                      ? 'bg-yellow-400 border-yellow-400 text-black'
-                                      : 'border-gray-600 bg-gray-900'
-                                  }`}
-                                >
-                                  {selected ? '✓' : ''}
-                                </span>
-                                {c}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))}
-                    <p className="text-xs text-gray-600 italic">
-                      {intake.tactics_cards.length === 0
-                        ? 'Nothing selected — Buddy will note no cards were active.'
-                        : `${intake.tactics_cards.length} card${intake.tactics_cards.length > 1 ? 's' : ''} selected`}
-                    </p>
-                  </div>
-                )}
-
-                {/* Context box */}
-                <div className="space-y-2">
-                  <label className="text-sm text-gray-300 font-medium">
-                    Add context <span className="text-gray-500 font-normal">(optional)</span>
-                  </label>
-                  <textarea
-                    value={playerContext}
-                    onChange={e => setPlayerContext(e.target.value)}
-                    placeholder="e.g. This was a Warzone Duel attack, I want to know if my gear loadout was right"
-                    rows={2}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2.5 text-sm text-gray-200 placeholder-gray-600 resize-none focus:outline-none focus:border-gray-500 transition-colors"
-                  />
-                </div>
-
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setStep('upload')}
-                    className="flex-1 py-3 rounded-xl border border-gray-700 text-gray-300 text-sm font-medium hover:border-gray-600 transition-colors"
-                  >
-                    ← Back
-                  </button>
-                  <button
-                    onClick={handleAnalyze}
-                    disabled={!intakeComplete}
-                    className="flex-[2] bg-yellow-500 hover:bg-yellow-400 disabled:bg-gray-700 disabled:text-gray-500 text-black font-bold py-3 rounded-xl transition-colors"
-                  >
-                    {intakeComplete ? '⚔️ Analyze Report' : 'Select report type'}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Step: Analyzing */}
-            {step === 'analyzing' && (
-              <div className="p-12 text-center space-y-4">
-                <div className="text-4xl animate-pulse">⚔️</div>
-                <h3 className="text-white font-bold text-lg">Analyzing your battle report...</h3>
-                <p className="text-gray-400 text-sm">
-                  Reading {images.length} screenshot{images.length > 1 ? 's' : ''}. May take up to 60 seconds.
-                </p>
-                <div className="flex justify-center gap-1 mt-4">
-                  {[0, 1, 2].map(i => (
-                    <div
-                      key={i}
-                      className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce"
-                      style={{ animationDelay: `${i * 0.15}s` }}
-                    />
+          {/* History Tab */}
+          {activeTab === 'history' && step !== 'analyzing' && (
+            <div className="p-6">
+              {historyLoading && (
+                <div className="space-y-3">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="h-16 bg-gray-800 rounded-xl animate-pulse" />
                   ))}
                 </div>
-              </div>
-            )}
-
-            {/* Step: Error */}
-            {step === 'error' && (
-              <div className="p-8 text-center space-y-4">
-                <div className="text-4xl">⚠️</div>
-                <h3 className="text-white font-bold text-lg">Analysis Failed</h3>
-                <p className="text-gray-400 text-sm leading-relaxed max-w-sm mx-auto">
-                  {error || 'Something went wrong processing your battle report. Your quota was not charged.'}
-                </p>
-                <p className="text-gray-600 text-xs">
-                  This is usually caused by unclear screenshots or an AI parsing issue. Try again with cropped, high-contrast screenshots.
-                </p>
-                <div className="flex gap-3 pt-2">
+              )}
+              {historyError && (
+                <div className="text-center py-8">
+                  <p className="text-red-400 text-sm mb-3">{historyError}</p>
                   <button
-                    onClick={handleReset}
-                    className="flex-1 py-3 rounded-xl border border-gray-700 text-gray-300 text-sm font-medium hover:border-gray-600 transition-colors"
+                    onClick={() => { setHistoryFetched(false); fetchHistory(); }}
+                    className="text-xs text-yellow-400 hover:text-yellow-300 underline"
                   >
-                    Start Over
-                  </button>
-                  <button
-                    onClick={() => { setStep('intake'); setError(''); }}
-                    className="flex-1 bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 rounded-xl transition-colors text-sm"
-                  >
-                    Try Again →
+                    Try again
                   </button>
                 </div>
-              </div>
-            )}
+              )}
+              {!historyLoading && !historyError && history.length === 0 && (
+                <div className="text-center py-12">
+                  <div className="text-4xl mb-3">⚔️</div>
+                  <p className="text-gray-400 text-sm">No battle reports yet.</p>
+                  <p className="text-gray-600 text-xs mt-1">Run your first analysis to see it here.</p>
+                  <button
+                    onClick={() => setActiveTab('analyze')}
+                    className="mt-4 text-xs text-yellow-400 hover:text-yellow-300 underline"
+                  >
+                    Analyze a report →
+                  </button>
+                </div>
+              )}
+              {!historyLoading && history.length > 0 && (
+                <div className="space-y-2">
+                  {history.map((report) => {
+                    const outcomeChip = OUTCOME_CHIP[report.outcome] ?? 'bg-gray-700 border-gray-600 text-gray-400';
+                    const typeShort = getReportTypeShort(report.report_type);
+                    const hasOpponent = report.opponent_name && report.opponent_name !== 'Unknown';
+                    const hasPower = report.opponent_power && report.opponent_power !== 'not visible';
+                    return (
+                      <div key={report.id} className="bg-gray-800/60 border border-gray-700/50 rounded-xl px-4 py-3">
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span className={`shrink-0 text-xs font-bold border rounded px-2 py-0.5 ${outcomeChip}`}>
+                            {report.outcome}
+                          </span>
+                          <span className="shrink-0 text-xs font-medium bg-gray-700 text-gray-400 border border-gray-600 rounded px-2 py-0.5">
+                            {typeShort}
+                          </span>
+                          {hasOpponent && (
+                            <>
+                              <span className="text-gray-500 text-xs">vs</span>
+                              <span className="text-gray-200 text-xs font-medium truncate">
+                                {report.opponent_name}
+                                {hasPower && <span className="text-gray-500 ml-1">({report.opponent_power})</span>}
+                              </span>
+                            </>
+                          )}
+                          <span className="shrink-0 ml-auto text-gray-500 text-xs">
+                            {formatReportDate(report.created_at)}
+                          </span>
+                        </div>
+                        <p className="text-gray-400 text-xs leading-relaxed truncate">{report.verdict}</p>
+                      </div>
+                    );
+                  })}
+                  <p className="text-center text-gray-600 text-xs pt-2">
+                    Showing last {history.length} report{history.length !== 1 ? 's' : ''}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
-            {/* Step: Result */}
-            {step === 'result' && result && (
-              <div className="p-6 space-y-5">
-                <div className="bg-gray-800 rounded-2xl p-5 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className={`text-2xl font-black ${OUTCOME_COLOR[result.outcome] ?? 'text-white'}`}>
-                      {result.outcome?.toUpperCase()}
-                    </span>
-                    <span className="text-xs text-gray-400">
-                      {meta?.images_analyzed} screenshot{(meta?.images_analyzed ?? 0) > 1 ? 's' : ''} analyzed
-                    </span>
+          {/* Analyze Tab */}
+          {(activeTab === 'analyze' || step === 'analyzing') && (
+            <>
+              {/* Step: Upload */}
+              {step === 'upload' && (
+                <div className="p-6 space-y-5">
+                  <p className="text-gray-300 text-sm leading-relaxed">
+                    Upload screenshots from your battle report.{' '}
+                    <span className="text-yellow-400 font-semibold">More screens = more precise coaching.</span>
+                  </p>
+
+                  {/* Drop zone */}
+                  <div
+                    ref={dropRef}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
+                      isDragging
+                        ? 'border-yellow-400 bg-yellow-400/5'
+                        : 'border-gray-600 hover:border-gray-500 hover:bg-gray-800/50'
+                    }`}
+                  >
+                    <div className="text-3xl mb-3">📸</div>
+                    <p className="text-gray-300 font-medium text-sm">Drop screenshots here or tap to upload</p>
+                    <p className="text-gray-500 text-xs mt-1">Up to 6 screenshots · JPG, PNG, WebP</p>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      multiple
+                      className="hidden"
+                      onChange={(e) => { if (e.target.files) addFiles(Array.from(e.target.files)); }}
+                    />
                   </div>
-                  <div className="text-yellow-300 font-bold text-base">{result.verdict}</div>
-                  {result.opponent_name && result.opponent_name !== 'Unknown' && (
-                    <div className="text-gray-400 text-xs">
-                      vs <span className="text-gray-200 font-medium">{result.opponent_name}</span>
-                      {result.opponent_power && result.opponent_power !== 'not visible' && (
-                        <span className="text-gray-500 ml-1">({result.opponent_power})</span>
+
+                  {/* Uploaded thumbnails */}
+                  {images.length > 0 && (
+                    <div className="grid grid-cols-3 gap-3">
+                      {images.map((img, idx) => (
+                        <div key={img.id} className="relative group">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={img.preview}
+                            alt={`Screenshot ${idx + 1}`}
+                            className="w-full h-24 object-cover rounded-lg border border-gray-700"
+                          />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                            <button
+                              onClick={() => removeImage(img.id)}
+                              className="bg-red-500 text-white text-xs px-2 py-1 rounded-lg"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                          <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
+                            {idx + 1}
+                          </div>
+                        </div>
+                      ))}
+                      {images.length < 6 && (
+                        <button
+                          onClick={() => fileInputRef.current?.click()}
+                          className="h-24 border-2 border-dashed border-gray-600 rounded-lg flex items-center justify-center text-gray-500 hover:border-gray-500 hover:text-gray-400 transition-colors text-2xl"
+                        >
+                          +
+                        </button>
                       )}
                     </div>
                   )}
+
+                  {/* Screenshot guide with example links */}
+                  <div className="bg-blue-900/20 border border-blue-800/40 rounded-xl p-4 space-y-3">
+                    <p className="font-semibold text-blue-200 text-xs">Which screenshots to upload:</p>
+                    {SCREEN_SLOTS.map((slot) => (
+                      <div key={slot.slot} className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-2 flex-1 min-w-0">
+                          <span className="shrink-0 w-5 h-5 rounded-full bg-gray-700 text-gray-300 text-xs flex items-center justify-center font-bold mt-0.5">
+                            {slot.slot}
+                          </span>
+                          <div className="min-w-0">
+                            <span className="text-white text-xs font-semibold">{slot.label}</span>
+                            {slot.required && (
+                              <span className="ml-1.5 text-yellow-400 text-xs font-bold">Required</span>
+                            )}
+                            <p className="text-blue-300 text-xs mt-0.5 leading-relaxed">{slot.description}</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setLightboxSrc(slot.example)}
+                          className="shrink-0 text-xs text-blue-400 hover:text-blue-200 underline whitespace-nowrap mt-0.5"
+                        >
+                          See example
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => setStep('intake')}
+                    disabled={images.length === 0}
+                    className="w-full bg-yellow-500 hover:bg-yellow-400 disabled:bg-gray-700 disabled:text-gray-500 text-black font-bold py-3 rounded-xl transition-colors"
+                  >
+                    {images.length === 0
+                      ? 'Upload at least 1 screenshot'
+                      : `Continue with ${images.length} screenshot${images.length > 1 ? 's' : ''} →`}
+                  </button>
                 </div>
+              )}
 
-                {result.power_differential?.attacker_power !== 'not visible' && result.power_differential && (
-                  <Section title="⚡ Power Differential">
-                    <div className="grid grid-cols-2 gap-3 text-center">
-                      <div>
-                        <div className="text-xs text-gray-500 mb-1">Attacker</div>
-                        <div className="text-white font-bold">{result.power_differential.attacker_power}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-500 mb-1">Defender</div>
-                        <div className="text-white font-bold">{result.power_differential.defender_power}</div>
-                      </div>
-                    </div>
-                    <div className="text-center mt-2">
-                      <span className="text-xs text-gray-400">{result.power_differential.gap_pct} gap — </span>
-                      <span className="text-xs text-gray-300">{result.power_differential.assessment}</span>
-                    </div>
-                  </Section>
-                )}
+              {/* Step: Intake */}
+              {step === 'intake' && (
+                <div className="p-6 space-y-6">
+                  <div>
+                    <p className="text-gray-300 text-sm mb-1 font-medium">
+                      Two quick questions <span className="text-gray-500">(10 seconds)</span>
+                    </p>
+                    <p className="text-gray-500 text-xs">Everything else gets read directly from your screenshots.</p>
+                  </div>
 
-                {result.troop_breakdown && (
-                  <Section title="🪖 Troop Type Matchup">
-                    <div className={`text-sm font-bold mb-1 ${MATCHUP_COLOR[result.troop_breakdown.type_matchup] ?? 'text-gray-300'}`}>
-                      {result.troop_breakdown.type_matchup}
+                  {error && (
+                    <div className="bg-red-900/30 border border-red-700/50 rounded-xl p-4 text-red-300 text-sm">
+                      {error}
                     </div>
-                    <p className="text-gray-300 text-sm">{result.troop_breakdown.counter_explanation}</p>
-                    {result.troop_breakdown.your_type_damage_pct !== 'not visible' && (
-                      <div className="grid grid-cols-2 gap-3 mt-3 text-center text-xs">
-                        <div>
-                          <div className="text-gray-500 mb-1">Your troops took</div>
-                          <div className={`font-bold text-base ${parseInt(result.troop_breakdown.your_type_damage_pct) > 60 ? 'text-red-400' : 'text-green-400'}`}>
-                            {result.troop_breakdown.your_type_damage_pct}
+                  )}
+
+                  {/* Report type */}
+                  <div className="space-y-2">
+                    <label className="text-sm text-gray-300 font-medium">What type of report is this?</label>
+                    <div className="space-y-2">
+                      {REPORT_TYPE_OPTIONS.map(opt => (
+                        <button
+                          key={opt}
+                          onClick={() => handleReportTypeSelect(opt)}
+                          className={`w-full py-2.5 px-3 rounded-xl text-sm font-medium border text-left transition-colors ${
+                            intake.report_type === opt
+                              ? 'border-yellow-400 bg-yellow-400/10 text-yellow-300'
+                              : 'border-gray-700 bg-gray-800 text-gray-300 hover:border-gray-600'
+                          }`}
+                        >
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Tactics cards */}
+                  {intake.report_type !== '' && (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-sm text-gray-300 font-medium">
+                          Which Tactics Cards were active in your deck?
+                        </label>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          These are invisible in screenshots — select all that apply, or skip if none.
+                        </p>
+                      </div>
+                      {Object.entries(getCardGroups(intake.report_type)).map(([groupName, cards]) => (
+                        <div key={groupName} className="space-y-1.5">
+                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{groupName}</p>
+                          <div className="space-y-1.5">
+                            {cards.map(c => {
+                              const selected = intake.tactics_cards.includes(c);
+                              return (
+                                <button
+                                  key={c}
+                                  onClick={() => toggleCard(c)}
+                                  className={`w-full py-2.5 px-3 rounded-xl text-sm font-medium border text-left transition-colors flex items-center gap-2.5 ${
+                                    selected
+                                      ? 'border-yellow-400 bg-yellow-400/10 text-yellow-300'
+                                      : 'border-gray-700 bg-gray-800 text-gray-300 hover:border-gray-600'
+                                  }`}
+                                >
+                                  <span
+                                    className={`w-4 h-4 shrink-0 rounded border flex items-center justify-center text-xs font-bold ${
+                                      selected
+                                        ? 'bg-yellow-400 border-yellow-400 text-black'
+                                        : 'border-gray-600 bg-gray-900'
+                                    }`}
+                                  >
+                                    {selected ? '✓' : ''}
+                                  </span>
+                                  {c}
+                                </button>
+                              );
+                            })}
                           </div>
                         </div>
-                        <div>
-                          <div className="text-gray-500 mb-1">Their troops took</div>
-                          <div className={`font-bold text-base ${parseInt(result.troop_breakdown.enemy_type_damage_pct) > 60 ? 'text-red-400' : 'text-green-400'}`}>
-                            {result.troop_breakdown.enemy_type_damage_pct}
-                          </div>
-                        </div>
+                      ))}
+                      <p className="text-xs text-gray-600 italic">
+                        {intake.tactics_cards.length === 0
+                          ? 'Nothing selected — Buddy will note no cards were active.'
+                          : `${intake.tactics_cards.length} card${intake.tactics_cards.length > 1 ? 's' : ''} selected`}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Context box */}
+                  <div className="space-y-2">
+                    <label className="text-sm text-gray-300 font-medium">
+                      Add context <span className="text-gray-500 font-normal">(optional)</span>
+                    </label>
+                    <textarea
+                      value={playerContext}
+                      onChange={e => setPlayerContext(e.target.value)}
+                      placeholder="e.g. This was a Warzone Duel attack, I want to know if my gear loadout was right"
+                      rows={2}
+                      className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2.5 text-sm text-gray-200 placeholder-gray-600 resize-none focus:outline-none focus:border-gray-500 transition-colors"
+                    />
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setStep('upload')}
+                      className="flex-1 py-3 rounded-xl border border-gray-700 text-gray-300 text-sm font-medium hover:border-gray-600 transition-colors"
+                    >
+                      ← Back
+                    </button>
+                    <button
+                      onClick={handleAnalyze}
+                      disabled={!intakeComplete}
+                      className="flex-[2] bg-yellow-500 hover:bg-yellow-400 disabled:bg-gray-700 disabled:text-gray-500 text-black font-bold py-3 rounded-xl transition-colors"
+                    >
+                      {intakeComplete ? '⚔️ Analyze Report' : 'Select report type'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step: Analyzing */}
+              {step === 'analyzing' && (
+                <div className="p-12 text-center space-y-4">
+                  <div className="text-4xl animate-pulse">⚔️</div>
+                  <h3 className="text-white font-bold text-lg">Analyzing your battle report...</h3>
+                  <p className="text-gray-400 text-sm">
+                    Reading {images.length} screenshot{images.length > 1 ? 's' : ''}. May take up to 60 seconds.
+                  </p>
+                  <div className="flex justify-center gap-1 mt-4">
+                    {[0, 1, 2].map(i => (
+                      <div
+                        key={i}
+                        className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce"
+                        style={{ animationDelay: `${i * 0.15}s` }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Step: Error */}
+              {step === 'error' && (
+                <div className="p-8 text-center space-y-4">
+                  <div className="text-4xl">⚠️</div>
+                  <h3 className="text-white font-bold text-lg">Analysis Failed</h3>
+                  <p className="text-gray-400 text-sm leading-relaxed max-w-sm mx-auto">
+                    {error || 'Something went wrong processing your battle report. Your quota was not charged.'}
+                  </p>
+                  <p className="text-gray-600 text-xs">
+                    This is usually caused by unclear screenshots or an AI parsing issue. Try again with cropped, high-contrast screenshots.
+                  </p>
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={handleReset}
+                      className="flex-1 py-3 rounded-xl border border-gray-700 text-gray-300 text-sm font-medium hover:border-gray-600 transition-colors"
+                    >
+                      Start Over
+                    </button>
+                    <button
+                      onClick={() => { setStep('intake'); setError(''); }}
+                      className="flex-1 bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 rounded-xl transition-colors text-sm"
+                    >
+                      Try Again →
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step: Result */}
+              {step === 'result' && result && (
+                <div className="p-6 space-y-5">
+                  <div className="bg-gray-800 rounded-2xl p-5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className={`text-2xl font-black ${OUTCOME_COLOR[result.outcome] ?? 'text-white'}`}>
+                        {result.outcome?.toUpperCase()}
+                      </span>
+                      <span className="text-xs text-gray-400">
+                        {meta?.images_analyzed} screenshot{(meta?.images_analyzed ?? 0) > 1 ? 's' : ''} analyzed
+                      </span>
+                    </div>
+                    <div className="text-yellow-300 font-bold text-base">{result.verdict}</div>
+                    {result.opponent_name && result.opponent_name !== 'Unknown' && (
+                      <div className="text-gray-400 text-xs">
+                        vs <span className="text-gray-200 font-medium">{result.opponent_name}</span>
+                        {result.opponent_power && result.opponent_power !== 'not visible' && (
+                          <span className="text-gray-500 ml-1">({result.opponent_power})</span>
+                        )}
                       </div>
                     )}
-                  </Section>
-                )}
+                  </div>
 
-                {result.stat_comparison && (
-                  <Section title="📊 Stat Comparison">
-                    <div className="grid grid-cols-2 gap-2">
-                      {(
-                        [
-                          ['ATK', result.stat_comparison.atk_status],
-                          ['HP', result.stat_comparison.hp_status],
-                          ['DEF', result.stat_comparison.def_status],
-                          ['Lethality', result.stat_comparison.lethality_status],
-                        ] as [string, string][]
-                      ).map(([label, status]) => (
-                        <div key={label} className="flex items-center justify-between bg-gray-800 rounded-lg px-3 py-2">
-                          <span className="text-gray-400 text-xs">{label}</span>
-                          <span className={`text-xs font-bold ${STAT_COLOR[status] ?? 'text-gray-400'}`}>
-                            {status === 'Advantage' ? '▲' : status === 'Disadvantage' ? '▼' : status === 'Equal' ? '=' : '—'}{' '}
-                            {status}
-                          </span>
+                  {result.power_differential?.attacker_power !== 'not visible' && result.power_differential && (
+                    <Section title="⚡ Power Differential">
+                      <div className="grid grid-cols-2 gap-3 text-center">
+                        <div>
+                          <div className="text-xs text-gray-500 mb-1">Attacker</div>
+                          <div className="text-white font-bold">{result.power_differential.attacker_power}</div>
                         </div>
-                      ))}
-                    </div>
-                    {result.stat_comparison.stat_gap_cause !== 'Stats favorable' &&
-                      result.stat_comparison.stat_gap_cause !== 'Unknown' && (
-                        <p className="text-yellow-300 text-xs mt-2 font-medium">
-                          {result.stat_comparison.stat_gap_cause}
-                        </p>
-                      )}
-                  </Section>
-                )}
+                        <div>
+                          <div className="text-xs text-gray-500 mb-1">Defender</div>
+                          <div className="text-white font-bold">{result.power_differential.defender_power}</div>
+                        </div>
+                      </div>
+                      <div className="text-center mt-2">
+                        <span className="text-xs text-gray-400">{result.power_differential.gap_pct} gap — </span>
+                        <span className="text-xs text-gray-300">{result.power_differential.assessment}</span>
+                      </div>
+                    </Section>
+                  )}
 
-                {result.hero_performance && (
-                  <Section title="🦸 Hero Performance">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span
-                        className={`text-sm font-bold ${
-                          result.hero_performance.skill_damage_assessment === 'Strong'
-                            ? 'text-green-400'
-                            : result.hero_performance.skill_damage_assessment === 'Moderate'
-                            ? 'text-yellow-400'
-                            : result.hero_performance.skill_damage_assessment === 'Weak'
-                            ? 'text-red-400'
-                            : 'text-gray-400'
-                        }`}
-                      >
-                        {result.hero_performance.skill_damage_assessment}
-                      </span>
-                      {result.hero_performance.ew_gap_suspected && (
-                        <span className="text-xs bg-orange-900/50 border border-orange-700/50 text-orange-300 px-2 py-0.5 rounded-full">
-                          EW gap suspected
+                  {result.troop_breakdown && (
+                    <Section title="🪖 Troop Type Matchup">
+                      <div className={`text-sm font-bold mb-1 ${MATCHUP_COLOR[result.troop_breakdown.type_matchup] ?? 'text-gray-300'}`}>
+                        {result.troop_breakdown.type_matchup}
+                      </div>
+                      <p className="text-gray-300 text-sm">{result.troop_breakdown.counter_explanation}</p>
+                      {result.troop_breakdown.your_type_damage_pct !== 'not visible' && result.troop_breakdown.your_type_damage_pct !== 'N/A - Arena' && (
+                        <div className="grid grid-cols-2 gap-3 mt-3 text-center text-xs">
+                          <div>
+                            <div className="text-gray-500 mb-1">Your troops took</div>
+                            <div className={`font-bold text-base ${parseInt(result.troop_breakdown.your_type_damage_pct) > 60 ? 'text-red-400' : 'text-green-400'}`}>
+                              {result.troop_breakdown.your_type_damage_pct}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-gray-500 mb-1">Their troops took</div>
+                            <div className={`font-bold text-base ${parseInt(result.troop_breakdown.enemy_type_damage_pct) > 60 ? 'text-red-400' : 'text-green-400'}`}>
+                              {result.troop_breakdown.enemy_type_damage_pct}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </Section>
+                  )}
+
+                  {result.stat_comparison && (
+                    <Section title="📊 Stat Comparison">
+                      <div className="grid grid-cols-2 gap-2">
+                        {(
+                          [
+                            ['ATK', result.stat_comparison.atk_status],
+                            ['HP', result.stat_comparison.hp_status],
+                            ['DEF', result.stat_comparison.def_status],
+                            ['Lethality', result.stat_comparison.lethality_status],
+                          ] as [string, string][]
+                        ).map(([label, status]) => (
+                          <div key={label} className="flex items-center justify-between bg-gray-800 rounded-lg px-3 py-2">
+                            <span className="text-gray-400 text-xs">{label}</span>
+                            <span className={`text-xs font-bold ${STAT_COLOR[status] ?? 'text-gray-400'}`}>
+                              {status === 'Advantage' ? '▲' : status === 'Disadvantage' ? '▼' : status === 'Equal' ? '=' : '—'}{' '}
+                              {status}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      {result.stat_comparison.stat_gap_cause !== 'Stats favorable' &&
+                        result.stat_comparison.stat_gap_cause !== 'Unknown' && (
+                          <p className="text-yellow-300 text-xs mt-2 font-medium">
+                            {result.stat_comparison.stat_gap_cause}
+                          </p>
+                        )}
+                    </Section>
+                  )}
+
+                  {result.hero_performance && (
+                    <Section title="🦸 Hero Performance">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span
+                          className={`text-sm font-bold ${
+                            result.hero_performance.skill_damage_assessment === 'Strong'
+                              ? 'text-green-400'
+                              : result.hero_performance.skill_damage_assessment === 'Moderate'
+                              ? 'text-yellow-400'
+                              : result.hero_performance.skill_damage_assessment === 'Weak'
+                              ? 'text-red-400'
+                              : 'text-gray-400'
+                          }`}
+                        >
+                          {result.hero_performance.skill_damage_assessment}
                         </span>
-                      )}
-                    </div>
-                    <p className="text-gray-300 text-sm">{result.hero_performance.notes}</p>
-                  </Section>
-                )}
+                        {result.hero_performance.ew_gap_suspected && (
+                          <span className="text-xs bg-orange-900/50 border border-orange-700/50 text-orange-300 px-2 py-0.5 rounded-full">
+                            EW gap suspected
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-gray-300 text-sm">{result.hero_performance.notes}</p>
+                    </Section>
+                  )}
 
-                {result.formation?.formation_issue && (
-                  <Section title="🔺 Formation Issue">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-yellow-300 font-bold text-sm">{result.formation.your_formation_bonus} bonus</span>
-                      <span className="text-gray-500 text-xs">(max is +20%)</span>
-                    </div>
-                    <p className="text-gray-300 text-sm">{result.formation.notes}</p>
-                  </Section>
-                )}
+                  {result.formation?.formation_issue && (
+                    <Section title="🔺 Formation Issue">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-yellow-300 font-bold text-sm">{result.formation.your_formation_bonus} bonus</span>
+                        <span className="text-gray-500 text-xs">(max is +20%)</span>
+                      </div>
+                      <p className="text-gray-300 text-sm">{result.formation.notes}</p>
+                    </Section>
+                  )}
 
-                {result.loss_severity?.permanent_loss_warning && (
-                  <div className="bg-red-900/30 border border-red-700/50 rounded-xl p-4">
-                    <div className="text-red-400 font-bold text-sm mb-1">⚠️ Permanent Loss Warning</div>
-                    <p className="text-red-300 text-xs">
-                      Your hospital may have been full during this fight. High kill counts indicate troops died permanently. Upgrade hospital capacity before your next engagement.
-                    </p>
+                  {result.loss_severity?.permanent_loss_warning && (
+                    <div className="bg-red-900/30 border border-red-700/50 rounded-xl p-4">
+                      <div className="text-red-400 font-bold text-sm mb-1">⚠️ Permanent Loss Warning</div>
+                      <p className="text-red-300 text-xs">
+                        Your hospital may have been full during this fight. High kill counts indicate troops died permanently. Upgrade hospital capacity before your next engagement.
+                      </p>
+                    </div>
+                  )}
+
+                  {(result.root_causes ?? []).length > 0 && (
+                    <Section title="🔍 Root Causes">
+                      <ul className="space-y-2">
+                        {result.root_causes.map((cause, i) => (
+                          <li key={i} className="flex gap-2 text-sm text-gray-300">
+                            <span className="text-yellow-400 shrink-0">{i + 1}.</span> {cause}
+                          </li>
+                        ))}
+                      </ul>
+                    </Section>
+                  )}
+
+                  {(result.coaching ?? []).length > 0 && (
+                    <Section title="🎯 Coaching">
+                      <ul className="space-y-3">
+                        {result.coaching.map((item, i) => (
+                          <li key={i} className="flex gap-2 text-sm">
+                            <span className="text-yellow-400 shrink-0 mt-0.5">→</span>
+                            <span className="text-gray-200">{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </Section>
+                  )}
+
+                  {result.invisible_factors_note && (
+                    <div className="bg-blue-900/20 border border-blue-800/40 rounded-xl p-4 text-xs text-blue-300 leading-relaxed">
+                      <span className="font-semibold">Tactics Card / EW Note: </span>
+                      {result.invisible_factors_note}
+                    </div>
+                  )}
+
+                  {result.rematch_verdict && (
+                    <Section title="🔁 Rematch?">
+                      <div className={`text-base font-bold mb-1 ${REMATCH_COLOR[result.rematch_verdict] ?? 'text-gray-300'}`}>
+                        {result.rematch_verdict}
+                      </div>
+                      <p className="text-gray-300 text-sm">{result.rematch_reasoning}</p>
+                    </Section>
+                  )}
+
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={handleReset}
+                      className="flex-1 py-3 rounded-xl border border-gray-700 text-gray-300 text-sm font-medium hover:border-gray-600 transition-colors"
+                    >
+                      New
+                    </button>
+                    <button
+                      onClick={handleSaveCard}
+                      disabled={savingCard}
+                      className="flex-1 py-3 rounded-xl border border-amber-600/60 bg-amber-600/10 text-amber-400 text-sm font-medium hover:bg-amber-600/20 transition-colors disabled:opacity-50"
+                    >
+                      {savingCard ? 'Saving…' : '📸 Save Card'}
+                    </button>
+                    <button
+                      onClick={handleAskBuddy}
+                      className="flex-[2] bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 rounded-xl transition-colors text-sm"
+                    >
+                      Ask Buddy More →
+                    </button>
                   </div>
-                )}
-
-                {(result.root_causes ?? []).length > 0 && (
-                  <Section title="🔍 Root Causes">
-                    <ul className="space-y-2">
-                      {result.root_causes.map((cause, i) => (
-                        <li key={i} className="flex gap-2 text-sm text-gray-300">
-                          <span className="text-yellow-400 shrink-0">{i + 1}.</span> {cause}
-                        </li>
-                      ))}
-                    </ul>
-                  </Section>
-                )}
-
-                {(result.coaching ?? []).length > 0 && (
-                  <Section title="🎯 Coaching">
-                    <ul className="space-y-3">
-                      {result.coaching.map((item, i) => (
-                        <li key={i} className="flex gap-2 text-sm">
-                          <span className="text-yellow-400 shrink-0 mt-0.5">→</span>
-                          <span className="text-gray-200">{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </Section>
-                )}
-
-                {result.invisible_factors_note && (
-                  <div className="bg-blue-900/20 border border-blue-800/40 rounded-xl p-4 text-xs text-blue-300 leading-relaxed">
-                    <span className="font-semibold">Tactics Card / EW Note: </span>
-                    {result.invisible_factors_note}
-                  </div>
-                )}
-
-                {result.rematch_verdict && (
-                  <Section title="🔁 Rematch?">
-                    <div className={`text-base font-bold mb-1 ${REMATCH_COLOR[result.rematch_verdict] ?? 'text-gray-300'}`}>
-                      {result.rematch_verdict}
-                    </div>
-                    <p className="text-gray-300 text-sm">{result.rematch_reasoning}</p>
-                  </Section>
-                )}
-
-                <div className="flex gap-3 pt-2">
-                  <button
-                    onClick={handleReset}
-                    className="flex-1 py-3 rounded-xl border border-gray-700 text-gray-300 text-sm font-medium hover:border-gray-600 transition-colors"
-                  >
-                    New
-                  </button>
-                  <button
-                    onClick={handleSaveCard}
-                    disabled={savingCard}
-                    className="flex-1 py-3 rounded-xl border border-amber-600/60 bg-amber-600/10 text-amber-400 text-sm font-medium hover:bg-amber-600/20 transition-colors disabled:opacity-50"
-                  >
-                    {savingCard ? 'Saving…' : '📸 Save Card'}
-                  </button>
-                  <button
-                    onClick={handleAskBuddy}
-                    className="flex-[2] bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 rounded-xl transition-colors text-sm"
-                  >
-                    Ask Buddy More →
-                  </button>
+                  <p className="text-center text-xs text-gray-600">
+                    {meta
+                      ? isFounding
+                        ? `${meta.reports_used_this_period} of 15 used this month · Founding Member`
+                        : `${meta.reports_used_this_period} of ${meta.display_limit} used this billing period`
+                      : headerQuotaLine}
+                  </p>
                 </div>
-                <p className="text-center text-xs text-gray-600">
-                  {meta
-                    ? isFounding
-                      ? `${meta.reports_used_this_period} of 15 used this month · Founding Member`
-                      : `${meta.reports_used_this_period} of ${meta.display_limit} used this billing period`
-                    : headerQuotaLine}
-                </p>
-              </div>
-            )}
-          </>
-        )}
+              )}
+            </>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
