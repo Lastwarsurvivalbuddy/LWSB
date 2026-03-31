@@ -736,7 +736,39 @@ export default function Dashboard() {
       </main>
 
       {/* ── Battle Report Analyzer Modal ── */}
-      <ErrorBoundary label="Battle Report Modal">
+      <ErrorBoundary
+        label="Battle Report Modal"
+        fallback={
+          battleReportOpen ? (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+              <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-md p-8 text-center space-y-4">
+                <div className="text-4xl">⚠️</div>
+                <h2 className="text-xl font-bold text-white">Something went wrong</h2>
+                <p className="text-gray-400 text-sm leading-relaxed">
+                  The Battle Report Analyzer hit an unexpected error. Your quota was not charged.
+                </p>
+                <p className="text-gray-600 text-xs">
+                  Try again with clearer, cropped screenshots. If this keeps happening, contact support.
+                </p>
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={() => setBattleReportOpen(false)}
+                    className="flex-1 py-3 rounded-xl border border-gray-700 text-gray-300 text-sm font-medium hover:border-gray-600 transition-colors"
+                  >
+                    Close
+                  </button>
+                  <button
+                    onClick={() => { setBattleReportOpen(false); setTimeout(() => setBattleReportOpen(true), 50); }}
+                    className="flex-1 bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 rounded-xl transition-colors text-sm"
+                  >
+                    Try Again →
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null
+        }
+      >
         <BattleReportAnalyzer
           isOpen={battleReportOpen}
           onClose={() => setBattleReportOpen(false)}

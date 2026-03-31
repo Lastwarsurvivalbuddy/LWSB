@@ -228,24 +228,24 @@ function getCardGroups(reportType: string): Record<string, string[]> {
 function buildShareCardHTML(result: AnalysisResult, commanderName: string): string {
   const outcomeColor = result.outcome === 'Win' ? card.green : result.outcome === 'Loss' ? card.red : card.yellow;
   const matchupColor =
-    result.troop_breakdown.type_matchup === 'Favored'
+    result.troop_breakdown?.type_matchup === 'Favored'
       ? card.green
-      : result.troop_breakdown.type_matchup === 'Countered'
+      : result.troop_breakdown?.type_matchup === 'Countered'
       ? card.red
       : card.yellow;
-  const rematchColor = result.rematch_verdict.startsWith('Yes')
+  const rematchColor = result.rematch_verdict?.startsWith('Yes')
     ? card.green
-    : result.rematch_verdict.startsWith('No')
+    : result.rematch_verdict?.startsWith('No')
     ? card.red
     : card.yellow;
-  const rootCausesHTML = result.root_causes
+  const rootCausesHTML = (result.root_causes ?? [])
     .slice(0, 3)
     .map(
       (c, i) =>
         `<div style="display:flex;gap:8px;margin-bottom:6px;"><span style="color:${card.gold};font-size:12px;min-width:16px;">${i + 1}.</span><span style="color:${card.text};font-size:12px;line-height:1.4;">${c}</span></div>`
     )
     .join('');
-  const coachingHTML = result.coaching
+  const coachingHTML = (result.coaching ?? [])
     .slice(0, 3)
     .map(
       (c) =>
@@ -256,7 +256,7 @@ function buildShareCardHTML(result: AnalysisResult, commanderName: string): stri
     result.opponent_name && result.opponent_name !== 'Unknown'
       ? `vs <strong>${result.opponent_name}</strong>${result.opponent_power && result.opponent_power !== 'not visible' ? ` (${result.opponent_power})` : ''}`
       : '';
-  return `<div style="width:600px;background:${card.bg};font-family:system-ui,-apple-system,sans-serif;color:${card.text};overflow:hidden;"><div style="background:${card.surface};border-bottom:2px solid ${card.gold};padding:16px 20px;display:flex;align-items:center;justify-content:space-between;"><div><div style="font-size:10px;color:${card.goldDim};letter-spacing:0.14em;text-transform:uppercase;margin-bottom:2px;">Battle Report</div><div style="font-size:18px;font-weight:800;color:${card.gold};letter-spacing:0.04em;">LAST WAR: SURVIVAL BUDDY</div></div><div style="font-size:22px;">⚔️</div></div><div style="padding:14px 20px;background:${card.surface};border-bottom:1px solid ${card.border};display:flex;align-items:flex-start;justify-content:space-between;gap:12px;"><div style="flex:1;"><div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;"><span style="font-size:26px;font-weight:900;color:${outcomeColor};">${result.outcome.toUpperCase()}</span><span style="font-size:10px;font-weight:700;border:1px solid ${outcomeColor}40;background:${outcomeColor}18;color:${outcomeColor};padding:2px 8px;border-radius:4px;letter-spacing:0.06em;">${getReportTypeShort(result.report_type)}</span></div><div style="font-size:13px;font-weight:700;color:${card.yellow};margin-bottom:4px;">${result.verdict}</div>${opponentLine ? `<div style="font-size:11px;color:${card.textMuted};">${opponentLine}</div>` : ''}</div><div style="text-align:right;">${commanderName ? `<div style="font-size:10px;color:${card.textMuted};">Commander</div><div style="font-size:13px;font-weight:700;color:${card.gold};">${commanderName}</div>` : ''}</div></div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:${card.border};margin-top:1px;"><div style="background:${card.bg};padding:10px 14px;"><div style="font-size:9px;color:${card.textMuted};text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">Troop Matchup</div><div style="font-size:14px;font-weight:800;color:${matchupColor};">${result.troop_breakdown.type_matchup}</div><div style="font-size:10px;color:${card.textMuted};margin-top:2px;">${result.troop_breakdown.counter_explanation.slice(0, 50)}${result.troop_breakdown.counter_explanation.length > 50 ? '…' : ''}</div></div><div style="background:${card.bg};padding:10px 14px;"><div style="font-size:9px;color:${card.textMuted};text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">Key Stats</div>${[['ATK', result.stat_comparison.atk_status], ['HP', result.stat_comparison.hp_status], ['DEF', result.stat_comparison.def_status]].map(([lbl, s]) => `<div style="display:flex;justify-content:space-between;margin-bottom:2px;"><span style="font-size:10px;color:${card.textMuted};">${lbl}</span><span style="font-size:10px;font-weight:700;color:${s === 'Advantage' ? card.green : s === 'Disadvantage' ? card.red : card.yellow};">${s}</span></div>`).join('')}</div><div style="background:${card.bg};padding:10px 14px;"><div style="font-size:9px;color:${card.textMuted};text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">Rematch?</div><div style="font-size:13px;font-weight:800;color:${rematchColor};line-height:1.3;">${result.rematch_verdict.replace('Yes — ', '✓ ').replace('No — ', '✗ ').replace('Not yet — ', '⏳ ').replace('N/A — ', '')}</div></div></div><div style="padding:14px 20px;border-bottom:1px solid ${card.border};"><div style="font-size:9px;color:${card.textMuted};text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;">🔍 Root Causes</div>${rootCausesHTML || `<div style="color:${card.textMuted};font-size:12px;">See full analysis in app</div>`}</div><div style="padding:14px 20px;border-bottom:1px solid ${card.border};"><div style="font-size:9px;color:${card.textMuted};text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;">🎯 Top Fixes</div>${coachingHTML || `<div style="color:${card.textMuted};font-size:12px;">See full analysis in app</div>`}</div><div style="background:${card.surface};border-top:1px solid ${card.border};padding:10px 20px;display:flex;align-items:center;justify-content:space-between;"><div style="font-size:10px;color:${card.goldDim};font-weight:700;letter-spacing:0.08em;">LastWarSurvivalBuddy.com</div><div style="font-size:10px;color:${card.textMuted};">AI Battle Report Analysis</div></div></div>`;
+  return `<div style="width:600px;background:${card.bg};font-family:system-ui,-apple-system,sans-serif;color:${card.text};overflow:hidden;"><div style="background:${card.surface};border-bottom:2px solid ${card.gold};padding:16px 20px;display:flex;align-items:center;justify-content:space-between;"><div><div style="font-size:10px;color:${card.goldDim};letter-spacing:0.14em;text-transform:uppercase;margin-bottom:2px;">Battle Report</div><div style="font-size:18px;font-weight:800;color:${card.gold};letter-spacing:0.04em;">LAST WAR: SURVIVAL BUDDY</div></div><div style="font-size:22px;">⚔️</div></div><div style="padding:14px 20px;background:${card.surface};border-bottom:1px solid ${card.border};display:flex;align-items:flex-start;justify-content:space-between;gap:12px;"><div style="flex:1;"><div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;"><span style="font-size:26px;font-weight:900;color:${outcomeColor};">${result.outcome?.toUpperCase()}</span><span style="font-size:10px;font-weight:700;border:1px solid ${outcomeColor}40;background:${outcomeColor}18;color:${outcomeColor};padding:2px 8px;border-radius:4px;letter-spacing:0.06em;">${getReportTypeShort(result.report_type)}</span></div><div style="font-size:13px;font-weight:700;color:${card.yellow};margin-bottom:4px;">${result.verdict}</div>${opponentLine ? `<div style="font-size:11px;color:${card.textMuted};">${opponentLine}</div>` : ''}</div><div style="text-align:right;">${commanderName ? `<div style="font-size:10px;color:${card.textMuted};">Commander</div><div style="font-size:13px;font-weight:700;color:${card.gold};">${commanderName}</div>` : ''}</div></div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:${card.border};margin-top:1px;"><div style="background:${card.bg};padding:10px 14px;"><div style="font-size:9px;color:${card.textMuted};text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">Troop Matchup</div><div style="font-size:14px;font-weight:800;color:${matchupColor};">${result.troop_breakdown?.type_matchup ?? 'Unknown'}</div><div style="font-size:10px;color:${card.textMuted};margin-top:2px;">${(result.troop_breakdown?.counter_explanation ?? '').slice(0, 50)}${(result.troop_breakdown?.counter_explanation ?? '').length > 50 ? '…' : ''}</div></div><div style="background:${card.bg};padding:10px 14px;"><div style="font-size:9px;color:${card.textMuted};text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">Key Stats</div>${[['ATK', result.stat_comparison?.atk_status], ['HP', result.stat_comparison?.hp_status], ['DEF', result.stat_comparison?.def_status]].map(([lbl, s]) => `<div style="display:flex;justify-content:space-between;margin-bottom:2px;"><span style="font-size:10px;color:${card.textMuted};">${lbl}</span><span style="font-size:10px;font-weight:700;color:${s === 'Advantage' ? card.green : s === 'Disadvantage' ? card.red : card.yellow};">${s ?? '—'}</span></div>`).join('')}</div><div style="background:${card.bg};padding:10px 14px;"><div style="font-size:9px;color:${card.textMuted};text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">Rematch?</div><div style="font-size:13px;font-weight:800;color:${rematchColor};line-height:1.3;">${(result.rematch_verdict ?? '—').replace('Yes — ', '✓ ').replace('No — ', '✗ ').replace('Not yet — ', '⏳ ').replace('N/A — ', '')}</div></div></div><div style="padding:14px 20px;border-bottom:1px solid ${card.border};"><div style="font-size:9px;color:${card.textMuted};text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;">🔍 Root Causes</div>${rootCausesHTML || `<div style="color:${card.textMuted};font-size:12px;">See full analysis in app</div>`}</div><div style="padding:14px 20px;border-bottom:1px solid ${card.border};"><div style="font-size:9px;color:${card.textMuted};text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;">🎯 Top Fixes</div>${coachingHTML || `<div style="color:${card.textMuted};font-size:12px;">See full analysis in app</div>`}</div><div style="background:${card.surface};border-top:1px solid ${card.border};padding:10px 20px;display:flex;align-items:center;justify-content:space-between;"><div style="font-size:10px;color:${card.goldDim};font-weight:700;letter-spacing:0.08em;">LastWarSurvivalBuddy.com</div><div style="font-size:10px;color:${card.textMuted};">AI Battle Report Analysis</div></div></div>`;
 }
 
 export default function BattleReportAnalyzer({
@@ -273,7 +273,7 @@ export default function BattleReportAnalyzer({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<'analyze' | 'history'>('analyze');
-  const [step, setStep] = useState<'upload' | 'intake' | 'analyzing' | 'result'>('upload');
+  const [step, setStep] = useState<'upload' | 'intake' | 'analyzing' | 'result' | 'error'>('upload');
   const [images, setImages] = useState<ImageFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [intake, setIntake] = useState<IntakeAnswers>({ report_type: '', tactics_cards: [] });
@@ -310,7 +310,7 @@ export default function BattleReportAnalyzer({
         const { data } = await supabase
           .from('commander_profile')
           .select('commander_name')
-          .eq('user_id', userId)
+          .eq('id', userId)
           .single();
         if (data?.commander_name) setCommanderName(data.commander_name);
       } catch { /* non-critical */ }
@@ -417,8 +417,9 @@ export default function BattleReportAnalyzer({
       setStep('result');
       handleReportComplete();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Analysis failed. Please try again.');
-      setStep('intake');
+      const msg = err instanceof Error ? err.message : 'Analysis failed. Please try again.';
+      setError(msg);
+      setStep('error');
     } finally {
       setAnalyzing(false);
     }
@@ -440,7 +441,7 @@ export default function BattleReportAnalyzer({
       result.opponent_name && result.opponent_name !== 'Unknown'
         ? ` vs ${result.opponent_name}${result.opponent_power && result.opponent_power !== 'not visible' ? ` (${result.opponent_power})` : ''}`
         : '';
-    const summary = `I just ran a Battle Report Analysis${opponentLine}. Verdict: ${result.verdict}. Outcome: ${result.outcome}. Root causes: ${result.root_causes.join('; ')}. Can you give me more detail on how to fix this?`;
+    const summary = `I just ran a Battle Report Analysis${opponentLine}. Verdict: ${result.verdict}. Outcome: ${result.outcome}. Root causes: ${(result.root_causes ?? []).join('; ')}. Can you give me more detail on how to fix this?`;
     sessionStorage.setItem('buddy_prefill', summary);
     router.push('/buddy');
   };
@@ -868,6 +869,34 @@ export default function BattleReportAnalyzer({
               </div>
             )}
 
+            {/* Step: Error */}
+            {step === 'error' && (
+              <div className="p-8 text-center space-y-4">
+                <div className="text-4xl">⚠️</div>
+                <h3 className="text-white font-bold text-lg">Analysis Failed</h3>
+                <p className="text-gray-400 text-sm leading-relaxed max-w-sm mx-auto">
+                  {error || 'Something went wrong processing your battle report. Your quota was not charged.'}
+                </p>
+                <p className="text-gray-600 text-xs">
+                  This is usually caused by unclear screenshots or an AI parsing issue. Try again with cropped, high-contrast screenshots.
+                </p>
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={handleReset}
+                    className="flex-1 py-3 rounded-xl border border-gray-700 text-gray-300 text-sm font-medium hover:border-gray-600 transition-colors"
+                  >
+                    Start Over
+                  </button>
+                  <button
+                    onClick={() => { setStep('intake'); setError(''); }}
+                    className="flex-1 bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 rounded-xl transition-colors text-sm"
+                  >
+                    Try Again →
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Step: Result */}
             {step === 'result' && result && (
               <div className="p-6 space-y-5">
@@ -891,7 +920,7 @@ export default function BattleReportAnalyzer({
                   )}
                 </div>
 
-                {result.power_differential.attacker_power !== 'not visible' && (
+                {result.power_differential?.attacker_power !== 'not visible' && result.power_differential && (
                   <Section title="⚡ Power Differential">
                     <div className="grid grid-cols-2 gap-3 text-center">
                       <div>
@@ -910,81 +939,87 @@ export default function BattleReportAnalyzer({
                   </Section>
                 )}
 
-                <Section title="🪖 Troop Type Matchup">
-                  <div className={`text-sm font-bold mb-1 ${MATCHUP_COLOR[result.troop_breakdown.type_matchup] ?? 'text-gray-300'}`}>
-                    {result.troop_breakdown.type_matchup}
-                  </div>
-                  <p className="text-gray-300 text-sm">{result.troop_breakdown.counter_explanation}</p>
-                  {result.troop_breakdown.your_type_damage_pct !== 'not visible' && (
-                    <div className="grid grid-cols-2 gap-3 mt-3 text-center text-xs">
-                      <div>
-                        <div className="text-gray-500 mb-1">Your troops took</div>
-                        <div className={`font-bold text-base ${parseInt(result.troop_breakdown.your_type_damage_pct) > 60 ? 'text-red-400' : 'text-green-400'}`}>
-                          {result.troop_breakdown.your_type_damage_pct}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-gray-500 mb-1">Their troops took</div>
-                        <div className={`font-bold text-base ${parseInt(result.troop_breakdown.enemy_type_damage_pct) > 60 ? 'text-red-400' : 'text-green-400'}`}>
-                          {result.troop_breakdown.enemy_type_damage_pct}
-                        </div>
-                      </div>
+                {result.troop_breakdown && (
+                  <Section title="🪖 Troop Type Matchup">
+                    <div className={`text-sm font-bold mb-1 ${MATCHUP_COLOR[result.troop_breakdown.type_matchup] ?? 'text-gray-300'}`}>
+                      {result.troop_breakdown.type_matchup}
                     </div>
-                  )}
-                </Section>
-
-                <Section title="📊 Stat Comparison">
-                  <div className="grid grid-cols-2 gap-2">
-                    {(
-                      [
-                        ['ATK', result.stat_comparison.atk_status],
-                        ['HP', result.stat_comparison.hp_status],
-                        ['DEF', result.stat_comparison.def_status],
-                        ['Lethality', result.stat_comparison.lethality_status],
-                      ] as [string, string][]
-                    ).map(([label, status]) => (
-                      <div key={label} className="flex items-center justify-between bg-gray-800 rounded-lg px-3 py-2">
-                        <span className="text-gray-400 text-xs">{label}</span>
-                        <span className={`text-xs font-bold ${STAT_COLOR[status] ?? 'text-gray-400'}`}>
-                          {status === 'Advantage' ? '▲' : status === 'Disadvantage' ? '▼' : status === 'Equal' ? '=' : '—'}{' '}
-                          {status}
-                        </span>
+                    <p className="text-gray-300 text-sm">{result.troop_breakdown.counter_explanation}</p>
+                    {result.troop_breakdown.your_type_damage_pct !== 'not visible' && (
+                      <div className="grid grid-cols-2 gap-3 mt-3 text-center text-xs">
+                        <div>
+                          <div className="text-gray-500 mb-1">Your troops took</div>
+                          <div className={`font-bold text-base ${parseInt(result.troop_breakdown.your_type_damage_pct) > 60 ? 'text-red-400' : 'text-green-400'}`}>
+                            {result.troop_breakdown.your_type_damage_pct}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-gray-500 mb-1">Their troops took</div>
+                          <div className={`font-bold text-base ${parseInt(result.troop_breakdown.enemy_type_damage_pct) > 60 ? 'text-red-400' : 'text-green-400'}`}>
+                            {result.troop_breakdown.enemy_type_damage_pct}
+                          </div>
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                  {result.stat_comparison.stat_gap_cause !== 'Stats favorable' &&
-                    result.stat_comparison.stat_gap_cause !== 'Unknown' && (
-                      <p className="text-yellow-300 text-xs mt-2 font-medium">
-                        {result.stat_comparison.stat_gap_cause}
-                      </p>
                     )}
-                </Section>
+                  </Section>
+                )}
 
-                <Section title="🦸 Hero Performance">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span
-                      className={`text-sm font-bold ${
-                        result.hero_performance.skill_damage_assessment === 'Strong'
-                          ? 'text-green-400'
-                          : result.hero_performance.skill_damage_assessment === 'Moderate'
-                          ? 'text-yellow-400'
-                          : result.hero_performance.skill_damage_assessment === 'Weak'
-                          ? 'text-red-400'
-                          : 'text-gray-400'
-                      }`}
-                    >
-                      {result.hero_performance.skill_damage_assessment}
-                    </span>
-                    {result.hero_performance.ew_gap_suspected && (
-                      <span className="text-xs bg-orange-900/50 border border-orange-700/50 text-orange-300 px-2 py-0.5 rounded-full">
-                        EW gap suspected
+                {result.stat_comparison && (
+                  <Section title="📊 Stat Comparison">
+                    <div className="grid grid-cols-2 gap-2">
+                      {(
+                        [
+                          ['ATK', result.stat_comparison.atk_status],
+                          ['HP', result.stat_comparison.hp_status],
+                          ['DEF', result.stat_comparison.def_status],
+                          ['Lethality', result.stat_comparison.lethality_status],
+                        ] as [string, string][]
+                      ).map(([label, status]) => (
+                        <div key={label} className="flex items-center justify-between bg-gray-800 rounded-lg px-3 py-2">
+                          <span className="text-gray-400 text-xs">{label}</span>
+                          <span className={`text-xs font-bold ${STAT_COLOR[status] ?? 'text-gray-400'}`}>
+                            {status === 'Advantage' ? '▲' : status === 'Disadvantage' ? '▼' : status === 'Equal' ? '=' : '—'}{' '}
+                            {status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    {result.stat_comparison.stat_gap_cause !== 'Stats favorable' &&
+                      result.stat_comparison.stat_gap_cause !== 'Unknown' && (
+                        <p className="text-yellow-300 text-xs mt-2 font-medium">
+                          {result.stat_comparison.stat_gap_cause}
+                        </p>
+                      )}
+                  </Section>
+                )}
+
+                {result.hero_performance && (
+                  <Section title="🦸 Hero Performance">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span
+                        className={`text-sm font-bold ${
+                          result.hero_performance.skill_damage_assessment === 'Strong'
+                            ? 'text-green-400'
+                            : result.hero_performance.skill_damage_assessment === 'Moderate'
+                            ? 'text-yellow-400'
+                            : result.hero_performance.skill_damage_assessment === 'Weak'
+                            ? 'text-red-400'
+                            : 'text-gray-400'
+                        }`}
+                      >
+                        {result.hero_performance.skill_damage_assessment}
                       </span>
-                    )}
-                  </div>
-                  <p className="text-gray-300 text-sm">{result.hero_performance.notes}</p>
-                </Section>
+                      {result.hero_performance.ew_gap_suspected && (
+                        <span className="text-xs bg-orange-900/50 border border-orange-700/50 text-orange-300 px-2 py-0.5 rounded-full">
+                          EW gap suspected
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-gray-300 text-sm">{result.hero_performance.notes}</p>
+                  </Section>
+                )}
 
-                {result.formation.formation_issue && (
+                {result.formation?.formation_issue && (
                   <Section title="🔺 Formation Issue">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-yellow-300 font-bold text-sm">{result.formation.your_formation_bonus} bonus</span>
@@ -994,7 +1029,7 @@ export default function BattleReportAnalyzer({
                   </Section>
                 )}
 
-                {result.loss_severity.permanent_loss_warning && (
+                {result.loss_severity?.permanent_loss_warning && (
                   <div className="bg-red-900/30 border border-red-700/50 rounded-xl p-4">
                     <div className="text-red-400 font-bold text-sm mb-1">⚠️ Permanent Loss Warning</div>
                     <p className="text-red-300 text-xs">
@@ -1003,26 +1038,30 @@ export default function BattleReportAnalyzer({
                   </div>
                 )}
 
-                <Section title="🔍 Root Causes">
-                  <ul className="space-y-2">
-                    {result.root_causes.map((cause, i) => (
-                      <li key={i} className="flex gap-2 text-sm text-gray-300">
-                        <span className="text-yellow-400 shrink-0">{i + 1}.</span> {cause}
-                      </li>
-                    ))}
-                  </ul>
-                </Section>
+                {(result.root_causes ?? []).length > 0 && (
+                  <Section title="🔍 Root Causes">
+                    <ul className="space-y-2">
+                      {result.root_causes.map((cause, i) => (
+                        <li key={i} className="flex gap-2 text-sm text-gray-300">
+                          <span className="text-yellow-400 shrink-0">{i + 1}.</span> {cause}
+                        </li>
+                      ))}
+                    </ul>
+                  </Section>
+                )}
 
-                <Section title="🎯 Coaching">
-                  <ul className="space-y-3">
-                    {result.coaching.map((item, i) => (
-                      <li key={i} className="flex gap-2 text-sm">
-                        <span className="text-yellow-400 shrink-0 mt-0.5">→</span>
-                        <span className="text-gray-200">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </Section>
+                {(result.coaching ?? []).length > 0 && (
+                  <Section title="🎯 Coaching">
+                    <ul className="space-y-3">
+                      {result.coaching.map((item, i) => (
+                        <li key={i} className="flex gap-2 text-sm">
+                          <span className="text-yellow-400 shrink-0 mt-0.5">→</span>
+                          <span className="text-gray-200">{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </Section>
+                )}
 
                 {result.invisible_factors_note && (
                   <div className="bg-blue-900/20 border border-blue-800/40 rounded-xl p-4 text-xs text-blue-300 leading-relaxed">
@@ -1031,12 +1070,14 @@ export default function BattleReportAnalyzer({
                   </div>
                 )}
 
-                <Section title="🔁 Rematch?">
-                  <div className={`text-base font-bold mb-1 ${REMATCH_COLOR[result.rematch_verdict] ?? 'text-gray-300'}`}>
-                    {result.rematch_verdict}
-                  </div>
-                  <p className="text-gray-300 text-sm">{result.rematch_reasoning}</p>
-                </Section>
+                {result.rematch_verdict && (
+                  <Section title="🔁 Rematch?">
+                    <div className={`text-base font-bold mb-1 ${REMATCH_COLOR[result.rematch_verdict] ?? 'text-gray-300'}`}>
+                      {result.rematch_verdict}
+                    </div>
+                    <p className="text-gray-300 text-sm">{result.rematch_reasoning}</p>
+                  </Section>
+                )}
 
                 <div className="flex gap-3 pt-2">
                   <button
