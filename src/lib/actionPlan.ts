@@ -7,26 +7,26 @@
 // Updated: March 17, 2026 — beginner full day-by-day rewrite
 // Updated: March 17, 2026 — advanced plan Day 1/7 filled in, tier actions gated to correct days
 // Updated: March 18, 2026 — T11 Armament Training fires every day; Day 2 split Training+Research;
-//                           Day 4 adds hero skills, exclusive weapons, ghost ops;
-//                           Day 5 troop copy generalized; defense review removed;
-//                           research copy fixed; Sec Sci added;
-//                           server_day removed from dutyReport (not auto-incremented)
+//                            Day 4 adds hero skills, exclusive weapons, ghost ops;
+//                            Day 5 troop copy generalized; defense review removed;
+//                            research copy fixed; Sec Sci added;
+//                            server_day removed from dutyReport (not auto-incremented)
 // Updated: March 23, 2026 — Day 1: drone skill chip chests added to advanced plan (always);
-//                           beginner plan gates chip chests to server_day >= 82
+//                            beginner plan gates chip chests to server_day >= 82
 // Updated: March 23, 2026 — Audit fixes: removed dead killTitle + nextHeroMilestone;
-//                           Ghost Ops detail improved; T11 Armament Research → critical priority;
-//                           T11 Armament Research gated to troop_tier === 't10' && season >= 4
+//                            Ghost Ops detail improved; T11 Armament Research → critical priority;
+//                            T11 Armament Research gated to troop_tier === 't10' && season >= 4
 // Updated: March 23, 2026 — Priority audit pass:
-//                           Day 1 adv: drone → high, chip chests → medium;
-//                           Day 2 adv: survivors → low, gold tasks → high, Sec Sci reminder added;
-//                           Day 5 adv: removed T11 Armament Training, added Fill Drill Grounds (critical),
-//                           radar → medium, Overlord upgrades added (high, gated server_day >= 200)
+//                            Day 1 adv: drone → high, chip chests → medium;
+//                            Day 2 adv: survivors → low, gold tasks → high, Sec Sci reminder added;
+//                            Day 5 adv: removed T11 Armament Training, added Fill Drill Grounds (critical),
+//                            radar → medium, Overlord upgrades added (high, gated server_day >= 200)
+// Updated: March 31, 2026 — Strategic insight copy fixed for Day 2, Day 3, Day 5
 
 import type { SquadPowerTier, RankBucket, PowerBucket, KillTier } from '@/lib/profileTypes'
 import { SQUAD_POWER_TIER_LABELS, RANK_BUCKET_LABELS, KILL_TIER_TITLES } from '@/lib/profileTypes'
 
 export type ActionPriority = 'critical' | 'high' | 'medium' | 'low'
-
 export type ActionCategory =
   | 'arms_race'
   | 'alliance_duel'
@@ -60,7 +60,7 @@ export interface ActionPlanResult {
   insight: string
 }
 
-// ─── Hero EXP Breakpoints ────────────────────────────────────────────────────────
+// ─── Hero EXP Breakpoints ─────────────────────────────────────────────────────
 export const HERO_EXP_BREAKPOINTS: Record<number, { expFromL1: number; label: string; hqRequired: number }> = {
   50:  { expFromL1: 2_500_000,   label: 'Early game milestone',          hqRequired: 10 },
   68:  { expFromL1: 4_500_000,   label: 'Major power spike begins',      hqRequired: 14 },
@@ -99,7 +99,7 @@ export function getNextExpBreakpoint(currentHeroLevel: number): { level: number;
   return entry ? { level: entry.level, label: entry.label, expNeeded: entry.expFromL1 } : null
 }
 
-// ─── Alliance Duel Day Calculation ──────────────────────────────────────────────
+// ─── Alliance Duel Day Calculation ───────────────────────────────────────────
 // Reset is always 2am UTC — no DST adjustment ever
 //
 // 2am UTC Mon → Day 1: Radar Training (1 pt)      — drone, radar tasks, gather
@@ -120,18 +120,18 @@ export function getDuelDay(now: Date = new Date()): DuelDayResult {
   const adjusted = new Date(now.getTime() - 2 * 60 * 60 * 1000)
   const utcDay = adjusted.getUTCDay()
   const schedule: Record<number, DuelDayResult> = {
-    0: { day: 7, label: 'Reset',               points: 0 },
-    1: { day: 1, label: 'Radar Training',       points: 1 },
-    2: { day: 2, label: 'Base Expansion',       points: 2 },
-    3: { day: 3, label: 'Age of Science',       points: 2 },
-    4: { day: 4, label: 'Train Heroes',         points: 2 },
-    5: { day: 5, label: 'Total Mobilization',   points: 2 },
-    6: { day: 6, label: 'Enemy Buster',         points: 4 },
+    0: { day: 7, label: 'Reset',             points: 0 },
+    1: { day: 1, label: 'Radar Training',    points: 1 },
+    2: { day: 2, label: 'Base Expansion',    points: 2 },
+    3: { day: 3, label: 'Age of Science',    points: 2 },
+    4: { day: 4, label: 'Train Heroes',      points: 2 },
+    5: { day: 5, label: 'Total Mobilization', points: 2 },
+    6: { day: 6, label: 'Enemy Buster',      points: 4 },
   }
   return schedule[utcDay]
 }
 
-// ─── Profile Types ───────────────────────────────────────────────────────────────
+// ─── Profile Types ────────────────────────────────────────────────────────────
 export interface CommanderProfile {
   hq_level: number
   commander_name?: string
@@ -140,7 +140,7 @@ export interface CommanderProfile {
   spend_style: string
   playstyle: string
   troop_type: string
-  troop_tier: string   // under_t10 | t10 | t11
+  troop_tier: string // under_t10 | t10 | t11
   rank_bucket?: RankBucket
   squad_power_tier?: SquadPowerTier
   power_bucket?: PowerBucket
@@ -149,7 +149,7 @@ export interface CommanderProfile {
   beginner_mode?: boolean
 }
 
-// ─── Display helpers ─────────────────────────────────────────────────────────────
+// ─── Display helpers ──────────────────────────────────────────────────────────
 function squadPowerLabel(tier?: SquadPowerTier): string {
   if (!tier) return 'unknown'
   return SQUAD_POWER_TIER_LABELS[tier] ?? tier
@@ -165,7 +165,7 @@ function getGreeting(profile: CommanderProfile): string {
   return name ? `Commander ${name}` : 'Commander'
 }
 
-// ─── Beginner Action Plan ────────────────────────────────────────────────────────
+// ─── Beginner Action Plan ─────────────────────────────────────────────────────
 // HARD RULES:
 // - Hero upgrades: Day 4 ONLY
 // - Troop training: Day 5 ONLY
@@ -200,7 +200,6 @@ function generateBeginnerActionPlan(profile: CommanderProfile): ActionPlanResult
         detail: 'Today is one of three days this week where radar tasks score VS points (Days 1, 3, 5). Open and complete your radar tasks now.',
         buddyPrompt: `Today is Day 1 — radar tasks score today. I'm at HQ ${hq}. Which radar tasks should I prioritize?`,
       })
-      // Drone skill chip chests — only relevant after server day 82 (Combat Boost 10 unlock)
       if (serverDay >= 82) {
         actions.push({
           id: 'day1_chip_chests', category: 'general', priority: 'high',
@@ -313,7 +312,7 @@ function generateBeginnerActionPlan(profile: CommanderProfile): ActionPlanResult
       actions.push({
         id: 'day7_gather', category: 'general', priority: 'medium',
         title: '🌾 Start Long Gather Runs Before Reset',
-        detail: 'Before the 2am UTC reset, send your troops out on long gathering runs. They\'ll complete after the reset and resources count toward Day 1 gathering points.',
+        detail: "Before the 2am UTC reset, send your troops out on long gathering runs. They'll complete after the reset and resources count toward Day 1 gathering points.",
         buddyPrompt: `Today is Alliance Duel reset day. I'm at HQ ${hq}. How do I set up gathering runs before reset to maximize Day 1 resources?`,
       })
       actions.push({
@@ -329,7 +328,6 @@ function generateBeginnerActionPlan(profile: CommanderProfile): ActionPlanResult
   actions.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority])
 
   const strategicInsight = getBeginnerStrategicInsight(day, hq)
-
   return {
     actions: actions.slice(0, 4),
     duelDay: day,
@@ -355,7 +353,7 @@ function getBeginnerStrategicInsight(day: number, hq: number): string {
   return insights[day] ?? `HQ ${hq} — keep building and stay consistent.`
 }
 
-// ─── Advanced Action Plan ────────────────────────────────────────────────────────
+// ─── Advanced Action Plan ─────────────────────────────────────────────────────
 // HARD RULES (same as beginner — these never change regardless of tier):
 // - Hero upgrades: Day 4 ONLY
 // - Troop training as duel action: Day 5 ONLY
@@ -379,25 +377,27 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
 
   const actions: DailyAction[] = []
   const { day, label, points } = getDuelDay()
-  const isDoubleDay = day >= 2 && day <= 5
-  const isEnemyBusterDay = day === 6
-  const isDroneDay = day === 1
-  const isResetDay = day === 7
 
+  const isDoubleDay      = day >= 2 && day <= 5
+  const isEnemyBusterDay = day === 6
+  const isDroneDay       = day === 1
+  const isResetDay       = day === 7
   const allowTierActions = day >= 1 && day <= 5
 
-  const hq = profile.hq_level || 1
-  const season = Number(profile.season ?? 0)
+  const hq        = profile.hq_level || 1
+  const season    = Number(profile.season ?? 0)
   const serverDay = profile.server_day ?? 0
-  const isT11 = profile.troop_tier === 't11'
+
+  const isT11                 = profile.troop_tier === 't11'
   const isT10WorkingTowardT11 = profile.troop_tier === 't10' && season >= 4
-  const isBelowT10 = profile.troop_tier === 'under_t10'
-  const isSpender = ['investor', 'whale', 'mega_whale'].includes(profile.spend_style)
-  const hasOverlord = serverDay >= 200
-  const maxHeroLevel = getMaxHeroLevelForHQ(hq)
+  const isBelowT10            = profile.troop_tier === 'under_t10'
+  const isSpender             = ['investor', 'whale', 'mega_whale'].includes(profile.spend_style)
+  const hasOverlord           = serverDay >= 200
+
+  const maxHeroLevel   = getMaxHeroLevelForHQ(hq)
   const nextBreakpoint = getNextExpBreakpoint(maxHeroLevel)
 
-  // ── Day 1: Radar Training ─────────────────────────────────────────────────────
+  // ── Day 1: Radar Training ──────────────────────────────────────────────────
   if (isDroneDay) {
     actions.push({
       id: 'day1_drone_adv', category: 'general', priority: 'high',
@@ -426,7 +426,7 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
     })
   }
 
-  // ── Double-dip days (Days 2–5) ────────────────────────────────────────────────
+  // ── Double-dip days (Days 2–5) ─────────────────────────────────────────────
   if (isDoubleDay) {
     actions.push({
       id: 'double_dip', category: 'alliance_duel', priority: 'critical',
@@ -437,7 +437,7 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
     })
   }
 
-  // ── Enemy Buster Day (Day 6) ──────────────────────────────────────────────────
+  // ── Enemy Buster Day (Day 6) ───────────────────────────────────────────────
   if (isEnemyBusterDay) {
     actions.push({
       id: 'enemy_buster', category: 'alliance_duel', priority: 'critical',
@@ -454,7 +454,7 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
     })
   }
 
-  // ── Reset Day (Day 7) ─────────────────────────────────────────────────────────
+  // ── Reset Day (Day 7) ──────────────────────────────────────────────────────
   if (isResetDay) {
     actions.push({
       id: 'day7_gather_adv', category: 'general', priority: 'medium',
@@ -470,7 +470,7 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
     })
   }
 
-  // ── Hero — Day 4 ONLY ─────────────────────────────────────────────────────────
+  // ── Hero — Day 4 ONLY ──────────────────────────────────────────────────────
   if (day === 4) {
     actions.push({
       id: 'hero_exp_duel', category: 'heroes', priority: 'critical',
@@ -488,12 +488,12 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
     actions.push({
       id: 'day4_ghost_ops', category: 'general', priority: 'high',
       title: '👻 Complete Ghost Ops',
-      detail: 'Thursdays only. 4 time windows. Claim rewards manually or they\'re lost.',
+      detail: "Thursdays only. 4 time windows. Claim rewards manually or they're lost.",
       buddyPrompt: `Today is Day 4. HQ ${hq}. What Ghost Ops should I be running at my level?`,
     })
   }
 
-  // ── Day 3 radar + drone component chests ─────────────────────────────────────
+  // ── Day 3: radar + drone component chests ─────────────────────────────────
   if (day === 3) {
     actions.push({
       id: 'day3_drone_chests_adv', category: 'general', priority: 'high',
@@ -509,7 +509,7 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
     })
   }
 
-  // ── Day 2: survivor tickets + gold tasks + Sec of Science reminder + T11 research ──
+  // ── Day 2: survivor tickets + gold tasks + Sec of Science + T11 research ──
   if (day === 2) {
     actions.push({
       id: 'day2_survivors_adv', category: 'general', priority: 'low',
@@ -526,10 +526,9 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
     actions.push({
       id: 'day2_sec_sci', category: 'research', priority: 'medium',
       title: '🔬 Switch to Secretary of Science Before Reset Tonight',
-      detail: 'Before the 2am UTC reset, switch your Secretary role to Science. Research keeps ticking overnight into Day 3 (Age of Science) — you want every possible research completion counting toward tomorrow\'s scoring window.',
+      detail: "Before the 2am UTC reset, switch your Secretary role to Science. Research keeps ticking overnight into Day 3 (Age of Science) — you want every possible research completion counting toward tomorrow's scoring window.",
       buddyPrompt: `Today is Day 2. I want to maximize Day 3 research scoring. HQ ${hq}, troop tier ${profile.troop_tier}. What research should I queue tonight before the reset and how do I use the Secretary of Science role effectively?`,
     })
-    // T11 Armament Research — only for T10 players in S4+ working toward T11
     if (isT10WorkingTowardT11) {
       actions.push({
         id: 'day2_t11_research', category: 'troops', priority: 'critical',
@@ -540,7 +539,7 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
     }
   }
 
-  // ── Day 5: Fill Drill Grounds + radar + Overlord ──────────────────────────────
+  // ── Day 5: Fill Drill Grounds + radar + Overlord ───────────────────────────
   if (day === 5) {
     actions.push({
       id: 'day5_drill_grounds', category: 'troops', priority: 'critical',
@@ -553,7 +552,7 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
       actions.push({
         id: 'day5_overlord', category: 'heroes', priority: 'high',
         title: '👑 Upgrade Overlord Skills',
-        detail: 'Total Mobilization day is the right time to invest in Overlord upgrades alongside troop training. Priority order: Brutal Roar → Overlord\'s Armor → Furious Hunt → Riot Shot → Expert Overlord.',
+        detail: "Total Mobilization day is the right time to invest in Overlord upgrades alongside troop training. Priority order: Brutal Roar → Overlord's Armor → Furious Hunt → Riot Shot → Expert Overlord.",
         buddyPrompt: `Today is Day 5. I have the Overlord unlocked. HQ ${hq}, server day ${serverDay}. Which Overlord skills should I upgrade next and what materials do I need?`,
       })
     }
@@ -565,7 +564,7 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
     })
   }
 
-  // ── T11 Armament Training — fires EVERY DAY for T11 players ──────────────────
+  // ── T11 Armament Training — fires EVERY DAY for T11 players ───────────────
   if (isT11) {
     actions.push({
       id: 't11_armament_training', category: 'troops', priority: 'high',
@@ -575,7 +574,7 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
     })
   }
 
-  // ── Tier-conditional actions — Days 1–5 ONLY ─────────────────────────────────
+  // ── Tier-conditional actions — Days 1–5 ONLY ──────────────────────────────
   if (isBelowT10 && allowTierActions && !isDoubleDay) {
     actions.push({
       id: 't10_path', category: 'troops', priority: 'high',
@@ -611,7 +610,7 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
   }
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function getDuelFocusDetail(day: number, profile: CommanderProfile): string {
   switch (day) {
     case 2: return 'complete building upgrades — every completion scores both Duel + Arms Race'
@@ -631,9 +630,10 @@ function getAdvancedStrategicInsight(
   isDoubleDay: boolean
 ): string {
   if (isDoubleDay) {
+    if (day === 2) return `Build day — sync building speedups and opening finished builds with Arms Race (Base Building) for maximum scoring.`
+    if (day === 3) return `Research day — sync research speedups and opening finished research with Arms Race (Tech Research) for maximum scoring. Time Secretary of Science to begin new research within the same window.`
     if (day === 4) return `Train Heroes Day — the ONLY day to spend Hero EXP items. Every hero level scores Alliance Duel AND Arms Race simultaneously. Save EXP every other day.`
-    if (day === 5) return `Total Mobilization — fill Drill Grounds with highest available troops. Every troop trained scores Alliance Duel AND Arms Race simultaneously.`
-    return `Double-dip day — every action for Alliance Duel Day ${day} (${label}) simultaneously scores Arms Race points. Highest efficiency play in the game.`
+    if (day === 5) return `Training day — sync troop training with Arms Race (Unit Progression) for maximum scoring.`
   }
   if (day === 6) return `Enemy Buster Day — 4 Alliance Duel points, highest of the week. Coordinate with leadership. Gold tasks and trucks only.`
   if (day === 7) return `Reset day — no scoring. Start gather runs before the 2am UTC reset and save radar tasks for tomorrow.`
