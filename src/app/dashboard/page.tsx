@@ -209,18 +209,13 @@ export default function Dashboard() {
   function handleReportComplete() {
     setBattleReportQuota((prev: BattleReportQuota) => {
       const newUsed = prev.used_this_period + 1
-      const newRemaining = typeof prev.remaining === 'number'
-        ? Math.max(0, prev.remaining - 1)
-        : prev.remaining
-      const canStillAnalyze = typeof newRemaining === 'number'
-        ? newRemaining > 0
-        : true
-      return {
-        ...prev,
-        used_this_period: newUsed,
-        remaining: newRemaining,
-        can_analyze: canStillAnalyze,
-      }
+      const newRemaining =
+        typeof prev.remaining === 'number'
+          ? Math.max(0, prev.remaining - 1)
+          : prev.remaining
+      const canStillAnalyze =
+        typeof newRemaining === 'number' ? newRemaining > 0 : true
+      return { ...prev, used_this_period: newUsed, remaining: newRemaining, can_analyze: canStillAnalyze }
     })
   }
 
@@ -265,7 +260,9 @@ export default function Dashboard() {
     { label: 'Squad 1 Type', value: profile.troop_type || '—' },
     {
       label: 'Squad 1 Power',
-      value: profile.squad_power_tier ? SQUAD_POWER_TIER_LABELS[profile.squad_power_tier] : '—',
+      value: profile.squad_power_tier
+        ? SQUAD_POWER_TIER_LABELS[profile.squad_power_tier]
+        : '—',
     },
     {
       label: 'Server Rank',
@@ -279,7 +276,6 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
-
       {/* ── Warfighter mode banner ── */}
       <ErrorBoundary label="Warfighter Banner">
         <WarfighterBanner />
@@ -383,7 +379,6 @@ export default function Dashboard() {
       </header>
 
       <main className="max-w-2xl mx-auto px-4 pb-24">
-
         {/* ── Profile staleness banner ── */}
         {showStaleBanner && (
           <div className="mt-4 flex items-center justify-between gap-3 bg-amber-950/40 border border-amber-800/60 rounded-xl px-4 py-3">
@@ -414,10 +409,10 @@ export default function Dashboard() {
               <span className="text-lg flex-shrink-0">⚡</span>
               <div className="text-left min-w-0">
                 <p className="text-xs font-bold text-amber-400 group-hover:text-amber-300 transition-colors">
-                  You&apos;re on Free — 5 questions/day, no Battle Reports, no Pack Scanner
+                  You&apos;re on Free — 20 questions/month, no Battle Reports, no Pack Scanner
                 </p>
                 <p className="text-[11px] text-zinc-500 mt-0.5">
-                  Pro · $9.99/mo — 30 questions · Battle Report Analyzer · Pack Scanner
+                  Pro · $9.99/mo — 100 questions/month · Battle Report Analyzer · Pack Scanner
                 </p>
               </div>
             </div>
@@ -446,10 +441,7 @@ export default function Dashboard() {
         <section className="pt-4">
           <ErrorBoundary label="Battle Report Analyzer">
             {isFree ? (
-              <button
-                onClick={() => router.push('/upgrade')}
-                className="w-full group"
-              >
+              <button onClick={() => router.push('/upgrade')} className="w-full group">
                 <div className="bg-zinc-900/50 border border-zinc-800 hover:border-zinc-700 rounded-2xl p-5 transition-colors">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3">
@@ -482,17 +474,13 @@ export default function Dashboard() {
                 </div>
               </button>
             ) : (
-              <button
-                onClick={() => setBattleReportOpen(true)}
-                className="w-full group"
-              >
+              <button onClick={() => setBattleReportOpen(true)} className="w-full group">
                 <div className={`
                   border rounded-2xl p-5 transition-all
                   ${battleReportQuota.can_analyze
                     ? 'bg-gradient-to-br from-red-950/40 to-zinc-900/60 border-red-800/50 hover:border-red-700/70 hover:from-red-950/60'
                     : 'bg-zinc-900/50 border-zinc-800 opacity-60'
-                  }
-                `}>
+                  }`}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3">
                       <div className={`
@@ -500,8 +488,7 @@ export default function Dashboard() {
                         ${battleReportQuota.can_analyze
                           ? 'bg-red-900/50 border border-red-700/50 group-hover:bg-red-900/70'
                           : 'bg-zinc-800 border border-zinc-700'
-                        }
-                      `}>
+                        }`}>
                         <span className="text-xl">⚔️</span>
                       </div>
                       <div className="text-left">
@@ -524,7 +511,6 @@ export default function Dashboard() {
                       </svg>
                     </div>
                   </div>
-
                   {/* Quota bar */}
                   <div className="mt-4 pt-3 border-t border-zinc-800/40">
                     <div className="flex items-center justify-between mb-1.5">
@@ -536,8 +522,9 @@ export default function Dashboard() {
                       <span className={`text-[11px] font-bold ${battleReportQuota.can_analyze ? 'text-red-400' : 'text-zinc-600'}`}>
                         {battleReportQuota.can_analyze
                           ? `${battleReportQuota.remaining} left →`
-                          : battleReportQuota.resets_on ? `Resets ${battleReportQuota.resets_on}` : 'Limit reached'
-                        }
+                          : battleReportQuota.resets_on
+                          ? `Resets ${battleReportQuota.resets_on}`
+                          : 'Limit reached'}
                       </span>
                     </div>
                     <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
@@ -548,7 +535,7 @@ export default function Dashboard() {
                             : 'bg-red-500'
                         }`}
                         style={{
-                          width: `${Math.min(100, (battleReportQuota.used_this_period / Math.max(battleReportQuota.limit, 1)) * 100)}%`
+                          width: `${Math.min(100, (battleReportQuota.used_this_period / Math.max(battleReportQuota.limit, 1)) * 100)}%`,
                         }}
                       />
                     </div>
@@ -561,10 +548,7 @@ export default function Dashboard() {
 
         {/* ── WAR ROOM CARD ── */}
         <section className="pt-4">
-          <button
-            onClick={() => router.push('/war-room')}
-            className="w-full group"
-          >
+          <button onClick={() => router.push('/war-room')} className="w-full group">
             <div className="bg-zinc-900/50 border border-zinc-800 hover:border-amber-800/60 rounded-2xl p-5 transition-colors">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
@@ -682,8 +666,7 @@ export default function Dashboard() {
                 className="text-xs text-amber-700 hover:text-amber-500 transition-colors flex items-center gap-1"
               >
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
-                  <path d="M1 3a1 1 0 011-1h8a1 1 0 011 1v6a1 1 0 01-1 1H2a1 1 0 01-1-1V3z"
-                    stroke="currentColor" strokeWidth="1.2" />
+                  <path d="M1 3a1 1 0 011-1h8a1 1 0 011 1v6a1 1 0 01-1 1H2a1 1 0 01-1-1V3z" stroke="currentColor" strokeWidth="1.2" />
                   <path d="M3 5h2M3 7h4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
                 </svg>
                 Commander Card
@@ -788,7 +771,8 @@ export default function Dashboard() {
           className="flex items-center gap-2.5 bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm px-5 py-3 rounded-full shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 transition-all duration-200 active:scale-95"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16">
-            <path d="M14 8c0 3.314-2.686 6-6 6a5.97 5.97 0 01-3.2-.928L2 14l.928-2.8A5.97 5.97 0 012 8c0-3.314 2.686-6 6-6s6 2.686 6 6z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M14 8c0 3.314-2.686 6-6 6a5.97 5.97 0 01-3.2-.928L2 14l.928-2.8A5.97 5.97 0 012 8c0-3.314 2.686-6 6-6s6 2.686 6 6z"
+              stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           Ask Buddy
         </button>
