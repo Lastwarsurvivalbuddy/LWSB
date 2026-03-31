@@ -335,7 +335,7 @@ Return ONLY valid JSON matching the schema in your instructions. No markdown, no
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 6000,
+        max_tokens: 8000,
         system: systemPrompt,
         messages: [{ role: 'user', content: contentBlocks }],
       }),
