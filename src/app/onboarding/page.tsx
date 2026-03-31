@@ -70,15 +70,13 @@ function ProgressBar({ step }: { step: number }) {
         </span>
       </div>
       <div style={{ height: 2, background: theme.border, borderRadius: 2, overflow: 'hidden' }}>
-        <div
-          style={{
-            height: '100%',
-            width: `${pct}%`,
-            background: `linear-gradient(90deg, ${theme.goldDim}, ${theme.gold})`,
-            borderRadius: 2,
-            transition: 'width 0.4s cubic-bezier(0.4,0,0.2,1)',
-          }}
-        />
+        <div style={{
+          height: '100%',
+          width: `${pct}%`,
+          background: `linear-gradient(90deg, ${theme.goldDim}, ${theme.gold})`,
+          borderRadius: 2,
+          transition: 'width 0.4s cubic-bezier(0.4,0,0.2,1)',
+        }} />
       </div>
     </div>
   );
@@ -109,11 +107,7 @@ function HintBox({ text }: { text: string }) {
 }
 
 function NavButtons({
-  onBack,
-  onNext,
-  nextLabel = 'Continue',
-  nextDisabled = false,
-  step,
+  onBack, onNext, nextLabel = 'Continue', nextDisabled = false, step,
 }: {
   onBack: () => void;
   onNext: () => void;
@@ -154,13 +148,7 @@ function btnStyle(variant: 'gold' | 'ghost'): React.CSSProperties {
   return { ...base, background: 'transparent', color: theme.textMuted, border: `1px solid ${theme.border}` };
 }
 
-function OptionCard({
-  label,
-  sublabel,
-  icon,
-  selected,
-  onClick,
-}: {
+function OptionCard({ label, sublabel, icon, selected, onClick }: {
   label: string;
   sublabel?: string;
   icon?: string;
@@ -171,18 +159,12 @@ function OptionCard({
     <button
       onClick={onClick}
       style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 14,
-        width: '100%',
+        display: 'flex', alignItems: 'center', gap: 14, width: '100%',
         padding: '14px 16px',
         background: selected ? `${theme.gold}12` : theme.surface,
         border: `1px solid ${selected ? theme.gold : theme.border}`,
-        borderRadius: 8,
-        cursor: 'pointer',
-        textAlign: 'left',
-        transition: 'all 0.15s',
-        marginBottom: 8,
+        borderRadius: 8, cursor: 'pointer', textAlign: 'left',
+        transition: 'all 0.15s', marginBottom: 8,
       }}
     >
       {icon && <span style={{ fontSize: 22, minWidth: 28 }}>{icon}</span>}
@@ -192,18 +174,19 @@ function OptionCard({
         </div>
         {sublabel && <div style={{ color: theme.textMuted, fontSize: 12, marginTop: 2 }}>{sublabel}</div>}
       </div>
-      <div style={{ marginLeft: 'auto', width: 18, height: 18, borderRadius: '50%', border: `2px solid ${selected ? theme.gold : theme.border}`, background: selected ? theme.gold : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      <div style={{
+        marginLeft: 'auto', width: 18, height: 18, borderRadius: '50%',
+        border: `2px solid ${selected ? theme.gold : theme.border}`,
+        background: selected ? theme.gold : 'transparent',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+      }}>
         {selected && <span style={{ color: '#0a0c10', fontSize: 11, fontWeight: 900 }}>✓</span>}
       </div>
     </button>
   );
 }
 
-function ChipGrid<T extends string>({
-  options,
-  value,
-  onChange,
-}: {
+function ChipGrid<T extends string>({ options, value, onChange }: {
   options: Record<T, string>;
   value: T | '';
   onChange: (v: T) => void;
@@ -220,14 +203,11 @@ function ChipGrid<T extends string>({
               padding: '10px 14px',
               background: selected ? `${theme.gold}18` : theme.surface,
               border: `1px solid ${selected ? theme.gold : theme.border}`,
-              borderRadius: 8,
-              cursor: 'pointer',
+              borderRadius: 8, cursor: 'pointer',
               color: selected ? theme.gold : theme.textDim,
-              fontSize: 13,
-              fontWeight: 600,
+              fontSize: 13, fontWeight: 600,
               fontFamily: '"Rajdhani", "Oswald", sans-serif',
-              letterSpacing: '0.03em',
-              transition: 'all 0.15s',
+              letterSpacing: '0.03em', transition: 'all 0.15s',
             }}
           >
             {label}
@@ -238,13 +218,7 @@ function ChipGrid<T extends string>({
   );
 }
 
-function NumberInput({
-  value,
-  onChange,
-  placeholder,
-  min,
-  max,
-}: {
+function NumberInput({ value, onChange, placeholder, min, max }: {
   value: string | number;
   onChange: (v: string) => void;
   placeholder: string;
@@ -260,19 +234,12 @@ function NumberInput({
       min={min}
       max={max}
       style={{
-        width: '100%',
-        padding: '14px 16px',
-        background: theme.surface,
-        border: `1px solid ${theme.border}`,
-        borderRadius: 8,
-        color: theme.text,
-        fontSize: 18,
+        width: '100%', padding: '14px 16px',
+        background: theme.surface, border: `1px solid ${theme.border}`,
+        borderRadius: 8, color: theme.text, fontSize: 18,
         fontFamily: '"Rajdhani", "Oswald", sans-serif',
-        fontWeight: 600,
-        letterSpacing: '0.05em',
-        outline: 'none',
-        boxSizing: 'border-box',
-        transition: 'border-color 0.15s',
+        fontWeight: 600, letterSpacing: '0.05em',
+        outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.15s',
       }}
       onFocus={e => (e.target.style.borderColor = theme.gold)}
       onBlur={e => (e.target.style.borderColor = theme.border)}
@@ -280,7 +247,7 @@ function NumberInput({
   );
 }
 
-// ─── STEPS ──────────────────────────────────────────────────────────────────
+// ─── STEPS ───────────────────────────────────────────────────────────────────
 
 function Step1_Welcome({ onNext }: { onNext: () => void }) {
   return (
@@ -391,19 +358,12 @@ function Step2_CommanderTag({ data, setData, onNext, onBack, step }: StepProps) 
           autoCorrect="off"
           spellCheck={false}
           style={{
-            width: '100%',
-            padding: '14px 16px',
-            background: theme.surface,
+            width: '100%', padding: '14px 16px', background: theme.surface,
             border: `1px solid ${status === 'available' ? theme.green : status === 'taken' || status === 'invalid' ? theme.red : theme.border}`,
-            borderRadius: 8,
-            color: theme.text,
-            fontSize: 18,
+            borderRadius: 8, color: theme.text, fontSize: 18,
             fontFamily: '"Rajdhani", "Oswald", sans-serif',
-            fontWeight: 600,
-            letterSpacing: '0.05em',
-            outline: 'none',
-            boxSizing: 'border-box',
-            transition: 'border-color 0.15s',
+            fontWeight: 600, letterSpacing: '0.05em',
+            outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.15s',
           }}
         />
         <span style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: theme.textMuted }}>
@@ -463,7 +423,8 @@ function Step4_ServerDay({ data, setData, onNext, onBack, step }: StepProps) {
 }
 
 function Step5_Season({ data, setData, onNext, onBack, step }: StepProps) {
-  const seasons = [0, 1, 2, 3, 4, 5];
+  const seasons = [0, 1, 2, 3, 4, 5, 6];
+  const seasonIcons: Record<number, string> = { 0: '🌱', 1: '☣️', 2: '❄️', 3: '🏆', 4: '🌑', 5: '🤠', 6: '🌿' };
   return (
     <div>
       <StepTitle title="What season is your server on?" subtitle="Check your Season Progress tab or alliance announcements." />
@@ -474,7 +435,7 @@ function Step5_Season({ data, setData, onNext, onBack, step }: StepProps) {
             label={SEASON_LABELS[s]}
             selected={data.season === s}
             onClick={() => setData({ ...data, season: s })}
-            icon={s === 5 ? '🤠' : s === 4 ? '⚙️' : s === 0 ? '🌱' : '📅'}
+            icon={seasonIcons[s]}
           />
         ))}
       </div>
@@ -495,14 +456,11 @@ function Step6_HQ({ data, setData, onNext, onBack, step }: StepProps) {
             key={lvl}
             onClick={() => setData({ ...data, hq_level: lvl })}
             style={{
-              padding: '8px 14px',
-              borderRadius: 6,
+              padding: '8px 14px', borderRadius: 6,
               border: `1px solid ${String(data.hq_level) === String(lvl) ? theme.gold : theme.border}`,
               background: String(data.hq_level) === String(lvl) ? `${theme.gold}18` : theme.surface,
               color: String(data.hq_level) === String(lvl) ? theme.gold : theme.textMuted,
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: 'pointer',
+              fontSize: 13, fontWeight: 600, cursor: 'pointer',
               fontFamily: '"Rajdhani", "Oswald", sans-serif',
             }}
           >
@@ -517,12 +475,12 @@ function Step6_HQ({ data, setData, onNext, onBack, step }: StepProps) {
 
 function Step7_SpendStyle({ data, setData, onNext, onBack, step }: StepProps) {
   const options = [
-    { value: 'f2p',        label: 'Free to Play',  sublabel: 'No real money spent',            icon: '🆓' },
-    { value: 'budget',     label: 'Budget',         sublabel: 'Occasional small packs (<$20/mo)', icon: '💵' },
-    { value: 'moderate',   label: 'Moderate',       sublabel: '$20–$100/mo',                    icon: '💳' },
-    { value: 'investor',   label: 'Investor',       sublabel: '$100–$500/mo',                   icon: '📈' },
-    { value: 'whale',      label: 'Whale',          sublabel: '$500–$2,000/mo',                 icon: '🐋' },
-    { value: 'mega_whale', label: 'Mega Whale',     sublabel: '$2,000+/mo',                     icon: '🔱' },
+    { value: 'f2p', label: 'Free to Play', sublabel: 'No real money spent', icon: '🆓' },
+    { value: 'budget', label: 'Budget', sublabel: 'Occasional small packs (<$20/mo)', icon: '💵' },
+    { value: 'moderate', label: 'Moderate', sublabel: '$20–$100/mo', icon: '💳' },
+    { value: 'investor', label: 'Investor', sublabel: '$100–$500/mo', icon: '📈' },
+    { value: 'whale', label: 'Whale', sublabel: '$500–$2,000/mo', icon: '🐋' },
+    { value: 'mega_whale', label: 'Mega Whale', sublabel: '$2,000+/mo', icon: '🔱' },
   ];
   return (
     <div>
@@ -531,21 +489,22 @@ function Step7_SpendStyle({ data, setData, onNext, onBack, step }: StepProps) {
         <OptionCard
           key={o.value}
           {...o}
-          selected={data.spend_style === o.value}  // FIX: was data.spend_tier
-          onClick={() => setData({ ...data, spend_style: o.value })}  // FIX: was spend_tier
+          selected={data.spend_style === o.value} // FIX: was data.spend_tier
+          onClick={() => setData({ ...data, spend_style: o.value })} // FIX: was spend_tier
         />
       ))}
-      <NavButtons step={step} onBack={onBack} onNext={onNext} nextDisabled={!data.spend_style} />  {/* FIX: was !data.spend_tier */}
+      <NavButtons step={step} onBack={onBack} onNext={onNext} nextDisabled={!data.spend_style} />
+      {/* FIX: was !data.spend_tier */}
     </div>
   );
 }
 
 function Step8_Playstyle({ data, setData, onNext, onBack, step }: StepProps) {
   const options = [
-    { value: 'fighter',   label: 'Player vs. Player',       sublabel: 'Kill events, rallies, war — you live for combat',            icon: '⚔️' },
-    { value: 'developer', label: 'Player vs. Event',        sublabel: 'Alliance Duel, Arms Race, Zombie Siege — max efficiency',    icon: '🎯' },
-    { value: 'commander', label: '50/50 Commander',         sublabel: 'You do both and optimize everything',                        icon: '⚖️' },
-    { value: 'scout',     label: 'Still Figuring It Out',   sublabel: 'New to the meta, learning the ropes',                       icon: '🗺️' },
+    { value: 'fighter', label: 'Player vs. Player', sublabel: 'Kill events, rallies, war — you live for combat', icon: '⚔️' },
+    { value: 'developer', label: 'Player vs. Event', sublabel: 'Alliance Duel, Arms Race, Zombie Siege — max efficiency', icon: '🎯' },
+    { value: 'commander', label: '50/50 Commander', sublabel: 'You do both and optimize everything', icon: '⚖️' },
+    { value: 'scout', label: 'Still Figuring It Out', sublabel: 'New to the meta, learning the ropes', icon: '🗺️' },
   ];
   return (
     <div>
@@ -560,10 +519,10 @@ function Step8_Playstyle({ data, setData, onNext, onBack, step }: StepProps) {
 
 function Step9_TroopType({ data, setData, onNext, onBack, step }: StepProps) {
   const options = [
-    { value: 'aircraft', label: 'Aircraft',           sublabel: 'Counters Tank',              icon: '✈️' },
-    { value: 'tank',     label: 'Tank',               sublabel: 'Counters Missile',           icon: '🛡️' },
-    { value: 'missile',  label: 'Missile Vehicle',    sublabel: 'Counters Aircraft',          icon: '🚀' },
-    { value: 'mixed',    label: 'Mixed / Not Sure',   sublabel: "Haven't specialized Squad 1 yet", icon: '⚖️' },
+    { value: 'aircraft', label: 'Aircraft', sublabel: 'Counters Tank', icon: '✈️' },
+    { value: 'tank', label: 'Tank', sublabel: 'Counters Missile', icon: '🛡️' },
+    { value: 'missile', label: 'Missile Vehicle', sublabel: 'Counters Aircraft', icon: '🚀' },
+    { value: 'mixed', label: 'Mixed / Not Sure', sublabel: "Haven't specialized Squad 1 yet", icon: '⚖️' },
   ];
   return (
     <div>
@@ -580,8 +539,8 @@ function Step9_TroopType({ data, setData, onNext, onBack, step }: StepProps) {
 function Step10_TroopTier({ data, setData, onNext, onBack, step }: StepProps) {
   const options = [
     { value: 'under_t10', label: 'Under T10', sublabel: 'Still working toward T10 unlock', icon: '🔨' },
-    { value: 't10',       label: 'T10',       sublabel: 'T10 unlocked and training',       icon: '⚙️' },
-    { value: 't11',       label: 'T11',       sublabel: 'Armament Research system — Season 4+', icon: '🔱' },
+    { value: 't10', label: 'T10', sublabel: 'T10 unlocked and training', icon: '⚙️' },
+    { value: 't11', label: 'T11', sublabel: 'Armament Research system — Season 4+', icon: '🔱' },
   ];
   return (
     <div>
@@ -595,9 +554,9 @@ function Step10_TroopTier({ data, setData, onNext, onBack, step }: StepProps) {
 }
 
 function Step11_RankAndPower({ data, setData, onNext, onBack, step }: StepProps) {
-  const rankValid   = !!data.rank_bucket;
-  const squadValid  = !!data.squad_power_tier;
-  const powerValid  = !!data.power_bucket;
+  const rankValid = !!data.rank_bucket;
+  const squadValid = !!data.squad_power_tier;
+  const powerValid = !!data.power_bucket;
   const canContinue = rankValid && squadValid && powerValid;
   return (
     <div>
@@ -643,12 +602,9 @@ function Step12_KillTier({ data, setData, onNext, onBack, step }: StepProps) {
   );
 }
 
-// ─── COMPLETE STEP with beginner mode auto-suggest ───────────────────────────
-function StepComplete({
-  data,
-  setData,
-  onDone,
-}: {
+// ─── COMPLETE STEP with beginner mode auto-suggest ────────────────────────────
+
+function StepComplete({ data, setData, onDone }: {
   data: ProfileData;
   setData: (d: ProfileData) => void;
   onDone: () => void;
@@ -670,18 +626,18 @@ function StepComplete({
   };
 
   const stats: [string, string][] = [
-    ['Commander',   data.commander_name],
-    ['Server',      `#${data.server_number} · Day ${data.server_day}`],
-    ['Season',      SEASON_LABELS[data.season] ?? String(data.season)],
-    ['HQ Level',    String(data.hq_level)],
-    ['Spend Style', tierLabels[data.spend_style] ?? data.spend_style],  // FIX: was data.spend_tier
-    ['Playstyle',   playstyleLabels[data.playstyle] ?? data.playstyle],
+    ['Commander', data.commander_name],
+    ['Server', `#${data.server_number} · Day ${data.server_day}`],
+    ['Season', SEASON_LABELS[data.season] ?? String(data.season)],
+    ['HQ Level', String(data.hq_level)],
+    ['Spend Style', tierLabels[data.spend_style] ?? data.spend_style], // FIX: was data.spend_tier
+    ['Playstyle', playstyleLabels[data.playstyle] ?? data.playstyle],
     ['Squad 1 Type', troopLabels[data.troop_type] ?? data.troop_type],
-    ['Troop Tier',  troopTierLabels[data.troop_tier] ?? data.troop_tier],
+    ['Troop Tier', troopTierLabels[data.troop_tier] ?? data.troop_tier],
     ['Server Rank', data.rank_bucket ? RANK_BUCKET_LABELS[data.rank_bucket] : ''],
     ['Squad 1 Power', data.squad_power_tier ? SQUAD_POWER_TIER_LABELS[data.squad_power_tier] : ''],
     ['Total Power', data.power_bucket ? POWER_BUCKET_LABELS[data.power_bucket] : ''],
-    ['Kill Tier',   data.kill_tier ? KILL_TIER_LABELS[data.kill_tier] : ''],
+    ['Kill Tier', data.kill_tier ? KILL_TIER_LABELS[data.kill_tier] : ''],
   ];
 
   return (
@@ -696,16 +652,14 @@ function StepComplete({
         </p>
       </div>
       <div style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: 20, marginBottom: 24 }}>
-        {stats.map(([label, val]) =>
-          val && (
-            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: `1px solid ${theme.border}` }}>
-              <span style={{ color: theme.textMuted, fontSize: 13 }}>{label}</span>
-              <span style={{ color: label === 'Commander' ? theme.gold : theme.text, fontWeight: 600, fontSize: 14, fontFamily: '"Rajdhani", "Oswald", sans-serif' }}>
-                {val}
-              </span>
-            </div>
-          )
-        )}
+        {stats.map(([label, val]) => val && (
+          <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: `1px solid ${theme.border}` }}>
+            <span style={{ color: theme.textMuted, fontSize: 13 }}>{label}</span>
+            <span style={{ color: label === 'Commander' ? theme.gold : theme.text, fontWeight: 600, fontSize: 14, fontFamily: '"Rajdhani", "Oswald", sans-serif' }}>
+              {val}
+            </span>
+          </div>
+        ))}
       </div>
       {shouldSuggest && (
         <div style={{ marginBottom: 24 }}>
@@ -715,15 +669,25 @@ function StepComplete({
           <div
             onClick={() => setData({ ...data, beginner_mode: !data.beginner_mode })}
             style={{
-              display: 'flex', alignItems: 'flex-start', gap: 16, padding: '16px', borderRadius: 10,
-              cursor: 'pointer',
+              display: 'flex', alignItems: 'flex-start', gap: 16, padding: '16px',
+              borderRadius: 10, cursor: 'pointer',
               border: `1px solid ${data.beginner_mode ? theme.gold : theme.border}`,
               background: data.beginner_mode ? `${theme.gold}12` : theme.surface,
               transition: 'all 0.15s',
             }}
           >
-            <div style={{ position: 'relative', marginTop: 2, flexShrink: 0, width: 40, height: 20, borderRadius: 10, background: data.beginner_mode ? theme.gold : '#374151', transition: 'background 0.2s' }}>
-              <div style={{ position: 'absolute', top: 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.4)', transition: 'transform 0.2s', transform: data.beginner_mode ? 'translateX(22px)' : 'translateX(2px)' }} />
+            <div style={{
+              position: 'relative', marginTop: 2, flexShrink: 0,
+              width: 40, height: 20, borderRadius: 10,
+              background: data.beginner_mode ? theme.gold : '#374151',
+              transition: 'background 0.2s',
+            }}>
+              <div style={{
+                position: 'absolute', top: 2, width: 16, height: 16, borderRadius: '50%',
+                background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
+                transition: 'transform 0.2s',
+                transform: data.beginner_mode ? 'translateX(22px)' : 'translateX(2px)',
+              }} />
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ color: data.beginner_mode ? theme.gold : theme.text, fontWeight: 700, fontSize: 15, fontFamily: '"Rajdhani", "Oswald", sans-serif', letterSpacing: '0.03em', marginBottom: 4 }}>
@@ -749,6 +713,7 @@ function StepComplete({
 }
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
+
 function calcServerStartDate(serverDay: number): string {
   const d = new Date();
   d.setDate(d.getDate() - (serverDay - 1));
@@ -756,6 +721,7 @@ function calcServerStartDate(serverDay: number): string {
 }
 
 // ─── MAIN ────────────────────────────────────────────────────────────────────
+
 export default function OnboardingFlow() {
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
@@ -766,7 +732,7 @@ export default function OnboardingFlow() {
     server_day: '',
     season: 0,
     hq_level: '',
-    spend_style: '',  // FIX: was spend_tier
+    spend_style: '', // FIX: was spend_tier
     playstyle: '',
     troop_type: '',
     troop_tier: '',
@@ -787,20 +753,20 @@ export default function OnboardingFlow() {
         setData(prev => ({
           ...prev,
           commander_name: profile.commander_name || '',
-          server_number:  profile.server_number  || '',
-          server_day:     profile.server_day     || '',
-          season:         profile.season ?? 0,
-          hq_level:       profile.hq_level       || '',
+          server_number: profile.server_number || '',
+          server_day: profile.server_day || '',
+          season: profile.season ?? 0,
+          hq_level: profile.hq_level || '',
           // FIX: read spend_style first, fall back to legacy spend_tier for existing rows
-          spend_style:    profile.spend_style || profile.spend_tier || '',
-          playstyle:      profile.playstyle      || '',
-          troop_type:     profile.troop_type     || '',
-          troop_tier:     profile.troop_tier     || '',
-          rank_bucket:    profile.rank_bucket    || '',
+          spend_style: profile.spend_style || profile.spend_tier || '',
+          playstyle: profile.playstyle || '',
+          troop_type: profile.troop_type || '',
+          troop_tier: profile.troop_tier || '',
+          rank_bucket: profile.rank_bucket || '',
           squad_power_tier: profile.squad_power_tier || '',
-          power_bucket:   profile.power_bucket   || '',
-          kill_tier:      profile.kill_tier      || '',
-          beginner_mode:  profile.beginner_mode ?? false,
+          power_bucket: profile.power_bucket || '',
+          kill_tier: profile.kill_tier || '',
+          beginner_mode: profile.beginner_mode ?? false,
         }));
         if (profile.onboarding_step > 1) setStep(profile.onboarding_step);
       }
@@ -818,20 +784,20 @@ export default function OnboardingFlow() {
       const serverDay = parseInt(String(data.server_day)) || 0;
       const serverStartDate = serverDay > 0 ? calcServerStartDate(serverDay) : null;
       const { error: upsertError } = await supabase.from('profiles').update({
-        commander_name:  data.commander_name || null,
-        server_number:   parseInt(String(data.server_number)) || 0,
-        server_day:      serverDay,
-        season:          data.season ?? 0,
-        hq_level:        parseInt(String(data.hq_level)) || 1,
-        spend_style:     data.spend_style || 'f2p',  // FIX: was spend_tier: data.spend_tier
-        playstyle:       data.playstyle || 'scout',
-        troop_type:      data.troop_type || 'mixed',
-        troop_tier:      data.troop_tier || 'under_t10',
-        rank_bucket:     data.rank_bucket || null,
+        commander_name: data.commander_name || null,
+        server_number: parseInt(String(data.server_number)) || 0,
+        server_day: serverDay,
+        season: data.season ?? 0,
+        hq_level: parseInt(String(data.hq_level)) || 1,
+        spend_style: data.spend_style || 'f2p', // FIX: was spend_tier: data.spend_tier
+        playstyle: data.playstyle || 'scout',
+        troop_type: data.troop_type || 'mixed',
+        troop_tier: data.troop_tier || 'under_t10',
+        rank_bucket: data.rank_bucket || null,
         squad_power_tier: data.squad_power_tier || null,
-        power_bucket:    data.power_bucket || null,
-        kill_tier:       data.kill_tier || null,
-        beginner_mode:   data.beginner_mode,
+        power_bucket: data.power_bucket || null,
+        kill_tier: data.kill_tier || null,
+        beginner_mode: data.beginner_mode,
         onboarding_step: nextStep,
         onboarding_complete: complete,
         server_start_date: serverStartDate,
@@ -853,7 +819,9 @@ export default function OnboardingFlow() {
     setStep(nextStep);
   }
 
-  function back() { setStep(s => Math.max(1, s - 1)); }
+  function back() {
+    setStep(s => Math.max(1, s - 1));
+  }
 
   async function complete() {
     await saveProgress(TOTAL_STEPS + 1, true);
@@ -889,15 +857,15 @@ export default function OnboardingFlow() {
             </div>
           )}
           {saving && <div style={{ color: theme.goldDim, fontSize: 12, textAlign: 'right', marginBottom: 8 }}>Saving...</div>}
-          {step === 1  && <Step1_Welcome onNext={advance} />}
-          {step === 2  && <Step2_CommanderTag {...stepProps} />}
-          {step === 3  && <Step3_Server {...stepProps} />}
-          {step === 4  && <Step4_ServerDay {...stepProps} />}
-          {step === 5  && <Step5_Season {...stepProps} />}
-          {step === 6  && <Step6_HQ {...stepProps} />}
-          {step === 7  && <Step7_SpendStyle {...stepProps} />}
-          {step === 8  && <Step8_Playstyle {...stepProps} />}
-          {step === 9  && <Step9_TroopType {...stepProps} />}
+          {step === 1 && <Step1_Welcome onNext={advance} />}
+          {step === 2 && <Step2_CommanderTag {...stepProps} />}
+          {step === 3 && <Step3_Server {...stepProps} />}
+          {step === 4 && <Step4_ServerDay {...stepProps} />}
+          {step === 5 && <Step5_Season {...stepProps} />}
+          {step === 6 && <Step6_HQ {...stepProps} />}
+          {step === 7 && <Step7_SpendStyle {...stepProps} />}
+          {step === 8 && <Step8_Playstyle {...stepProps} />}
+          {step === 9 && <Step9_TroopType {...stepProps} />}
           {step === 10 && <Step10_TroopTier {...stepProps} />}
           {step === 11 && <Step11_RankAndPower {...stepProps} />}
           {step === 12 && <Step12_KillTier {...stepProps} />}
