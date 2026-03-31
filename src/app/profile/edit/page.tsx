@@ -65,7 +65,7 @@ const TROOP_TIERS = [
   { value: 't11', label: 'T11' },
 ]
 
-const SEASONS = [0, 1, 2, 3, 4, 5]
+const SEASONS = [0, 1, 2, 3, 4, 5, 6]
 const HQ_SHORTCUTS = [5, 10, 15, 20, 25, 30, 35]
 
 const REMINDER_OPTIONS = [
