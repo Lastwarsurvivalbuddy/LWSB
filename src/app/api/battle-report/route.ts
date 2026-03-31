@@ -51,6 +51,59 @@ interface ProfileRow {
 }
 
 // ─────────────────────────────────────────────────────────────
+// RESPONSE VALIDATION
+// Required top-level fields that must be present for a usable result.
+// Missing any of these = incomplete response, do not save, return 422.
+// ─────────────────────────────────────────────────────────────
+const REQUIRED_FIELDS = [
+  'outcome',
+  'report_type',
+  'verdict',
+  'root_causes',
+  'coaching',
+  'rematch_verdict',
+  'rematch_reasoning',
+  'troop_breakdown',
+  'stat_comparison',
+  'hero_performance',
+  'formation',
+  'loss_severity',
+  'power_differential',
+  'invisible_factors_note',
+] as const;
+
+function validateAnalysisResponse(analysis: Record<string, unknown>): string | null {
+  for (const field of REQUIRED_FIELDS) {
+    if (analysis[field] === undefined || analysis[field] === null) {
+      return `Missing required field: ${field}`;
+    }
+  }
+  // Validate nested objects have their key subfields
+  const troop = analysis.troop_breakdown as Record<string, unknown> | null;
+  if (!troop || troop.type_matchup === undefined) return 'Missing field: troop_breakdown.type_matchup';
+
+  const stat = analysis.stat_comparison as Record<string, unknown> | null;
+  if (!stat || stat.atk_status === undefined) return 'Missing field: stat_comparison.atk_status';
+
+  const hero = analysis.hero_performance as Record<string, unknown> | null;
+  if (!hero || hero.skill_damage_assessment === undefined) return 'Missing field: hero_performance.skill_damage_assessment';
+
+  const formation = analysis.formation as Record<string, unknown> | null;
+  if (!formation || formation.formation_issue === undefined) return 'Missing field: formation.formation_issue';
+
+  const loss = analysis.loss_severity as Record<string, unknown> | null;
+  if (!loss || loss.permanent_loss_warning === undefined) return 'Missing field: loss_severity.permanent_loss_warning';
+
+  const power = analysis.power_differential as Record<string, unknown> | null;
+  if (!power || power.attacker_power === undefined) return 'Missing field: power_differential.attacker_power';
+
+  if (!Array.isArray(analysis.root_causes)) return 'Invalid field: root_causes must be an array';
+  if (!Array.isArray(analysis.coaching)) return 'Invalid field: coaching must be an array';
+
+  return null; // valid
+}
+
+// ─────────────────────────────────────────────────────────────
 // TIER LIMIT HELPER
 // ─────────────────────────────────────────────────────────────
 function getMonthlyLimit(tier: string): number {
@@ -314,6 +367,17 @@ Return ONLY valid JSON matching the schema in your instructions. No markdown, no
       console.error('Failed to parse Claude JSON:', rawText.slice(0, 500));
       return NextResponse.json({
         error: 'Could not parse battle report analysis. Please try again with clearer screenshots.',
+      }, { status: 422 });
+    }
+
+    // ── 9b. Validate response completeness ───────────────────
+    // If Claude returned a partial response, reject it now before saving.
+    // This protects the quota and prevents a broken result from reaching the client.
+    const validationError = validateAnalysisResponse(analysis);
+    if (validationError) {
+      console.error('Battle report validation failed:', validationError, '| Raw:', rawText.slice(0, 500));
+      return NextResponse.json({
+        error: 'The AI returned an incomplete analysis. Your quota was not charged. Please try again with clearer, cropped screenshots.',
       }, { status: 422 });
     }
 
