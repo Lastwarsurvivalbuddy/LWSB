@@ -74,11 +74,11 @@ const supabase = createClient(
 // ─── Monthly limits per tier ──────────────────────────────────────────────────
 // Tracking key: YYYY-MM (reuses daily_usage table with month-scoped date key)
 const TIER_LIMITS: Record<string, { questions: number; screenshots: number }> = {
-  free:     { questions: 20,   screenshots: 0    },
-  pro:      { questions: 100,  screenshots: 10   },
-  elite:    { questions: 250,  screenshots: 20   },
-  founding: { questions: 300,  screenshots: 9999 },
-  alliance: { questions: 250,  screenshots: 20   },
+  free:     { questions: 20,  screenshots: 0  },
+  pro:      { questions: 100, screenshots: 10 },
+  elite:    { questions: 250, screenshots: 20 },
+  founding: { questions: 300, screenshots: 25 },
+  alliance: { questions: 250, screenshots: 20 },
 };
 
 // ─── Current month key ────────────────────────────────────────────────────────
@@ -405,9 +405,12 @@ You are Buddy — the personal AI commander coach for Last War: Survival. The pl
       : 'Not set';
 
   const troopTierDisplay: Record<string, string> = {
-    under_t10: 'Under T10 — working toward T10 unlock',
-    t10: 'T10 — unlocked and training. Do NOT recommend T10 research nodes as a goal — assume T10 research is complete.',
-    t11: 'T11 — Armament Institute active. Armored Trooper / Assault Raider system. Do NOT recommend T10 research nodes.',
+    under_t10:
+      'Under T10 — working toward T10 unlock',
+    t10:
+      'T10 — unlocked and training. Do NOT recommend T10 research nodes as a goal — assume T10 research is complete.',
+    t11:
+      'T11 — Armament Institute active. Armored Trooper / Assault Raider system. Do NOT recommend T10 research nodes.',
   };
 
   const duelLabels: Record<number, string> = {
@@ -486,7 +489,8 @@ Buddy never fabricates. This is not a limitation — it is the foundation of tru
 **Three tiers of confidence:**
 TIER 1 — KNOWS IT: Answer directly and confidently using knowledge base data. No hedging needed.
 TIER 2 — PARTIALLY KNOWS IT: Answer what is known, then flag the gap honestly. Example: "Here's what I know — but I want to be straight with you, I'm not fully loaded on [X] yet. Use this as a starting point."
-TIER 3 — DOESN'T KNOW IT: Do NOT guess. Do NOT invent numbers, mechanics, event schedules, resource costs, or game systems. Use this exact pattern: "I don't have solid data on that yet — and I'd rather tell you that than guess. I've flagged it for the Buddy Commander and it's going into the knowledge base. In the meantime, if you've got intel on it, drop it in TeachBuddy — you'll be helping every commander on the platform."
+TIER 3 — DOESN'T KNOW IT: Do NOT guess. Do NOT invent numbers, mechanics, event schedules, resource costs, or game systems. Use this exact pattern:
+"I don't have solid data on that yet — and I'd rather tell you that than guess. I've flagged it for the Buddy Commander and it's going into the knowledge base. In the meantime, if you've got intel on it, drop it in TeachBuddy — you'll be helping every commander on the platform."
 
 **Hard rules — never break these:**
 - Never invent mechanics not present in this prompt

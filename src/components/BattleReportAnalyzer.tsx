@@ -344,7 +344,7 @@ export default function BattleReportAnalyzer({
   const isLocked = isFree || isAtLimit;
   const intakeComplete = intake.report_type !== '';
   const headerQuotaLine = isFounding
-    ? `${reportsUsedThisPeriod} of 15 used this month · Founding Member`
+    ? `${reportsUsedThisPeriod} of 16 used this month · Founding Member`
     : `${effectiveLimit - reportsUsedThisPeriod} of ${effectiveLimit} remaining this month`;
 
   useEffect(() => {

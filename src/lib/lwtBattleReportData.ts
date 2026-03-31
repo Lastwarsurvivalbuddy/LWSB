@@ -30,13 +30,11 @@ export function buildBattleReportSystemPrompt(
   playerContext?: string
 ): string {
   const isArena = intake.report_type.toLowerCase().includes('arena');
-
   const isPvE =
     !isArena &&
     (intake.report_type.toLowerCase().includes('pve') ||
       intake.report_type.toLowerCase().includes('zombie') ||
       intake.report_type.toLowerCase().includes('monster'));
-
   const isPvP = !isArena && !isPvE;
 
   const tacticsCardsSummary =
@@ -99,46 +97,42 @@ export function buildBattleReportSystemPrompt(
     .filter(Boolean)
     .join('\n');
 
-  // ── ARENA PATH ───────────────────────────────────────────
+  // ── ARENA PATH ─────────────────────────────────────────────
   const arenaInstructions = isArena
     ? `
 ## ⚔️ ARENA REPORT — SPECIAL ANALYSIS PATH
-
 THIS IS AN ARENA BATTLE. These rules are ABSOLUTE:
 - NO TROOPS involved. None. Zero.
 - NO troop loss. NO hospital. NO formation bonus. NO troop type counter.
 - Outcome determined by: hero stats, EW levels (skill level 36 vs 30 at EW L20), decoration investment, skill order.
 - ONLY reference Screen 3 (hero skill damage) and Screen 4 (stat comparison).
-
 FORBIDDEN IN ARENA OUTPUT: troops, formation, hospital, troop loss, type counter, march, base defense.
 VERDICT: Use "Arena — Stat / Hero Investment Gap".
 `
     : '';
 
-  // ── PvP PATH ─────────────────────────────────────────────
+  // ── PvP PATH ───────────────────────────────────────────────
   const pvpInstructions = isPvP
     ? `
 ## PvP ANALYSIS RULES
-
 SCREEN 2 IS THE MOST IMPORTANT SCREEN FOR PvP.
 Read per-troop-type damage % for both sides directly from Screen 2.
 - One side at 80-100% damage = that type was countered.
 - Both sides ~50% = neutral, other factors decided it.
 - Same type vs same type = NEUTRAL. Never fabricate a counter.
 - Missing Screen 2 = type_matchup "Unknown", request it.
-
 FORMATION: Read hero lineup icons from Screen 1. Count same-type heroes. Apply formation rules.
 MORALE CASCADE: Near-equal power + same type, but losses catastrophically asymmetric = morale snowball.
 TROOP STRENGTH GAP: If opponent's troop strength visibly exceeds yours from Screen 2 counts → flag it.
-Coaching: "Opponent fielded stronger troops — close with Special Forces march size research and training your highest available troop tier." Do NOT speculate on which lever specifically without data.
+Coaching: "Opponent fielded stronger troops — close with Special Forces march size research and training your highest available troop tier."
+Do NOT speculate on which lever specifically without data.
 `
     : '';
 
-  // ── PvE PATH ─────────────────────────────────────────────
+  // ── PvE PATH ───────────────────────────────────────────────
   const pveInstructions = isPvE
     ? `
 ## PvE ANALYSIS RULES
-
 - Troop type counter does NOT apply to PvE.
 - World map zombies should cause ZERO troop losses with correct squad.
 - Near-zero damage to zombies in Season 1 = virus resistance gate. NOT a power problem.
@@ -148,7 +142,7 @@ Coaching: "Opponent fielded stronger troops — close with Special Forces march 
 `
     : '';
 
-  // ── PLAYER CONTEXT ───────────────────────────────────────
+  // ── PLAYER CONTEXT ─────────────────────────────────────────
   const playerContextBlock = playerContext
     ? `
 ## PLAYER CONTEXT — TREAT AS GROUND TRUTH
@@ -156,35 +150,28 @@ ${playerContext}
 `
     : '';
 
-  // ── COACHING RULES ───────────────────────────────────────
+  // ── COACHING RULES ─────────────────────────────────────────
   const coachingRules = `
 ## COACHING RULES — NON-NEGOTIABLE
-
 1. Every coaching item MUST reference a specific data point from the screenshots.
    BAD: "Upgrade your heroes."
    GOOD: "Screen 3 shows your hero skill damage at [X] vs opponent's [Y] — that gap is EW levels. Get main squad EWs to Level 20 for skills at level 36 and the 7.5% stat boost."
-
 2. Every coaching item MUST name a specific action.
    BAD: "Improve your stats."
    GOOD: "Screen 4 shows ATK red — Tower of Victory to Level 3 is your next decoration priority."
-
 3. Minimum 3 coaching items, maximum 5. No padding. No repetition.
-
 4. If you cannot produce specific coaching from the screenshots, state exactly what additional screenshot is needed and why.
-
 5. NEVER produce generic advice. Reference actual numbers and names from screenshots.
-
 6. ${
-  playerProfile.beginner_mode
-    ? 'BEGINNER MODE: Explain the WHY behind every recommendation. Define terms briefly. Simple language.'
-    : 'EXPERIENCED PLAYER: Direct and technical. Name the exact gap and the exact fix. No hand-holding.'
-}
+    playerProfile.beginner_mode
+      ? 'BEGINNER MODE: Explain the WHY behind every recommendation. Define terms briefly. Simple language.'
+      : 'EXPERIENCED PLAYER: Direct and technical. Name the exact gap and the exact fix. No hand-holding.'
+  }
 `;
 
-  // ── OUTPUT SCHEMA ────────────────────────────────────────
+  // ── OUTPUT SCHEMA ──────────────────────────────────────────
   const outputSchema = `
 ## OUTPUT FORMAT
-
 Respond ONLY with a valid JSON object. No markdown, no preamble, no text outside the JSON.
 
 {
@@ -242,7 +229,6 @@ Respond ONLY with a valid JSON object. No markdown, no preamble, no text outside
 You will be given one or more screenshots of a Last War: Survival battle report along with player profile data and pre-analysis intake answers. Deliver a structured, expert-level post-battle analysis grounded entirely in the knowledge base below.
 
 ## ABSOLUTE RULES
-
 1. READ THE SCREENSHOTS. Every fact about troop types, damage percentages, power numbers, and player names is in the screenshots. Read them directly.
 2. NEVER fabricate numbers. Use "not visible" when data is absent.
 3. NEVER use player profile to override screenshot data.
@@ -264,7 +250,6 @@ You will be given one or more screenshots of a Last War: Survival battle report 
 
 ## TACTICS CARD FLAGS
 ${cardFlags}
-
 ${arenaInstructions}
 ${pvpInstructions}
 ${pveInstructions}
@@ -284,43 +269,43 @@ export const BATTLE_REPORT_QUOTAS = {
     cta: 'Upgrade to Pro to unlock Battle Report Analyzer',
   },
   pro: {
-    monthly_limit: 10,
+    monthly_limit: 8,
     gate: 'hard',
     cost_per_report_usd: 0.10,
-    monthly_max_cost_usd: 1.00,
+    monthly_max_cost_usd: 0.80,
     monthly_revenue_usd: 9.99,
     net_after_hedge_usd: 8.49,
-    margin_usd: 7.49,
-    note: 'Use it for the fights that matter. 10 deep-dive analyses per month.',
+    margin_usd: 7.69,
+    note: 'Use it for the fights that matter. 8 deep-dive analyses per month.',
   },
   elite: {
-    monthly_limit: 20,
+    monthly_limit: 16,
     gate: 'hard',
     cost_per_report_usd: 0.10,
-    monthly_max_cost_usd: 2.00,
+    monthly_max_cost_usd: 1.60,
     monthly_revenue_usd: 19.99,
     net_after_hedge_usd: 16.99,
-    margin_usd: 14.99,
-    note: '20 analyses per month. More than enough for active PvP players.',
+    margin_usd: 15.39,
+    note: '16 analyses per month. More than enough for active PvP players.',
   },
   alliance: {
-    monthly_limit: 20,
+    monthly_limit: 16,
     gate: 'hard',
     cost_per_report_usd: 0.10,
-    monthly_max_cost_usd: 2.00,
+    monthly_max_cost_usd: 1.60,
     monthly_revenue_usd: 19.99,
     net_after_hedge_usd: 16.99,
-    margin_usd: 14.99,
+    margin_usd: 15.39,
   },
   founding: {
-    monthly_limit: 15,
+    monthly_limit: 16,
     gate: 'hard',
-    displayed_as: '15/month — resets on signup anniversary date each month',
+    displayed_as: '16/month — resets on signup anniversary date each month',
     cost_per_report_usd: 0.10,
-    monthly_max_cost_usd: 1.50,
+    monthly_max_cost_usd: 1.60,
     revenue_one_time_usd: 99,
     net_after_hedge_usd: 84.15,
-    note: 'Hard cap at 15/mo. Resets on day-of-month matching signup date.',
+    note: 'Hard cap at 16/mo. Resets on day-of-month matching signup date.',
   },
 };
 
@@ -343,6 +328,6 @@ Troop Losses: High killed = permanent loss (PvP). Read from Screen 2.
 Arena: Hero-only. NO troops. NO troop loss. NO hospital. NO type counter. EVER.
 PvE: Virus resistance gate in Season 1. Purgator card required. AoE heroes for Zombie Siege.
 Screens: Screen 2 (troop breakdown) is most critical for PvP diagnosis.
-Quotas: Free=0, Pro=10/mo, Elite=20/mo, Founding=15/mo (resets on signup anniversary date).
-  `.trim();
+Quotas: Free=0, Pro=8/mo, Elite=16/mo, Founding=16/mo (resets on signup anniversary date).
+`.trim();
 }

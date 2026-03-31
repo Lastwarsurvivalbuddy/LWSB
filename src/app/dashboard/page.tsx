@@ -126,7 +126,6 @@ export default function Dashboard() {
       try {
         const { data: { session } } = await supabase.auth.getSession()
         if (!session) { router.push('/signin'); return }
-
         setAccessToken(session.access_token)
 
         const adminUserId = process.env.NEXT_PUBLIC_ADMIN_USER_ID
@@ -139,7 +138,6 @@ export default function Dashboard() {
           .select('*')
           .eq('id', session.user.id)
           .single()
-
         if (error) throw error
         if (!data?.onboarding_complete) { router.push('/onboarding'); return }
 
@@ -292,7 +290,6 @@ export default function Dashboard() {
             </div>
             <span className="text-sm font-bold tracking-wide text-white">LWSB</span>
           </div>
-
           <div className="flex items-center gap-3">
             {/* Duel day badge */}
             <div className={`
@@ -370,8 +367,7 @@ export default function Dashboard() {
               title="Sign out"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16">
-                <path d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h3M10 11l3-3-3-3M13 8H6"
-                  stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h3M10 11l3-3-3-3M13 8H6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
           </div>
@@ -479,16 +475,16 @@ export default function Dashboard() {
                   border rounded-2xl p-5 transition-all
                   ${battleReportQuota.can_analyze
                     ? 'bg-gradient-to-br from-red-950/40 to-zinc-900/60 border-red-800/50 hover:border-red-700/70 hover:from-red-950/60'
-                    : 'bg-zinc-900/50 border-zinc-800 opacity-60'
-                  }`}>
+                    : 'bg-zinc-900/50 border-zinc-800 opacity-60'}
+                `}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3">
                       <div className={`
                         w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors
                         ${battleReportQuota.can_analyze
                           ? 'bg-red-900/50 border border-red-700/50 group-hover:bg-red-900/70'
-                          : 'bg-zinc-800 border border-zinc-700'
-                        }`}>
+                          : 'bg-zinc-800 border border-zinc-700'}
+                      `}>
                         <span className="text-xl">⚔️</span>
                       </div>
                       <div className="text-left">
@@ -511,12 +507,13 @@ export default function Dashboard() {
                       </svg>
                     </div>
                   </div>
+
                   {/* Quota bar */}
                   <div className="mt-4 pt-3 border-t border-zinc-800/40">
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="text-[11px] text-zinc-500 font-mono">
                         {isFounding
-                          ? `${battleReportQuota.used_this_period} of 15 used this month`
+                          ? `${battleReportQuota.used_this_period} of 16 used this month`
                           : `${battleReportQuota.used_this_period} of ${battleReportQuota.limit} used this month`}
                       </span>
                       <span className={`text-[11px] font-bold ${battleReportQuota.can_analyze ? 'text-red-400' : 'text-zinc-600'}`}>
@@ -632,11 +629,15 @@ export default function Dashboard() {
               <div className="flex flex-col items-end gap-1.5">
                 <span className={`
                   text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded font-mono
-                  ${subscriptionTier === 'elite'    ? 'bg-amber-900/60 text-amber-300 border border-amber-800'
-                  : subscriptionTier === 'pro'      ? 'bg-sky-900/60 text-sky-300 border border-sky-800'
-                  : subscriptionTier === 'founding' ? 'bg-purple-900/60 text-purple-300 border border-purple-800'
-                  : subscriptionTier === 'alliance' ? 'bg-green-900/60 text-green-300 border border-green-800'
-                  : 'bg-zinc-800 text-zinc-500 border border-zinc-700'}
+                  ${subscriptionTier === 'elite'
+                    ? 'bg-amber-900/60 text-amber-300 border border-amber-800'
+                    : subscriptionTier === 'pro'
+                    ? 'bg-sky-900/60 text-sky-300 border border-sky-800'
+                    : subscriptionTier === 'founding'
+                    ? 'bg-purple-900/60 text-purple-300 border border-purple-800'
+                    : subscriptionTier === 'alliance'
+                    ? 'bg-green-900/60 text-green-300 border border-green-800'
+                    : 'bg-zinc-800 text-zinc-500 border border-zinc-700'}
                 `}>
                   {subscriptionTier.toUpperCase()}
                 </span>
@@ -676,13 +677,19 @@ export default function Dashboard() {
 
           {/* ── Quick links below card ── */}
           <div className="mt-3 flex items-center gap-5 flex-wrap px-1">
-            <button onClick={() => router.push('/profile/edit')} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1">
+            <button
+              onClick={() => router.push('/profile/edit')}
+              className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1"
+            >
               <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
                 <path d="M8.5 1.5l2 2-7 7H1.5v-2l7-7z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
               Edit profile
             </button>
-            <button onClick={() => router.push('/how-to')} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1">
+            <button
+              onClick={() => router.push('/how-to')}
+              className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1"
+            >
               <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
                 <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.2"/>
                 <path d="M5 5c0-.55.45-1 1-1s1 .45 1 1c0 .42-.27.78-.67.92V8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
@@ -690,7 +697,10 @@ export default function Dashboard() {
               </svg>
               How to use
             </button>
-            <button onClick={() => router.push('/contact')} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1">
+            <button
+              onClick={() => router.push('/contact')}
+              className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1"
+            >
               <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
                 <path d="M1 2.5h10a.5.5 0 01.5.5v6a.5.5 0 01-.5.5H1a.5.5 0 01-.5-.5V3a.5.5 0 01.5-.5z" stroke="currentColor" strokeWidth="1.2" />
                 <path d="M1 3l5 4 5-4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
@@ -698,7 +708,10 @@ export default function Dashboard() {
               Contact
             </button>
             {affiliateStatus === 'approved' && (
-              <button onClick={() => router.push('/affiliate/dashboard')} className="text-xs text-green-700 hover:text-green-500 transition-colors flex items-center gap-1">
+              <button
+                onClick={() => router.push('/affiliate/dashboard')}
+                className="text-xs text-green-700 hover:text-green-500 transition-colors flex items-center gap-1"
+              >
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
                   <path d="M6 1l1.5 3 3.5.5-2.5 2.5.5 3.5L6 9l-3 1.5.5-3.5L1 4.5 4.5 4z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
                 </svg>
@@ -706,7 +719,10 @@ export default function Dashboard() {
               </button>
             )}
             {affiliateStatus === 'none' && (
-              <button onClick={() => router.push('/affiliate')} className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors flex items-center gap-1">
+              <button
+                onClick={() => router.push('/affiliate')}
+                className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors flex items-center gap-1"
+              >
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
                   <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.2"/>
                   <path d="M6 4v4M4 6h4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
@@ -771,8 +787,7 @@ export default function Dashboard() {
           className="flex items-center gap-2.5 bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm px-5 py-3 rounded-full shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 transition-all duration-200 active:scale-95"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16">
-            <path d="M14 8c0 3.314-2.686 6-6 6a5.97 5.97 0 01-3.2-.928L2 14l.928-2.8A5.97 5.97 0 012 8c0-3.314 2.686-6 6-6s6 2.686 6 6z"
-              stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M14 8c0 3.314-2.686 6-6 6a5.97 5.97 0 01-3.2-.928L2 14l.928-2.8A5.97 5.97 0 012 8c0-3.314 2.686-6 6-6s6 2.686 6 6z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           Ask Buddy
         </button>

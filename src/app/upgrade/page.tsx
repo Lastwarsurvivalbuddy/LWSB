@@ -12,15 +12,15 @@ const TIERS = [
     period: '/mo',
     questions: 100,
     screenshots: 10,
-    battle_reports: 10,
-    battle_reports_label: '10/mo',
+    battle_reports: 8,
+    battle_reports_label: '8/mo',
     color: 'sky',
     badge: null,
     description: 'For active players who want daily guidance.',
     features: [
       '100 questions per month',
       '10 screenshot analyses per month',
-      '10 Battle Report analyses per month',
+      '8 Battle Report analyses per month',
       'Full Buddy AI with profile context',
       'Pack Scanner',
       'Daily Briefing + Action Plan',
@@ -35,15 +35,15 @@ const TIERS = [
     period: '/mo',
     questions: 250,
     screenshots: 20,
-    battle_reports: 20,
-    battle_reports_label: '20/mo',
+    battle_reports: 16,
+    battle_reports_label: '16/mo',
     color: 'amber',
     badge: 'MOST POPULAR',
     description: 'For serious commanders who play to win.',
     features: [
       '250 questions per month',
       '20 screenshot analyses per month',
-      '20 Battle Report analyses per month',
+      '16 Battle Report analyses per month',
       'Full Buddy AI with profile context',
       'Pack Scanner',
       'Daily Briefing + Action Plan',
@@ -58,16 +58,16 @@ const TIERS = [
     price: '$99',
     period: ' lifetime',
     questions: 300,
-    screenshots: 999,
-    battle_reports: 15,
-    battle_reports_label: '15/mo',
+    screenshots: 25,
+    battle_reports: 16,
+    battle_reports_label: '16/mo',
     color: 'purple',
     badge: 'LIMITED — 500 SPOTS',
     description: 'Lock in lifetime access before launch.',
     features: [
       '300 questions per month — for life',
-      'Unlimited screenshot analyses',
-      '15 Battle Report analyses per month',
+      '25 screenshot analyses per month',
+      '16 Battle Report analyses per month',
       'Full Buddy AI with profile context',
       'Pack Scanner',
       'Daily Briefing + Action Plan',
@@ -84,15 +84,15 @@ const TIERS = [
     period: '/mo',
     questions: 250,
     screenshots: 20,
-    battle_reports: 20,
-    battle_reports_label: '20/mo',
+    battle_reports: 16,
+    battle_reports_label: '16/mo',
     color: 'green',
     badge: 'FOR ALLIANCE LEADERS',
     description: 'Give your whole alliance daily AI guidance.',
     features: [
       '250 questions per month',
       '20 screenshot analyses per month',
-      '20 Battle Report analyses per month',
+      '16 Battle Report analyses per month',
       'Full Buddy AI with profile context',
       'Pack Scanner',
       'Daily Briefing + Action Plan',
@@ -171,7 +171,6 @@ export default function UpgradePage() {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/signin'); return }
-
       const ref_code = getRefCookie()
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
@@ -286,7 +285,7 @@ export default function UpgradePage() {
           <div className="w-2 h-2 rounded-full bg-purple-400 animate-pulse flex-shrink-0" />
           <p className="text-sm text-purple-200">
             <span className="font-bold">Founding Member offer:</span>{' '}
-            {foundingSpots} lifetime spots available. 300 questions/month + unlimited screenshots — pay once, never again. Once gone, monthly-only pricing.
+            {foundingSpots} lifetime spots available. 300 questions/month + 25 screenshots/month — pay once, never again. Once gone, monthly-only pricing.
           </p>
         </div>
 
@@ -295,7 +294,7 @@ export default function UpgradePage() {
           {TIERS.map(tier => {
             const c = COLOR_MAP[tier.color]
             const isCurrentTier = currentTier === tier.id
-            const isLoading = loading === tier.id
+            const isLoadingTier = loading === tier.id
             const isFoundingTier = tier.id === 'founding'
 
             return (
@@ -340,7 +339,7 @@ export default function UpgradePage() {
                   </div>
                   <div className="bg-zinc-800/60 rounded-lg px-1.5 py-2 text-center">
                     <div className="text-sm font-bold text-white">
-                      {isFoundingTier ? '∞' : tier.screenshots}
+                      {isFoundingTier ? '25' : tier.screenshots}
                     </div>
                     <div className="text-[9px] text-zinc-500 font-mono leading-tight">📸/mo</div>
                   </div>
@@ -370,12 +369,12 @@ export default function UpgradePage() {
                       ? 'bg-zinc-800 text-zinc-500 cursor-default border border-zinc-700'
                       : `${c.btn} shadow-md`
                     }
-                    ${isLoading ? 'opacity-70 cursor-wait' : ''}
+                    ${isLoadingTier ? 'opacity-70 cursor-wait' : ''}
                   `}
                 >
                   {isCurrentTier
                     ? '✓ Current Plan'
-                    : isLoading
+                    : isLoadingTier
                     ? 'Loading...'
                     : tier.id === 'founding'
                     ? 'Claim Lifetime Access'
@@ -395,15 +394,15 @@ export default function UpgradePage() {
           </div>
           <div className="divide-y divide-zinc-800/60">
             {[
-              { feature: 'Buddy AI Chat',             free: '20/mo',  pro: '100/mo',  elite: '250/mo',  founding: '300/mo' },
-              { feature: 'Screenshot Analysis',        free: '—',      pro: '10/mo',   elite: '20/mo',   founding: 'Unlimited' },
-              { feature: '⚔️ Battle Report Analyzer', free: '—',      pro: '10/mo',   elite: '20/mo',   founding: '15/mo' },
-              { feature: 'Pack Scanner',               free: '—',      pro: '✓',       elite: '✓',       founding: '✓' },
-              { feature: 'Daily Briefing',             free: '✓',      pro: '✓',       elite: '✓',       founding: '✓' },
-              { feature: 'Daily Action Plan',          free: '✓',      pro: '✓',       elite: '✓',       founding: '✓' },
-              { feature: '🏜️ DS War Room',            free: '✓',      pro: '✓',       elite: '✓',       founding: '✓' },
-              { feature: 'Profile Context',            free: '✓',      pro: '✓',       elite: '✓',       founding: '✓' },
-              { feature: 'New Features',               free: 'Basic',  pro: 'Standard', elite: 'Priority', founding: 'All — forever' },
+              { feature: 'Buddy AI Chat',            free: '20/mo',    pro: '100/mo',  elite: '250/mo',  founding: '300/mo'    },
+              { feature: 'Screenshot Analysis',       free: '—',        pro: '10/mo',   elite: '20/mo',   founding: '25/mo'     },
+              { feature: '⚔️ Battle Report Analyzer', free: '—',        pro: '8/mo',    elite: '16/mo',   founding: '16/mo'     },
+              { feature: 'Pack Scanner',              free: '—',        pro: '✓',       elite: '✓',       founding: '✓'         },
+              { feature: 'Daily Briefing',            free: '✓',        pro: '✓',       elite: '✓',       founding: '✓'         },
+              { feature: 'Daily Action Plan',         free: '✓',        pro: '✓',       elite: '✓',       founding: '✓'         },
+              { feature: '🏜️ DS War Room',            free: '✓',        pro: '✓',       elite: '✓',       founding: '✓'         },
+              { feature: 'Profile Context',           free: '✓',        pro: '✓',       elite: '✓',       founding: '✓'         },
+              { feature: 'New Features',              free: 'Basic',    pro: 'Standard', elite: 'Priority', founding: 'All — forever' },
             ].map(({ feature, free, pro, elite, founding }) => (
               <div key={feature} className="grid grid-cols-5 px-5 py-3 text-xs items-center">
                 <span className="text-zinc-300 font-medium col-span-1">{feature}</span>

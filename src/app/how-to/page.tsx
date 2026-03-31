@@ -74,7 +74,7 @@ const features = [
       'Save or share the report card.',
     ],
     tip: "Include the opponent's profile screenshot if you have it — Buddy's analysis gets significantly sharper.",
-    quota: 'Free: Locked · Pro: 10/month · Elite: 20/month · Founding: 15/month',
+    quota: 'Free: Locked · Pro: 8/month · Elite: 16/month · Founding: 16/month',
   },
   {
     id: 'pack-scanner',
@@ -112,7 +112,7 @@ const features = [
       'Export the plan card and share it with your alliance leader.',
     ],
     tip: 'Canyon Storm: The Virus Lab opens at exactly 12 minutes. Set a timer.',
-    quota: 'Free to all users. No gate, no quota. Share the card — it\'s branded.',
+    quota: "Free to all users. No gate, no quota. Share the card — it's branded.",
   },
   {
     id: 'commander-card',
@@ -262,8 +262,7 @@ export default function HowToPage() {
             letterSpacing: '-0.02em',
           }}
         >
-          How to Use
-          <br />
+          How to Use <br />
           <span style={{ color: '#4ade80' }}>Survival Buddy</span>
         </h1>
         <p
@@ -275,7 +274,8 @@ export default function HowToPage() {
             margin: 0,
           }}
         >
-          Eight features. One goal: tell you exactly what to do, right now, for your game. Here&apos;s how each one works.
+          Eight features. One goal: tell you exactly what to do, right now, for your game. Here&apos;s
+          how each one works.
         </p>
       </div>
 
@@ -534,8 +534,7 @@ export default function HowToPage() {
               lineHeight: 1.6,
             }}
           >
-            Your profile is your mission file. The more complete it is,
-            <br />
+            Your profile is your mission file. The more complete it is, <br />
             the sharper every Buddy response becomes.
           </p>
           <button
