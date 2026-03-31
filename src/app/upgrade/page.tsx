@@ -10,7 +10,7 @@ const TIERS = [
     name: 'Buddy Pro',
     price: '$9.99',
     period: '/mo',
-    questions: 30,
+    questions: 100,
     screenshots: 10,
     battle_reports: 10,
     battle_reports_label: '10/mo',
@@ -18,8 +18,8 @@ const TIERS = [
     badge: null,
     description: 'For active players who want daily guidance.',
     features: [
-      '30 questions per day',
-      '10 screenshot analyses per day',
+      '100 questions per month',
+      '10 screenshot analyses per month',
       '10 Battle Report analyses per month',
       'Full Buddy AI with profile context',
       'Pack Scanner',
@@ -33,7 +33,7 @@ const TIERS = [
     name: 'Buddy Elite',
     price: '$19.99',
     period: '/mo',
-    questions: 100,
+    questions: 250,
     screenshots: 20,
     battle_reports: 20,
     battle_reports_label: '20/mo',
@@ -41,8 +41,8 @@ const TIERS = [
     badge: 'MOST POPULAR',
     description: 'For serious commanders who play to win.',
     features: [
-      '100 questions per day',
-      '20 screenshot analyses per day',
+      '250 questions per month',
+      '20 screenshot analyses per month',
       '20 Battle Report analyses per month',
       'Full Buddy AI with profile context',
       'Pack Scanner',
@@ -57,15 +57,15 @@ const TIERS = [
     name: 'Founding Member',
     price: '$99',
     period: ' lifetime',
-    questions: 999,
+    questions: 300,
     screenshots: 999,
-    battle_reports: 999,
+    battle_reports: 15,
     battle_reports_label: '15/mo',
     color: 'purple',
     badge: 'LIMITED — 500 SPOTS',
     description: 'Lock in lifetime access before launch.',
     features: [
-      'Unlimited questions per day',
+      '300 questions per month — for life',
       'Unlimited screenshot analyses',
       '15 Battle Report analyses per month',
       'Full Buddy AI with profile context',
@@ -82,7 +82,7 @@ const TIERS = [
     name: 'Alliance Premium',
     price: '$19.99',
     period: '/mo',
-    questions: 100,
+    questions: 250,
     screenshots: 20,
     battle_reports: 20,
     battle_reports_label: '20/mo',
@@ -90,8 +90,8 @@ const TIERS = [
     badge: 'FOR ALLIANCE LEADERS',
     description: 'Give your whole alliance daily AI guidance.',
     features: [
-      '100 questions per day',
-      '20 screenshot analyses per day',
+      '250 questions per month',
+      '20 screenshot analyses per month',
       '20 Battle Report analyses per month',
       'Full Buddy AI with profile context',
       'Pack Scanner',
@@ -138,7 +138,6 @@ const COLOR_MAP: Record<string, Record<string, string>> = {
   },
 }
 
-// ── Read referral cookie ──────────────────────────────────────
 function getRefCookie(): string | null {
   if (typeof document === 'undefined') return null
   const match = document.cookie
@@ -173,9 +172,7 @@ export default function UpgradePage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/signin'); return }
 
-      // Read referral cookie — pass to checkout if present
       const ref_code = getRefCookie()
-
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: {
@@ -198,7 +195,6 @@ export default function UpgradePage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
-
       {/* ── Header ── */}
       <header className="border-b border-zinc-800/80 bg-zinc-950/95 sticky top-0 z-20 backdrop-blur-sm">
         <div className="max-w-4xl mx-auto px-4 h-12 flex items-center justify-between">
@@ -217,7 +213,6 @@ export default function UpgradePage() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-10">
-
         {/* ── Hero ── */}
         <div className="text-center mb-10">
           <p className="text-xs font-mono text-zinc-500 uppercase tracking-widest mb-3">
@@ -227,8 +222,7 @@ export default function UpgradePage() {
             The smarter you play, the smarter it gets.
           </h1>
           <p className="text-sm text-zinc-400 max-w-md mx-auto leading-relaxed">
-            Free tier gives you 5 questions a day. Upgrade for deep daily guidance,
-            Battle Report analysis, Pack Scanner, and the full Buddy AI experience.
+            Free tier gives you 20 questions a month. Upgrade for deep daily guidance, Battle Report analysis, Pack Scanner, and the full Buddy AI experience.
           </p>
         </div>
 
@@ -246,9 +240,7 @@ export default function UpgradePage() {
                 </span>
               </div>
               <p className="text-sm text-zinc-400 leading-relaxed mb-3">
-                Upload your battle report screenshots. Get a full expert breakdown — troop type counter diagnosis,
-                morale cascade analysis, decoration gap, Exclusive Weapon gap, hero performance, and a
-                rematch verdict. Use it on the fights you genuinely don&apos;t understand. No other Last War tool does this.
+                Upload your battle report screenshots. Get a full expert breakdown — troop type counter diagnosis, morale cascade analysis, decoration gap, Exclusive Weapon gap, hero performance, and a rematch verdict. Use it on the fights you genuinely don&apos;t understand. No other Last War tool does this.
               </p>
               <div className="grid grid-cols-3 gap-2 text-center">
                 {[
@@ -283,9 +275,7 @@ export default function UpgradePage() {
                 </span>
               </div>
               <p className="text-sm text-zinc-400 leading-relaxed">
-                Build your Desert Storm battle plan in seconds. Assign roles — Roamers, East/West flanks,
-                Hospital guards, Silo team. Generate a shareable strategy card with a compass and post it
-                straight to alliance chat. Every card has your alliance name and LastWarSurvivalBuddy.com on it.
+                Build your Desert Storm battle plan in seconds. Assign roles — Roamers, East/West flanks, Hospital guards, Silo team. Generate a shareable strategy card with a compass and post it straight to alliance chat. Every card has your alliance name and LastWarSurvivalBuddy.com on it.
               </p>
             </div>
           </div>
@@ -296,8 +286,7 @@ export default function UpgradePage() {
           <div className="w-2 h-2 rounded-full bg-purple-400 animate-pulse flex-shrink-0" />
           <p className="text-sm text-purple-200">
             <span className="font-bold">Founding Member offer:</span>{' '}
-            {foundingSpots} lifetime spots available. Unlimited everything — pay once, never again.
-            Once gone, monthly-only pricing.
+            {foundingSpots} lifetime spots available. 300 questions/month + unlimited screenshots — pay once, never again. Once gone, monthly-only pricing.
           </p>
         </div>
 
@@ -315,7 +304,8 @@ export default function UpgradePage() {
                 className={`
                   relative border rounded-xl p-5 flex flex-col
                   ${tier.id === 'elite' ? 'ring-1 ring-amber-700/50' : ''}
-                  ${c.border} bg-zinc-900/40 shadow-lg ${c.glow}
+                  ${c.border}
+                  bg-zinc-900/40 shadow-lg ${c.glow}
                 `}
               >
                 {tier.badge && (
@@ -344,15 +334,15 @@ export default function UpgradePage() {
                 <div className="grid grid-cols-3 gap-1.5 mb-4">
                   <div className="bg-zinc-800/60 rounded-lg px-1.5 py-2 text-center">
                     <div className="text-sm font-bold text-white">
-                      {isFoundingTier ? '∞' : tier.questions}
+                      {tier.questions}
                     </div>
-                    <div className="text-[9px] text-zinc-500 font-mono leading-tight">Q/day</div>
+                    <div className="text-[9px] text-zinc-500 font-mono leading-tight">Q/mo</div>
                   </div>
                   <div className="bg-zinc-800/60 rounded-lg px-1.5 py-2 text-center">
                     <div className="text-sm font-bold text-white">
                       {isFoundingTier ? '∞' : tier.screenshots}
                     </div>
-                    <div className="text-[9px] text-zinc-500 font-mono leading-tight">📸/day</div>
+                    <div className="text-[9px] text-zinc-500 font-mono leading-tight">📸/mo</div>
                   </div>
                   <div className={`border rounded-lg px-1.5 py-2 text-center ${c.statBg}`}>
                     <div className={`text-sm font-bold ${c.accent}`}>
@@ -391,8 +381,7 @@ export default function UpgradePage() {
                     ? 'Claim Lifetime Access'
                     : tier.id === 'alliance'
                     ? 'Upgrade to Alliance'
-                    : `Upgrade to ${tier.name}`
-                  }
+                    : `Upgrade to ${tier.name}`}
                 </button>
               </div>
             )
@@ -406,15 +395,15 @@ export default function UpgradePage() {
           </div>
           <div className="divide-y divide-zinc-800/60">
             {[
-              { feature: 'Buddy AI Chat', free: '5/day', pro: '30/day', elite: '100/day', founding: 'Unlimited' },
-              { feature: 'Screenshot Analysis', free: '—', pro: '10/day', elite: '20/day', founding: 'Unlimited' },
-              { feature: '⚔️ Battle Report Analyzer', free: '—', pro: '10/mo', elite: '20/mo', founding: '15/mo' },
-              { feature: 'Pack Scanner', free: '—', pro: '✓', elite: '✓', founding: '✓' },
-              { feature: 'Daily Briefing', free: '✓', pro: '✓', elite: '✓', founding: '✓' },
-              { feature: 'Daily Action Plan', free: '✓', pro: '✓', elite: '✓', founding: '✓' },
-              { feature: '🏜️ DS War Room', free: '✓', pro: '✓', elite: '✓', founding: '✓' },
-              { feature: 'Profile Context', free: '✓', pro: '✓', elite: '✓', founding: '✓' },
-              { feature: 'New Features', free: 'Basic', pro: 'Standard', elite: 'Priority', founding: 'All — forever' },
+              { feature: 'Buddy AI Chat',             free: '20/mo',  pro: '100/mo',  elite: '250/mo',  founding: '300/mo' },
+              { feature: 'Screenshot Analysis',        free: '—',      pro: '10/mo',   elite: '20/mo',   founding: 'Unlimited' },
+              { feature: '⚔️ Battle Report Analyzer', free: '—',      pro: '10/mo',   elite: '20/mo',   founding: '15/mo' },
+              { feature: 'Pack Scanner',               free: '—',      pro: '✓',       elite: '✓',       founding: '✓' },
+              { feature: 'Daily Briefing',             free: '✓',      pro: '✓',       elite: '✓',       founding: '✓' },
+              { feature: 'Daily Action Plan',          free: '✓',      pro: '✓',       elite: '✓',       founding: '✓' },
+              { feature: '🏜️ DS War Room',            free: '✓',      pro: '✓',       elite: '✓',       founding: '✓' },
+              { feature: 'Profile Context',            free: '✓',      pro: '✓',       elite: '✓',       founding: '✓' },
+              { feature: 'New Features',               free: 'Basic',  pro: 'Standard', elite: 'Priority', founding: 'All — forever' },
             ].map(({ feature, free, pro, elite, founding }) => (
               <div key={feature} className="grid grid-cols-5 px-5 py-3 text-xs items-center">
                 <span className="text-zinc-300 font-medium col-span-1">{feature}</span>
@@ -437,7 +426,7 @@ export default function UpgradePage() {
         {/* ── Footer ── */}
         <div className="mt-8 text-center space-y-2">
           <p className="text-xs text-zinc-600">
-            Free tier: 5 questions/day, no Battle Reports, no Pack Scanner.{' '}
+            Free tier: 20 questions/month, no Battle Reports, no Pack Scanner.{' '}
             <button
               onClick={() => router.push('/dashboard')}
               className="text-zinc-500 hover:text-zinc-300 underline transition-colors"
@@ -455,7 +444,6 @@ export default function UpgradePage() {
             Fan-built tool. Not affiliated with FUNFLY PTE. LTD.
           </p>
         </div>
-
       </main>
     </div>
   )
