@@ -25,8 +25,12 @@ export default function BuddyPage() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
-  const [pendingImage, setPendingImage] = useState<{ dataUrl: string; base64: string; mimeType: string } | null>(null);
-  const [dailyLimit, setDailyLimit] = useState<{ used: number; limit: number } | null>(null);
+  const [pendingImage, setPendingImage] = useState<{
+    dataUrl: string;
+    base64: string;
+    mimeType: string;
+  } | null>(null);
+  const [monthlyLimit, setMonthlyLimit] = useState<{ used: number; limit: number } | null>(null);
   const [tier, setTier] = useState<string>('free');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -56,12 +60,15 @@ export default function BuddyPage() {
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + 'px';
+      textareaRef.current.style.height =
+        Math.min(textareaRef.current.scrollHeight, 120) + 'px';
     }
   }, [input]);
 
   async function checkAuthAndLoadContext() {
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     if (!session) {
       router.push('/signin');
       return;
@@ -72,22 +79,28 @@ export default function BuddyPage() {
       .select('tier')
       .eq('user_id', session.user.id)
       .single();
-
     if (sub) setTier(sub.tier);
 
-    const today = new Date().toISOString().split('T')[0];
+    // Monthly key: YYYY-MM
+    const monthKey = new Date().toISOString().slice(0, 7);
     const { data: usage } = await supabase
       .from('daily_usage')
-      .select('question_count, screenshot_count')
+      .select('question_count')
       .eq('user_id', session.user.id)
-      .eq('date', today)
+      .eq('date', monthKey)
       .single();
 
-    const limits: Record<string, number> = { free: 5, pro: 30, elite: 100, founding: 20, alliance: 100 };
+    const limits: Record<string, number> = {
+      free:     20,
+      pro:      100,
+      elite:    250,
+      founding: 300,
+      alliance: 250,
+    };
     const userTier = sub?.tier || 'free';
-    const userLimit = limits[userTier] || 5;
+    const userLimit = limits[userTier] || 20;
     const used = usage?.question_count || 0;
-    setDailyLimit({ used, limit: userLimit });
+    setMonthlyLimit({ used, limit: userLimit });
   }
 
   function handleScreenshotClick() {
@@ -101,7 +114,6 @@ export default function BuddyPage() {
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-
     if (!file.type.startsWith('image/')) {
       alert('Please upload an image file (PNG, JPG, WEBP).');
       return;
@@ -110,9 +122,8 @@ export default function BuddyPage() {
       alert('Image must be under 5MB.');
       return;
     }
-
     const reader = new FileReader();
-    reader.onload = (ev) => {
+    reader.onload = ev => {
       const dataUrl = ev.target?.result as string;
       const base64 = dataUrl.split(',')[1];
       const mimeType = file.type;
@@ -129,9 +140,7 @@ export default function BuddyPage() {
   async function sendMessage() {
     const trimmed = input.trim();
     if ((!trimmed && !pendingImage) || isLoading) return;
-    if (dailyLimit && dailyLimit.used >= dailyLimit.limit) {
-      return;
-    }
+    if (monthlyLimit && monthlyLimit.used >= monthlyLimit.limit) return;
 
     const userMessage: Message = {
       id: crypto.randomUUID(),
@@ -140,7 +149,6 @@ export default function BuddyPage() {
       imageUrl: pendingImage?.dataUrl,
       timestamp: new Date(),
     };
-
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     const imageToSend = pendingImage;
@@ -149,7 +157,9 @@ export default function BuddyPage() {
     setIsTyping(true);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session) {
         router.push('/signin');
         return;
@@ -157,24 +167,17 @@ export default function BuddyPage() {
 
       const body: Record<string, unknown> = {
         message: userMessage.content,
-        history: messages.map(m => ({
-          role: m.role,
-          content: m.content,
-        })),
+        history: messages.map(m => ({ role: m.role, content: m.content })),
       };
-
       if (imageToSend) {
-        body.image = {
-          base64: imageToSend.base64,
-          mimeType: imageToSend.mimeType,
-        };
+        body.image = { base64: imageToSend.base64, mimeType: imageToSend.mimeType };
       }
 
       const res = await fetch('/api/buddy', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify(body),
       });
@@ -184,35 +187,44 @@ export default function BuddyPage() {
       if (!res.ok) {
         const err = await res.json();
         if (res.status === 429) {
-          setMessages(prev => [...prev, {
-            id: crypto.randomUUID(),
-            role: 'assistant',
-            content: err.upgradeMessage || "You've hit your daily limit. Upgrade to keep going.",
-            timestamp: new Date(),
-          }]);
-          setDailyLimit(prev => prev ? { ...prev, used: prev.limit } : prev);
+          setMessages(prev => [
+            ...prev,
+            {
+              id: crypto.randomUUID(),
+              role: 'assistant',
+              content:
+                err.upgradeMessage || "You've hit your monthly limit. Upgrade to keep going.",
+              timestamp: new Date(),
+            },
+          ]);
+          setMonthlyLimit(prev => (prev ? { ...prev, used: prev.limit } : prev));
           return;
         }
         throw new Error(err.error || 'Request failed');
       }
 
       const data = await res.json();
-      setMessages(prev => [...prev, {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: data.reply,
-        timestamp: new Date(),
-      }]);
-      setDailyLimit(prev => prev ? { ...prev, used: prev.used + 1 } : prev);
-
+      setMessages(prev => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: data.reply,
+          timestamp: new Date(),
+        },
+      ]);
+      setMonthlyLimit(prev => (prev ? { ...prev, used: prev.used + 1 } : prev));
     } catch {
       setIsTyping(false);
-      setMessages(prev => [...prev, {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: "Something went wrong. Try again in a moment.",
-        timestamp: new Date(),
-      }]);
+      setMessages(prev => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: 'Something went wrong. Try again in a moment.',
+          timestamp: new Date(),
+        },
+      ]);
     } finally {
       setIsLoading(false);
     }
@@ -225,7 +237,7 @@ export default function BuddyPage() {
     }
   }
 
-  const isAtLimit = dailyLimit ? dailyLimit.used >= dailyLimit.limit : false;
+  const isAtLimit = monthlyLimit ? monthlyLimit.used >= monthlyLimit.limit : false;
   const isEmpty = messages.length === 0;
 
   return (
@@ -239,10 +251,10 @@ export default function BuddyPage() {
           <span className="buddy-logo">🎖️</span>
           <span className="buddy-title">BUDDY AI</span>
         </div>
-        {dailyLimit && (
+        {monthlyLimit && (
           <div className="usage-badge">
-            <span className={dailyLimit.used >= dailyLimit.limit ? 'usage-maxed' : ''}>
-              {dailyLimit.used}/{dailyLimit.limit}
+            <span className={monthlyLimit.used >= monthlyLimit.limit ? 'usage-maxed' : ''}>
+              {monthlyLimit.used}/{monthlyLimit.limit}
             </span>
           </div>
         )}
@@ -253,13 +265,14 @@ export default function BuddyPage() {
         {isEmpty ? (
           <div className="empty-state">
             <div className="empty-icon">🎖️</div>
-            <h2 className="empty-heading">What's your situation, Commander?</h2>
+            <h2 className="empty-heading">What&apos;s your situation, Commander?</h2>
             <p className="empty-sub">
-              Ask anything. Upload a Hot Deal screenshot for buy/skip analysis.<br />
-              Every answer knows your profile, server, and what's coming up.
+              Ask anything. Upload a Hot Deal screenshot for buy/skip analysis.
+              <br />
+              Every answer knows your profile, server, and what&apos;s coming up.
             </p>
             <div className="suggested-prompts">
-              {SUGGESTED_PROMPTS.map((prompt) => (
+              {SUGGESTED_PROMPTS.map(prompt => (
                 <button
                   key={prompt}
                   className="prompt-chip"
@@ -275,7 +288,7 @@ export default function BuddyPage() {
           </div>
         ) : (
           <div className="messages-list">
-            {messages.map((msg) => (
+            {messages.map(msg => (
               <div key={msg.id} className={`message-row ${msg.role}`}>
                 {msg.role === 'assistant' && (
                   <div className="avatar assistant-avatar">🎖️</div>
@@ -289,7 +302,10 @@ export default function BuddyPage() {
                   {msg.content && (
                     <div className="bubble-text">
                       {msg.content.split('\n').map((line, i) => (
-                        <span key={i}>{line}{i < msg.content.split('\n').length - 1 && <br />}</span>
+                        <span key={i}>
+                          {line}
+                          {i < msg.content.split('\n').length - 1 && <br />}
+                        </span>
                       ))}
                     </div>
                   )}
@@ -313,22 +329,19 @@ export default function BuddyPage() {
 
       {/* Input area */}
       <footer className="input-area">
-        {/* ── Limit banner — free tier hits wall ── */}
+        {/* ── Limit banner ── */}
         {isAtLimit && (
           <div className="limit-banner">
             <div className="limit-banner-top">
               <span className="limit-text">
                 {tier === 'free'
-                  ? "Daily limit reached — 5 questions/day on Free."
-                  : `Daily limit reached (${dailyLimit?.limit} questions).`}
+                  ? `Monthly limit reached — ${monthlyLimit?.limit} questions/month on Free.`
+                  : `Monthly limit reached (${monthlyLimit?.limit} questions). Resets on the 1st.`}
               </span>
             </div>
             {tier === 'free' && (
-              <button
-                onClick={() => router.push('/upgrade')}
-                className="upgrade-cta-btn"
-              >
-                Upgrade to Pro — 30/day · $9.99/mo →
+              <button onClick={() => router.push('/upgrade')} className="upgrade-cta-btn">
+                Upgrade to Pro — 100/month · $9.99/mo →
               </button>
             )}
           </div>
@@ -337,25 +350,34 @@ export default function BuddyPage() {
         {pendingImage && (
           <div className="pending-image-bar">
             <div className="pending-thumb-wrap">
-              <img src={pendingImage.dataUrl} alt="Screenshot ready to send" className="pending-thumb" />
-              <button className="remove-image-btn" onClick={clearPendingImage} title="Remove">✕</button>
+              <img
+                src={pendingImage.dataUrl}
+                alt="Screenshot ready to send"
+                className="pending-thumb"
+              />
+              <button className="remove-image-btn" onClick={clearPendingImage} title="Remove">
+                ✕
+              </button>
             </div>
-            <span className="pending-label">Screenshot ready — add a question or just hit send</span>
+            <span className="pending-label">
+              Screenshot ready — add a question or just hit send
+            </span>
           </div>
         )}
 
         <div className="screenshot-row">
-          {/* Screenshot button — free users click → /upgrade */}
           <button
             className="screenshot-btn"
             onClick={handleScreenshotClick}
             disabled={isAtLimit && tier !== 'free'}
-            title={tier === 'free' ? 'Screenshot analysis requires Pro or above' : 'Upload a pack screenshot'}
+            title={
+              tier === 'free'
+                ? 'Screenshot analysis requires Pro or above'
+                : 'Upload a pack screenshot'
+            }
           >
             📸 Upload Screenshot
-            {tier === 'free' && (
-              <span className="pro-badge">PRO</span>
-            )}
+            {tier === 'free' && <span className="pro-badge">PRO</span>}
           </button>
           <input
             ref={fileInputRef}
@@ -372,7 +394,7 @@ export default function BuddyPage() {
             className="chat-input"
             placeholder={
               isAtLimit
-                ? 'Daily limit reached'
+                ? 'Monthly limit reached'
                 : pendingImage
                 ? 'Add a question about this screenshot, or just hit Send…'
                 : 'Ask Buddy anything…'
@@ -392,8 +414,20 @@ export default function BuddyPage() {
               <span className="spinner" />
             ) : (
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path d="M22 2L11 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path
+                  d="M22 2L11 13"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M22 2L15 22L11 13L2 9L22 2Z"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
             )}
           </button>
@@ -463,7 +497,10 @@ export default function BuddyPage() {
         }
         .messages-area::-webkit-scrollbar { width: 4px; }
         .messages-area::-webkit-scrollbar-track { background: transparent; }
-        .messages-area::-webkit-scrollbar-thumb { background: #1e2535; border-radius: 2px; }
+        .messages-area::-webkit-scrollbar-thumb {
+          background: #1e2535;
+          border-radius: 2px;
+        }
         .empty-state {
           display: flex;
           flex-direction: column;
@@ -515,16 +552,8 @@ export default function BuddyPage() {
           color: #c9b87a;
           background: #0f1420;
         }
-        .messages-list {
-          display: flex;
-          flex-direction: column;
-          gap: 18px;
-        }
-        .message-row {
-          display: flex;
-          gap: 10px;
-          align-items: flex-start;
-        }
+        .messages-list { display: flex; flex-direction: column; gap: 18px; }
+        .message-row { display: flex; gap: 10px; align-items: flex-start; }
         .message-row.user { flex-direction: row-reverse; }
         .avatar {
           width: 30px;
@@ -537,10 +566,7 @@ export default function BuddyPage() {
           flex-shrink: 0;
           margin-top: 2px;
         }
-        .assistant-avatar {
-          background: #12182a;
-          border: 1px solid #1e2535;
-        }
+        .assistant-avatar { background: #12182a; border: 1px solid #1e2535; }
         .bubble {
           max-width: 78%;
           border-radius: 12px;
@@ -548,16 +574,8 @@ export default function BuddyPage() {
           font-size: 14px;
           line-height: 1.7;
         }
-        .bubble.user {
-          background: #131d33;
-          border: 1px solid #1e3060;
-          color: #d4e0f5;
-        }
-        .bubble.assistant {
-          background: #0d1017;
-          border: 1px solid #1e2535;
-          color: #d0c9b5;
-        }
+        .bubble.user { background: #131d33; border: 1px solid #1e3060; color: #d4e0f5; }
+        .bubble.assistant { background: #0d1017; border: 1px solid #1e2535; color: #d0c9b5; }
         .bubble-text { white-space: pre-wrap; word-break: break-word; }
         .image-preview-in-bubble {
           margin-bottom: 10px;
@@ -609,11 +627,7 @@ export default function BuddyPage() {
           flex-direction: column;
           gap: 8px;
         }
-        .limit-banner-top {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-        }
+        .limit-banner-top { display: flex; align-items: center; justify-content: space-between; }
         .limit-text {
           font-size: 12px;
           color: #c0392b;
@@ -671,12 +685,7 @@ export default function BuddyPage() {
           justify-content: center;
           line-height: 1;
         }
-        .pending-label {
-          font-size: 12px;
-          color: #5a6880;
-          line-height: 1.4;
-          font-style: italic;
-        }
+        .pending-label { font-size: 12px; color: #5a6880; line-height: 1.4; font-style: italic; }
         .screenshot-row { display: flex; align-items: center; }
         .screenshot-btn {
           background: #0d1017;
@@ -705,11 +714,7 @@ export default function BuddyPage() {
           letter-spacing: 0.08em;
           margin-left: 2px;
         }
-        .text-input-row {
-          display: flex;
-          gap: 8px;
-          align-items: flex-end;
-        }
+        .text-input-row { display: flex; gap: 8px; align-items: flex-end; }
         .chat-input {
           flex: 1;
           background: #0a0e18;
