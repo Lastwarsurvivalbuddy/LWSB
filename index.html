@@ -207,6 +207,16 @@
     .stat-label { font-size: 10px; color: var(--muted); letter-spacing: 0.15em;
       text-transform: uppercase; font-weight: 600; display: block; }
     .stat-divider { width: 1px; height: 36px; background: var(--border2); }
+    .stat-partner { text-align: center; }
+    .stat-partner-label { font-family: 'Rajdhani', sans-serif; font-size: 10px; font-weight: 700;
+      letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted);
+      display: block; margin-bottom: 5px; }
+    .stat-partner-link { display: inline-flex; align-items: center; gap: 5px;
+      font-family: 'Oswald', sans-serif; font-size: 13px; font-weight: 600;
+      letter-spacing: 0.08em; color: var(--gold2);
+      text-decoration: none; transition: color 0.2s; }
+    .stat-partner-link:hover { color: var(--gold); }
+    .stat-partner-link svg { opacity: 0.6; }
     .features { position: relative; z-index: 1; padding: 100px 5%; max-width: 1200px; margin: 0 auto; }
     .section-label { font-family: 'Rajdhani', sans-serif; font-size: 11px; font-weight: 700;
       letter-spacing: 0.3em; text-transform: uppercase; color: var(--gold);
@@ -837,9 +847,12 @@
     </button>
   </div>
 
-  <!-- STATS -->
+  <!-- STATS ROW — 2000+ active servers · seasons · battle report · war room · 0 discord · data partner -->
   <div class="stats-row" role="region" aria-label="App stats">
-    <div class="stat"><span class="stat-number">500+</span><span class="stat-label">Active Servers</span></div>
+    <div class="stat">
+      <span class="stat-number">2000+</span>
+      <span class="stat-label">Active Servers</span>
+    </div>
     <div class="stat-divider" aria-hidden="true"></div>
     <div class="stat" style="display:flex;flex-direction:column;align-items:center;gap:2px;">
       <span class="stat-number">S1–S5</span>
@@ -847,11 +860,30 @@
       <span class="stat-label" style="color:#facc15;font-size:0.75em;">S6 Coming Soon!</span>
     </div>
     <div class="stat-divider" aria-hidden="true"></div>
-    <div class="stat"><span class="stat-number" aria-label="Battle Report Analyzer">⚔️</span><span class="stat-label">Battle Report Analyzer</span></div>
+    <div class="stat">
+      <span class="stat-number" aria-label="Battle Report Analyzer">⚔️</span>
+      <span class="stat-label">Battle Report Analyzer</span>
+    </div>
     <div class="stat-divider" aria-hidden="true"></div>
-    <div class="stat"><span class="stat-number" aria-label="War Room">🗺️</span><span class="stat-label">War Room · 3 Tools</span></div>
+    <div class="stat">
+      <span class="stat-number" aria-label="War Room">🗺️</span>
+      <span class="stat-label">War Room · 3 Tools</span>
+    </div>
     <div class="stat-divider" aria-hidden="true"></div>
-    <div class="stat"><span class="stat-number">0</span><span class="stat-label">Discord Scrolling Required</span></div>
+    <div class="stat">
+      <span class="stat-number">0</span>
+      <span class="stat-label">Discord Scrolling Required</span>
+    </div>
+    <div class="stat-divider" aria-hidden="true"></div>
+    <div class="stat-partner">
+      <span class="stat-partner-label">Game Data</span>
+      <a href="https://cpt-hedge.com" target="_blank" rel="noopener noreferrer" class="stat-partner-link">
+        ⬡ cpt-hedge.com
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M2 8L8 2M8 2H4M8 2V6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
+    </div>
   </div>
 
   <!-- BUDDY AI PREVIEW -->

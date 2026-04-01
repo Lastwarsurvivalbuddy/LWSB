@@ -731,6 +731,19 @@ export default function Dashboard() {
               </button>
             )}
           </div>
+
+          {/* ── Data attribution ── */}
+          <div className="mt-5 flex justify-center">
+            <a
+              href="https://cpt-hedge.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-[10px] font-mono text-zinc-600 hover:text-zinc-400 transition-colors tracking-wider uppercase"
+            >
+              <span className="text-[9px]">⬡</span>
+              Data powered by cpt-hedge.com
+            </a>
+          </div>
         </section>
       </main>
 
