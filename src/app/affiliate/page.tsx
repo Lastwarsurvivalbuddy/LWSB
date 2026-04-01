@@ -1,5 +1,4 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -13,6 +12,7 @@ export default function AffiliatePage() {
   const [errorMsg, setErrorMsg] = useState('');
   const [form, setForm] = useState({
     name: '',
+    contact_email: '',
     ign: '',
     server: '',
     promo_method: '',
@@ -43,11 +43,13 @@ export default function AffiliatePage() {
   const handleSubmit = async () => {
     setStatus('loading');
     setErrorMsg('');
+
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       router.push('/login');
       return;
     }
+
     const res = await fetch('/api/affiliate/apply', {
       method: 'POST',
       headers: {
@@ -56,19 +58,30 @@ export default function AffiliatePage() {
       },
       body: JSON.stringify(form),
     });
+
     const data = await res.json();
+
     if (res.status === 409) {
       setExistingStatus(data.status);
       setStatus('already_applied');
       return;
     }
+
     if (!res.ok) {
       setErrorMsg(data.error ?? 'Something went wrong. Try again.');
       setStatus('error');
       return;
     }
+
     setStatus('submitted');
   };
+
+  const isFormValid =
+    !!form.name &&
+    !!form.contact_email &&
+    !!form.ign &&
+    !!form.server &&
+    !!form.promo_method;
 
   return (
     <div style={{
@@ -92,7 +105,6 @@ export default function AffiliatePage() {
       }} />
 
       <div style={{ position: 'relative', zIndex: 1, maxWidth: 640, margin: '0 auto', padding: '80px 24px 60px' }}>
-
         {/* Back */}
         <button
           onClick={() => router.push('/dashboard')}
@@ -124,16 +136,13 @@ export default function AffiliatePage() {
               Affiliate Program
             </span>
           </div>
-
           <h1 style={{
-            fontFamily: "'Oswald', sans-serif",
-            fontSize: 'clamp(32px, 6vw, 48px)',
+            fontFamily: "'Oswald', sans-serif", fontSize: 'clamp(32px, 6vw, 48px)',
             fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em',
             lineHeight: 1.1, marginBottom: 16,
           }}>
             Earn With<br /><span style={{ color: '#e8a020' }}>Last War Buddy</span>
           </h1>
-
           <p style={{ fontSize: 14, color: '#8090a0', lineHeight: 1.8, fontWeight: 300 }}>
             Share your referral link. Earn a commission on every subscription you bring in — for the life of that subscriber.
             Commission rates are confirmed individually at approval based on your audience and reach.
@@ -167,17 +176,11 @@ export default function AffiliatePage() {
               desc: 'Major YouTube channels and large-scale platform partnerships.',
             },
           ].map(tier => (
-            <div
-              key={tier.label}
-              style={{
-                background: '#0e1014',
-                border: tier.featured ? '1px solid rgba(232,160,32,0.5)' : '1px solid #222830',
-                borderRadius: 10,
-                padding: '16px 14px',
-                textAlign: 'center',
-                position: 'relative',
-              }}
-            >
+            <div key={tier.label} style={{
+              background: '#0e1014',
+              border: tier.featured ? '1px solid rgba(232,160,32,0.5)' : '1px solid #222830',
+              borderRadius: 10, padding: '16px 14px', textAlign: 'center', position: 'relative',
+            }}>
               {tier.featured && (
                 <div style={{
                   position: 'absolute', top: 0, left: 0, right: 0, height: 2,
@@ -198,12 +201,8 @@ export default function AffiliatePage() {
               }}>
                 {tier.rate}
               </div>
-              <div style={{ fontSize: 10, color: '#606878', marginBottom: 10 }}>
-                {tier.rateNote}
-              </div>
-              <div style={{ fontSize: 11, color: '#606878', lineHeight: 1.5 }}>
-                {tier.desc}
-              </div>
+              <div style={{ fontSize: 10, color: '#606878', marginBottom: 10 }}>{tier.rateNote}</div>
+              <div style={{ fontSize: 11, color: '#606878', lineHeight: 1.5 }}>{tier.desc}</div>
             </div>
           ))}
         </div>
@@ -239,8 +238,7 @@ export default function AffiliatePage() {
               <button
                 onClick={() => router.push('/affiliate/dashboard')}
                 style={{
-                  marginTop: 20,
-                  background: 'linear-gradient(135deg, #c06010, #e8a020)',
+                  marginTop: 20, background: 'linear-gradient(135deg, #c06010, #e8a020)',
                   border: 'none', borderRadius: 8, padding: '12px 28px', color: '#fff',
                   fontFamily: "'Oswald', sans-serif", fontSize: 14, fontWeight: 600,
                   letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer',
@@ -266,8 +264,7 @@ export default function AffiliatePage() {
               Application Submitted
             </div>
             <div style={{ fontSize: 13, color: '#8090a0', lineHeight: 1.75 }}>
-              You'll hear back within 48 hours. Once approved, you'll get your referral link and
-              dashboard access automatically.
+              You'll hear back within 48 hours. Once approved, you'll get your referral link and dashboard access automatically.
             </div>
           </div>
         )}
@@ -276,8 +273,7 @@ export default function AffiliatePage() {
         {status !== 'already_applied' && status !== 'submitted' && (
           <div style={{
             background: '#0e1014', border: '1px solid #2a3040',
-            borderRadius: 16, padding: '32px 28px',
-            position: 'relative', overflow: 'hidden',
+            borderRadius: 16, padding: '32px 28px', position: 'relative', overflow: 'hidden',
           }}>
             {/* Top accent */}
             <div style={{
@@ -296,7 +292,7 @@ export default function AffiliatePage() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
 
-              {/* Name */}
+              {/* Full Name */}
               <div>
                 <label style={{
                   display: 'block', fontFamily: "'Rajdhani', sans-serif", fontSize: 10,
@@ -306,8 +302,34 @@ export default function AffiliatePage() {
                   Full Name
                 </label>
                 <input
-                  name="name" value={form.name} onChange={handleChange}
+                  name="name"
+                  value={form.name}
+                  onChange={handleChange}
                   placeholder="Your name"
+                  style={{
+                    width: '100%', background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid #222830', borderRadius: 8, padding: '12px 14px',
+                    color: '#e8e8e8', fontSize: 14, fontFamily: "'Open Sans', sans-serif",
+                    outline: 'none', boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+
+              {/* Contact Email */}
+              <div>
+                <label style={{
+                  display: 'block', fontFamily: "'Rajdhani', sans-serif", fontSize: 10,
+                  fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase',
+                  color: '#606878', marginBottom: 6,
+                }}>
+                  Contact Email
+                </label>
+                <input
+                  name="contact_email"
+                  type="email"
+                  value={form.contact_email}
+                  onChange={handleChange}
+                  placeholder="Where should we reach you?"
                   style={{
                     width: '100%', background: 'rgba(255,255,255,0.04)',
                     border: '1px solid #222830', borderRadius: 8, padding: '12px 14px',
@@ -327,7 +349,9 @@ export default function AffiliatePage() {
                   In-Game Name (IGN)
                 </label>
                 <input
-                  name="ign" value={form.ign} onChange={handleChange}
+                  name="ign"
+                  value={form.ign}
+                  onChange={handleChange}
                   placeholder="Your Last War IGN"
                   style={{
                     width: '100%', background: 'rgba(255,255,255,0.04)',
@@ -348,7 +372,9 @@ export default function AffiliatePage() {
                   Server Number
                 </label>
                 <input
-                  name="server" value={form.server} onChange={handleChange}
+                  name="server"
+                  value={form.server}
+                  onChange={handleChange}
                   placeholder="e.g. 1032"
                   style={{
                     width: '100%', background: 'rgba(255,255,255,0.04)',
@@ -369,7 +395,9 @@ export default function AffiliatePage() {
                   How Will You Promote?
                 </label>
                 <textarea
-                  name="promo_method" value={form.promo_method} onChange={handleChange}
+                  name="promo_method"
+                  value={form.promo_method}
+                  onChange={handleChange}
                   placeholder="e.g. I'm R5 on Server 1032 and will share in alliance chat. I run a YouTube channel with 5k subs. etc."
                   rows={4}
                   style={{
@@ -392,14 +420,13 @@ export default function AffiliatePage() {
 
               <button
                 onClick={handleSubmit}
-                disabled={status === 'loading' || !form.name || !form.ign || !form.server || !form.promo_method}
+                disabled={status === 'loading' || !isFormValid}
                 style={{
-                  width: '100%',
-                  background: 'linear-gradient(135deg, #c0281a, #c06010, #e8a020)',
+                  width: '100%', background: 'linear-gradient(135deg, #c0281a, #c06010, #e8a020)',
                   border: 'none', borderRadius: 8, padding: '15px', color: '#fff',
                   fontFamily: "'Oswald', sans-serif", fontSize: 16, fontWeight: 600,
                   letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer',
-                  opacity: status === 'loading' || !form.name || !form.ign || !form.server || !form.promo_method ? 0.5 : 1,
+                  opacity: status === 'loading' || !isFormValid ? 0.5 : 1,
                   transition: 'opacity 0.2s',
                 }}
               >
@@ -410,11 +437,9 @@ export default function AffiliatePage() {
                 Applications are reviewed manually. You'll receive confirmation within 48 hours.<br />
                 Commission rate is confirmed individually at approval. Rates are not publicly disclosed.
               </div>
-
             </div>
           </div>
         )}
-
       </div>
     </div>
   );

@@ -18,9 +18,10 @@ export async function POST(req: NextRequest) {
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const token = authHeader.split(' ')[1];
 
+    const token = authHeader.split(' ')[1];
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -41,14 +42,15 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { name, ign, server, promo_method } = body;
+    const { name, contact_email, ign, server, promo_method } = body;
 
-    if (!name || !ign || !server || !promo_method) {
+    if (!name || !contact_email || !ign || !server || !promo_method) {
       return NextResponse.json({ error: 'All fields are required.' }, { status: 400 });
     }
 
     // Generate unique referral code
     let referral_code = generateReferralCode(ign);
+
     // Ensure uniqueness
     let attempts = 0;
     while (attempts < 5) {
@@ -68,6 +70,7 @@ export async function POST(req: NextRequest) {
         user_id: user.id,
         referral_code,
         name,
+        contact_email,
         ign,
         server,
         promo_method,
