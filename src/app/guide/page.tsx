@@ -172,9 +172,8 @@ const glossaryTerms = [
   { term: 'RSS', def: 'Resources — food, iron, gold. The currency of everything in the game.' },
   { term: 'HQ', def: 'Headquarters — your main base building. Its level unlocks higher troop tiers and buildings.' },
   { term: 'MG', def: "Marshall's Guard — a group rally event run by your alliance. Show up. It's free rewards." },
-  { term: 'DSB', def: 'Desert Storm Battle — large-scale alliance vs alliance territory war event.' },
+  { term: 'DS/DSB', def: 'Desert Storm / Desert Storm Battle — large-scale alliance vs alliance territory war event.' },
   { term: 'SvS', def: 'Server vs Server — cross-server war. Major event with high-value rewards.' },
-  { term: 'ATM', def: 'Abandoned base with no alliance tag used as a free resource farm. Scout them out.' },
   { term: 'UR', def: 'Ultra Rare — the highest hero rarity tier. Certain heroes transform to UR at specific seasons.' },
   { term: 'F2P', def: 'Free to Play — no real money spent. Totally viable with disciplined timing.' },
   { term: 'Arms Race', def: 'Alliance-wide points event running alongside Alliance Duel. Time spending to score both.' },
@@ -183,7 +182,7 @@ const glossaryTerms = [
   { term: 'Troop Buff', def: 'Same-type power bonus: 3 same=5%, 3+2 mix=10%, 4 same=15%, 5 same=20%.' },
   { term: '1-Hero Squad', def: 'Deploy your weakest hero alone to carry fewer troops and minimize losses in risky situations.' },
   { term: 'Drill Grounds', def: 'Building that sets your maximum troop capacity. Level it to hold more troops.' },
-  { term: 'Honour Campaign', def: 'PvE event every other day (Sun/Tue/Thu). Win stages for boxes and progression points.' },
+  { term: 'Honor Campaign', def: 'PvE event every other day (Sun/Tue/Thu). Win stages for boxes and progression points.' },
   { term: 'ATK / DEF gear', def: 'Attack gear = Gun + Chip (left side). Defense gear = Armor + Radar (right side).' },
 ];
 
@@ -341,8 +340,7 @@ export default function GuidePage() {
                   Ask Buddy for advice tailored to your situation →
                 </button>
               </>
-            : <>This guide uses general advice for all new commanders.{' '}<button style={s.inlineLink} onClick={() => router.push('/signin')}>Create a free account for a personalized daily plan →</button></>}
-
+            : 'This guide uses general advice for all new commanders. Create an account for a personalized daily plan.'}
         </span>
       </div>
 
