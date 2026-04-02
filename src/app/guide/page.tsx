@@ -341,7 +341,8 @@ export default function GuidePage() {
                   Ask Buddy for advice tailored to your situation →
                 </button>
               </>
-            : 'This guide uses general advice for all new commanders. Create an account for a personalized daily plan.'}
+            : <>This guide uses general advice for all new commanders.{' '}<button style={s.inlineLink} onClick={() => router.push('/signin')}>Create a free account for a personalized daily plan →</button></>}
+
         </span>
       </div>
 
