@@ -102,6 +102,44 @@ function troopTierDisplay(tier: string): string {
   return map[tier] ?? tier ?? '—'
 }
 
+// ─────────────────────────────────────────────────────────────
+// ROOKIE COMMANDER CARD
+// Shown for players with server_day <= 60
+// Always available at /guide for anyone to share
+// ─────────────────────────────────────────────────────────────
+
+function RookieCommanderCard({ onNavigate }: { onNavigate: () => void }) {
+  return (
+    <div className="mt-4 flex items-center justify-between gap-3 rounded-xl px-4 py-3 flex-wrap"
+      style={{
+        backgroundColor: 'rgba(240,165,0,0.06)',
+        border: '1px solid rgba(240,165,0,0.2)',
+        borderLeft: '3px solid #f0a500',
+      }}
+    >
+      <div className="flex-1 min-w-0">
+        <p className="text-[9px] font-mono tracking-widest text-amber-500 uppercase mb-1">
+          New Commander
+        </p>
+        <p className="text-sm font-bold text-white mb-0.5">
+          New LW Commander? Start here →
+        </p>
+        <p className="text-xs text-zinc-500 leading-snug">
+          The Rookie Commander Guide walks you through exactly what to focus on first.
+          No overwhelm. Shareable with new alliance members too.
+        </p>
+      </div>
+      <button
+        onClick={onNavigate}
+        className="flex-shrink-0 text-[12px] font-bold px-4 py-2 rounded-lg transition-colors active:scale-95"
+        style={{ backgroundColor: '#f0a500', color: '#0d1117' }}
+      >
+        Open guide
+      </button>
+    </div>
+  )
+}
+
 export default function Dashboard() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
@@ -251,6 +289,9 @@ export default function Dashboard() {
   const subscriptionTier = profile.subscription_tier ?? 'free'
   const isFree = subscriptionTier === 'free'
   const isFounding = subscriptionTier === 'founding'
+
+  // Gate: show rookie card for players day 60 and under
+  const showRookieCard = (profile.server_day ?? 0) <= 60
 
   const statsGrid = [
     { label: 'HQ Level', value: profile.hq_level ?? '—' },
@@ -416,6 +457,11 @@ export default function Dashboard() {
               Upgrade →
             </span>
           </button>
+        )}
+
+        {/* ── Rookie Commander Card — sub-Day-60 only ── */}
+        {showRookieCard && (
+          <RookieCommanderCard onNavigate={() => router.push('/guide')} />
         )}
 
         {/* ── Today's Orders + Watch Out + Site News ── */}
