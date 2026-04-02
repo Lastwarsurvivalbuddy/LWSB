@@ -22,6 +22,9 @@
 //                            Day 5 adv: removed T11 Armament Training, added Fill Drill Grounds (critical),
 //                            radar → medium, Overlord upgrades added (high, gated server_day >= 200)
 // Updated: March 31, 2026 — Strategic insight copy fixed for Day 2, Day 3, Day 5
+// Updated: April 2, 2026  — Day 4 Watch Out: Ghost Ops gated to season >= 2;
+//                            season 0 and season 1 get troop power-up day copy instead;
+//                            season 1 includes Exclusive Weapon shards
 
 import type { SquadPowerTier, RankBucket, PowerBucket, KillTier } from '@/lib/profileTypes'
 import { SQUAD_POWER_TIER_LABELS, RANK_BUCKET_LABELS, KILL_TIER_TITLES } from '@/lib/profileTypes'
@@ -369,6 +372,10 @@ function getBeginnerStrategicInsight(day: number, hq: number): string {
 // - Overlord upgrades: Day 5 only, gated to server_day >= 200
 // - Fill Drill Grounds: Day 5 only (highest available troop tier)
 // - Sec of Science role switch: Day 2 reminder (before reset tonight)
+// - Day 4 Watch Out:
+//     season 0  → troop power-up day copy (no Exclusive Weapons)
+//     season 1  → troop power-up day copy (includes Exclusive Weapon shards)
+//     season 2+ → Ghost Ops copy
 
 export function generateActionPlan(profile: CommanderProfile): ActionPlanResult {
   if (profile.beginner_mode) {
@@ -485,12 +492,31 @@ export function generateActionPlan(profile: CommanderProfile): ActionPlanResult 
       detail: 'Today is the day to invest in your heroes fully — level up hero skills and upgrade exclusive weapons alongside EXP. Stack every hero improvement you can while the scoring window is open.',
       buddyPrompt: `Today is Day 4 — hero day. HQ ${hq}, max hero level ${maxHeroLevel}. Which hero skills and exclusive weapons should I prioritize upgrading?`,
     })
-    actions.push({
-      id: 'day4_ghost_ops', category: 'general', priority: 'high',
-      title: '👻 Complete Ghost Ops',
-      detail: "Thursdays only. 4 time windows. Claim rewards manually or they're lost.",
-      buddyPrompt: `Today is Day 4. HQ ${hq}. What Ghost Ops should I be running at my level?`,
-    })
+
+    // ── Day 4 Watch Out — season-gated ──────────────────────────────────────
+    if (season === 0) {
+      actions.push({
+        id: 'day4_watch_out', category: 'general', priority: 'high',
+        title: '⚡ Troop Power Up Day',
+        detail: "It's troop power up day — EXP, hero shards, and skill medals all score today. Stack these items all week and unload them today.",
+        buddyPrompt: `Today is Day 4. I'm in Season 0. HQ ${hq}. Which EXP items, hero shards, and skill medals should I prioritize using today?`,
+      })
+    } else if (season === 1) {
+      actions.push({
+        id: 'day4_watch_out', category: 'general', priority: 'high',
+        title: '⚡ Troop Power Up Day',
+        detail: "It's troop power up day — EXP, hero shards, skill medals, and Exclusive Weapon shards all score today. Stack these items all week and unload them today.",
+        buddyPrompt: `Today is Day 4. I'm in Season 1. HQ ${hq}. Which EXP items, hero shards, skill medals, and Exclusive Weapon shards should I prioritize using today?`,
+      })
+    } else {
+      // season >= 2
+      actions.push({
+        id: 'day4_ghost_ops', category: 'general', priority: 'high',
+        title: '👻 Complete Ghost Ops',
+        detail: "Thursdays only. 4 time windows. Claim rewards manually or they're lost.",
+        buddyPrompt: `Today is Day 4. HQ ${hq}. What Ghost Ops should I be running at my level?`,
+      })
+    }
   }
 
   // ── Day 3: radar + drone component chests ─────────────────────────────────
