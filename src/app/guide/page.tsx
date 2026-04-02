@@ -187,6 +187,33 @@ const glossaryTerms = [
 ];
 
 // ─────────────────────────────────────────────────────────────
+// SHARE STRIP COMPONENT
+// ─────────────────────────────────────────────────────────────
+
+function ShareStrip() {
+  const [copied, setCopied] = useState(false);
+
+  function handleCopy() {
+    navigator.clipboard.writeText('https://lwsb.vercel.app/guide').then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  return (
+    <div style={s.shareStrip}>
+      <span style={s.shareText}>Know a new commander? Share this guide.</span>
+      <button
+        style={{ ...s.shareBtn, ...(copied ? s.shareBtnCopied : {}) }}
+        onClick={handleCopy}
+      >
+        {copied ? '✓ Copied!' : 'Copy link'}
+      </button>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
 // COMPONENT
 // ─────────────────────────────────────────────────────────────
 
@@ -304,6 +331,16 @@ export default function GuidePage() {
         >
           Ask Buddy about your situation →
         </button>
+      </div>
+    );
+  }
+
+  // Renders CTA + share strip together — share always below CTA
+  function renderTabFooter() {
+    return (
+      <div style={{ marginTop: '1.5rem' }}>
+        {renderCTA()}
+        <ShareStrip />
       </div>
     );
   }
@@ -461,7 +498,7 @@ export default function GuidePage() {
                     </li>
                   ))}
                 </ul>
-                <div style={{ marginTop: '1.5rem' }}>{renderCTA()}</div>
+                {renderTabFooter()}
               </div>
             )}
 
@@ -512,7 +549,7 @@ export default function GuidePage() {
                     </ul>
                   </div>
                 ))}
-                <div style={{ marginTop: '1.5rem' }}>{renderCTA()}</div>
+                {renderTabFooter()}
               </div>
             )}
 
@@ -547,7 +584,7 @@ export default function GuidePage() {
                   Aim for 7–9 Alliance Duel boxes per day. Save radar tasks before radar days (1, 3, 5).
                   Highlighted days = highest scoring density.
                 </p>
-                <div style={{ marginTop: '1.5rem' }}>{renderCTA()}</div>
+                {renderTabFooter()}
               </div>
             )}
 
@@ -574,7 +611,7 @@ export default function GuidePage() {
                     <li style={s.warningItem}>Use defender-type heroes in the frontline and attacker/support types in the backline</li>
                   </ul>
                 </div>
-                <div style={{ marginTop: '1.5rem' }}>{renderCTA()}</div>
+                {renderTabFooter()}
               </div>
             )}
 
@@ -590,7 +627,7 @@ export default function GuidePage() {
                     </div>
                   ))}
                 </div>
-                <div style={{ marginTop: '1.5rem' }}>{renderCTA()}</div>
+                {renderTabFooter()}
               </div>
             )}
           </div>
@@ -1073,5 +1110,39 @@ const s: Record<string, React.CSSProperties> = {
     borderRadius: '6px',
     padding: '10px 20px',
     cursor: 'pointer',
+  },
+  // ── SHARE STRIP ──
+  shareStrip: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '12px',
+    marginTop: '10px',
+    padding: '11px 14px',
+    backgroundColor: '#161c24',
+    border: '1px solid #2a3442',
+    borderRadius: '6px',
+  },
+  shareText: {
+    fontSize: '12px',
+    color: '#6b7f94',
+  },
+  shareBtn: {
+    fontSize: '11px',
+    fontWeight: 500,
+    fontFamily: 'monospace',
+    letterSpacing: '0.06em',
+    backgroundColor: '#1e2730',
+    color: '#8a9ab0',
+    border: '1px solid #2a3442',
+    borderRadius: '4px',
+    padding: '5px 12px',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+    transition: 'color 0.15s, borderColor 0.15s',
+  },
+  shareBtnCopied: {
+    color: '#5dca8a',
+    borderColor: 'rgba(15,110,86,0.4)',
   },
 };
