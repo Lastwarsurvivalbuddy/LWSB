@@ -72,7 +72,7 @@ const checklistData: Record<string, CheckItem[]> = {
     { text: 'Pick ONE squad type and stop upgrading all others until it\'s dominant', tag: 'once' },
     { text: 'Stop spending speed-ups randomly — hold everything for Alliance Duel day timing', tag: 'once' },
     { text: "Hit Code Boss daily — it's free progress most confused players are skipping", tag: 'daily' },
-    { text: 'Learn the 7-day Alliance Duel cycle and align all resource spending to it', tag: 'once' },
+    { text: 'Learn the 6-day Alliance Duel cycle and align all resource spending to it', tag: 'once' },
     { text: 'Check the Glossary tab — understanding the terms removes a lot of the fog', tag: 'once' },
   ],
 };
@@ -177,7 +177,7 @@ const glossaryTerms = [
   { term: 'UR', def: 'Ultra Rare — the highest hero rarity tier. Certain heroes transform to UR at specific seasons.' },
   { term: 'F2P', def: 'Free to Play — no real money spent. Totally viable with disciplined timing.' },
   { term: 'Arms Race', def: 'Alliance-wide points event running alongside Alliance Duel. Time spending to score both.' },
-  { term: 'Alliance Duel', def: '7-day rotating event cycle. Each day has a different focus — this cycle is everything.' },
+  { term: 'Alliance Duel', def: '6-day rotating event cycle (day 7 is an "off" day). Each day has a different focus — this cycle is everything.' },
   { term: 'Radar Tasks', def: 'Daily tasks that generate points on Radar days (1, 3, 5). They have a storage cap — watch it.' },
   { term: 'Troop Buff', def: 'Same-type power bonus: 3 same=5%, 3+2 mix=10%, 4 same=15%, 5 same=20%.' },
   { term: '1-Hero Squad', def: 'Deploy your weakest hero alone to carry fewer troops and minimize losses in risky situations.' },
@@ -556,11 +556,11 @@ export default function GuidePage() {
             {/* WEEKLY TAB */}
             {activeTab === 'weekly' && (
               <div>
-                <div style={s.sectionLabel}>// ALLIANCE DUEL — 7-DAY CYCLE</div>
+                <div style={s.sectionLabel}>// ALLIANCE DUEL — 6-DAY EVENT</div>
                 <div style={s.mindsetBox}>
                   <div style={s.mindsetLabel}>// THE CORE PRINCIPLE</div>
                   <p style={s.mindsetText}>
-                    Alliance Duel runs on a 7-day rotating cycle. Arms Race runs at the same time.
+                    Alliance Duel runs on a 6-day rotating cycle (Day 7 is an off day). Arms Race runs at the same time.
                     On Days 2 and 3, specific actions score{' '}
                     <strong style={{ color: '#e8f0f8' }}>both simultaneously</strong> — that is
                     your highest efficiency window of the week. Learn this cycle. Align everything to it.
