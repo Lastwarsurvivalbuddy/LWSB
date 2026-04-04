@@ -577,26 +577,22 @@ export default function BattleReportAnalyzer({
 
   return (
     <>
-      {/* Lightbox */}
+      {/* Lightbox — tap anywhere to close */}
       {lightboxSrc && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-4"
+          className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-black/90 p-4 cursor-pointer"
           onClick={() => setLightboxSrc(null)}
         >
-          <div className="relative max-w-sm w-full" onClick={e => e.stopPropagation()}>
-            <button
-              onClick={() => setLightboxSrc(null)}
-              className="absolute -top-8 right-0 text-gray-400 hover:text-white text-sm"
-            >
-              ✕ Close
-            </button>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={lightboxSrc}
-              alt="Example screenshot"
-              className="w-full rounded-xl border border-gray-600 shadow-2xl"
-            />
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={lightboxSrc}
+            alt="Example screenshot"
+            className="max-w-sm w-full rounded-xl border border-gray-600 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <p className="mt-4 text-gray-500 text-xs tracking-wide select-none">
+            Tap anywhere to close
+          </p>
         </div>
       )}
 
