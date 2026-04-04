@@ -30,22 +30,13 @@ const RATE_LIMITS: Record<string, Record<string, number>> = {
   },
 }
 
-// How many rate limit hits per hour before flagging for review
-const ABUSE_THRESHOLD_PER_HOUR = 5
+// How many rate limit hits per hour before flagging for manual review.
+// Set high — auto-flagging paying users on normal usage is worse than
+// missing a bot. Manual review in Mission Control is the right gate.
+const ABUSE_THRESHOLD_PER_HOUR = 20
 
 const WINDOW_SECONDS = 60
 const ABUSE_WINDOW_SECONDS = 3600
-
-// ─────────────────────────────────────────────────────────────
-// WARNING — injected into every 429 response
-// ─────────────────────────────────────────────────────────────
-
-const ABUSE_WARNING =
-  'Last War: Survival Buddy is a human-use service. ' +
-  'Automated scripts, bots, and programmatic API access are strictly prohibited. ' +
-  'Accounts detected running automated requests will be permanently banned ' +
-  'without refund, regardless of subscription tier. ' +
-  'This is monitored and enforced.'
 
 // ─────────────────────────────────────────────────────────────
 // MIDDLEWARE
@@ -153,7 +144,8 @@ export async function middleware(req: NextRequest) {
   // ── 5. Rate limit exceeded ────────────────────────────────
   if (currentCount > limit) {
 
-    // Track abuse hits for authenticated users
+    // Track abuse hits for authenticated users — logged only, no auto-flag.
+    // Manual review in Mission Control is the right gate for any ban action.
     if (userId) {
       try {
         const abuseWindowStart = Math.floor(Date.now() / (ABUSE_WINDOW_SECONDS * 1000))
@@ -179,13 +171,13 @@ export async function middleware(req: NextRequest) {
             .eq('key', abuseKey)
         }
 
-        // Flag for review — admin manually confirms before hard ban
+        // Only flag at high threshold — manual review required before any ban
         if (abuseCount >= ABUSE_THRESHOLD_PER_HOUR) {
           await supabase
             .from('subscriptions')
             .update({
               flagged_for_review: true,
-              flag_reason: `Rate limit hit ${abuseCount}x in 1 hour on ${routeKey}. Possible script. Review and ban if confirmed.`,
+              flag_reason: `Rate limit hit ${abuseCount}x in 1 hour on ${routeKey}. Review before taking action.`,
               flagged_at: new Date().toISOString(),
             })
             .eq('user_id', userId)
@@ -199,10 +191,9 @@ export async function middleware(req: NextRequest) {
     return new NextResponse(
       JSON.stringify({
         error: 'rate_limit_exceeded',
-        message: "You're sending requests faster than any human can read responses. Wait a minute.",
+        message: "Buddy needs a moment — you're moving faster than he can respond. Wait 60 seconds and try again.",
         retry_after: WINDOW_SECONDS,
         limit,
-        warning: ABUSE_WARNING,
       }),
       {
         status: 429,
