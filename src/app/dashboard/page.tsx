@@ -58,6 +58,13 @@ interface BattleReportQuota {
   resets_on: string
 }
 
+interface Notification {
+  id: string
+  message: string
+  read: boolean
+  created_at: string
+}
+
 // Alliance Duel day helper — reset is always 2am UTC
 function getDuelDay(): { day: number; name: string; points: number } {
   const duelDays: Record<number, { name: string; points: number }> = {
@@ -105,7 +112,6 @@ function troopTierDisplay(tier: string): string {
 // ─────────────────────────────────────────────────────────────
 // ROOKIE COMMANDER CARD
 // Shown for players with server_day <= 60
-// Always available at /guide for anyone to share
 // ─────────────────────────────────────────────────────────────
 
 function RookieCommanderCard({ onNavigate }: { onNavigate: () => void }) {
@@ -156,6 +162,7 @@ export default function Dashboard() {
   })
   const [isAdmin, setIsAdmin] = useState(false)
   const [affiliateStatus, setAffiliateStatus] = useState<'approved' | 'pending' | 'none'>('none')
+  const [notifications, setNotifications] = useState<Notification[]>([])
   const router = useRouter()
   const duel = getDuelDay()
 
@@ -228,6 +235,20 @@ export default function Dashboard() {
         } catch {
           setAffiliateStatus('none')
         }
+
+        // ── Fetch unread notifications ──
+        try {
+          const notifRes = await fetch('/api/notifications', {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          })
+          if (notifRes.ok) {
+            const notifData = await notifRes.json()
+            setNotifications(notifData.notifications ?? [])
+          }
+        } catch {
+          // Non-fatal
+        }
+
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'Failed to load profile')
       } finally {
@@ -236,6 +257,19 @@ export default function Dashboard() {
     }
     loadProfile()
   }, [router])
+
+  async function dismissNotification(id: string) {
+    setNotifications(prev => prev.filter(n => n.id !== id))
+    try {
+      await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ id }),
+      })
+    } catch {
+      // Non-fatal
+    }
+  }
 
   async function handleSignOut() {
     await supabase.auth.signOut()
@@ -290,7 +324,6 @@ export default function Dashboard() {
   const isFree = subscriptionTier === 'free'
   const isFounding = subscriptionTier === 'founding'
 
-  // Gate: show rookie card for players day 60 and under
   const showRookieCard = (profile.server_day ?? 0) <= 60
 
   const statsGrid = [
@@ -416,6 +449,42 @@ export default function Dashboard() {
       </header>
 
       <main className="max-w-2xl mx-auto px-4 pb-24">
+
+        {/* ── User Notifications ── */}
+        {notifications.map(n => (
+          <div
+            key={n.id}
+            className="mt-4 flex items-start justify-between gap-3 rounded-xl px-4 py-3"
+            style={{
+              backgroundColor: 'rgba(234,179,8,0.06)',
+              border: '1px solid rgba(234,179,8,0.25)',
+              borderLeft: '3px solid #ca8a04',
+            }}
+          >
+            <div className="flex items-start gap-2.5 min-w-0">
+              <span className="text-amber-500 text-base flex-shrink-0 mt-0.5">⚠️</span>
+              <div className="min-w-0">
+                <p className="text-xs text-amber-200/80 leading-snug">{n.message}</p>
+                <a
+                  href="mailto:support@lastwarsurvivalbuddy.com"
+                  className="text-[11px] text-amber-600 hover:text-amber-400 transition-colors mt-1 inline-block"
+                >
+                  Contact support →
+                </a>
+              </div>
+            </div>
+            <button
+              onClick={() => dismissNotification(n.id)}
+              className="flex-shrink-0 text-zinc-600 hover:text-zinc-400 transition-colors mt-0.5"
+              title="Dismiss"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16">
+                <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            </button>
+          </div>
+        ))}
+
         {/* ── Profile staleness banner ── */}
         {showStaleBanner && (
           <div className="mt-4 flex items-center justify-between gap-3 bg-amber-950/40 border border-amber-800/60 rounded-xl px-4 py-3">

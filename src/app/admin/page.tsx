@@ -115,14 +115,12 @@ export default function MissionControlPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'submissions' | 'affiliates' | 'users' | 'news'>('overview')
   const [token, setToken] = useState<string | null>(null)
 
-  // Submissions state
   const [screenshotUrls, setScreenshotUrls] = useState<Record<string, string>>({})
   const [acting, setActing] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editClaim, setEditClaim] = useState('')
   const [editScope, setEditScope] = useState('')
 
-  // Affiliates state
   const [affiliates, setAffiliates] = useState<Affiliate[]>([])
   const [affiliatesLoading, setAffiliatesLoading] = useState(false)
   const [affiliateActing, setAffiliateActing] = useState<string | null>(null)
@@ -136,7 +134,6 @@ export default function MissionControlPage() {
   const [markPaidActing, setMarkPaidActing] = useState<string | null>(null)
   const [ledgerLoading, setLedgerLoading] = useState(false)
 
-  // Users state
   const [users, setUsers] = useState<UserRow[]>([])
   const [usersLoading, setUsersLoading] = useState(false)
   const [usersTotal, setUsersTotal] = useState(0)
@@ -145,8 +142,11 @@ export default function MissionControlPage() {
   const [usersFlaggedOnly, setUsersFlaggedOnly] = useState(false)
   const [usersSort, setUsersSort] = useState<{ col: keyof UserRow; dir: 'asc' | 'desc' }>({ col: 'joined', dir: 'desc' })
   const [unflagActing, setUnflagActing] = useState<string | null>(null)
+  const [messagePanelId, setMessagePanelId] = useState<string | null>(null)
+  const [messageInputs, setMessageInputs] = useState<Record<string, string>>({})
+  const [messageActing, setMessageActing] = useState<string | null>(null)
+  const [messageSent, setMessageSent] = useState<Record<string, boolean>>({})
 
-  // News state
   const [newsItems, setNewsItems] = useState<NewsItem[]>([])
   const [newsLoading, setNewsLoading] = useState(false)
   const [newsBadge, setNewsBadge] = useState('KB UPDATE')
@@ -396,6 +396,25 @@ export default function MissionControlPage() {
     setUnflagActing(null)
   }
 
+  async function handleSendMessage(userId: string) {
+    if (!token) return
+    const message = messageInputs[userId]?.trim()
+    if (!message) return
+    setMessageActing(userId)
+    const res = await fetch('/api/admin/notify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ userId, message }),
+    })
+    if (res.ok) {
+      setMessageSent(prev => ({ ...prev, [userId]: true }))
+      setMessageInputs(prev => ({ ...prev, [userId]: '' }))
+      setMessagePanelId(null)
+      setTimeout(() => setMessageSent(prev => ({ ...prev, [userId]: false })), 3000)
+    }
+    setMessageActing(null)
+  }
+
   async function handleNewsPost() {
     if (!token || !newsMessage.trim()) return
     setNewsActing(true)
@@ -482,7 +501,6 @@ export default function MissionControlPage() {
   const filteredAffiliates = affiliateFilter === 'all' ? affiliates : affiliates.filter(a => a.status === affiliateFilter)
   const approvedAffiliates = affiliates.filter(a => a.status === 'approved')
 
-  // Ledger totals
   const ledgerRows = approvedAffiliates.map(a => {
     const pd = payoutData[a.id]
     return {
@@ -546,7 +564,6 @@ export default function MissionControlPage() {
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
 
-      {/* ── Top nav ── */}
       <header className="border-b border-zinc-800/80 bg-zinc-950/95 sticky top-0 z-20 backdrop-blur-sm">
         <div className="max-w-5xl mx-auto px-4 h-12 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -567,7 +584,6 @@ export default function MissionControlPage() {
         </div>
       </header>
 
-      {/* ── Tab bar ── */}
       <div className="border-b border-zinc-800 bg-zinc-950">
         <div className="max-w-5xl mx-auto px-4 flex gap-0">
           {(['overview', 'submissions', 'affiliates', 'users', 'news'] as const).map(tab => (
@@ -592,7 +608,6 @@ export default function MissionControlPage() {
 
       <main className="max-w-5xl mx-auto px-4 py-6 pb-24">
 
-        {/* ── OVERVIEW TAB ── */}
         {activeTab === 'overview' && (
           <>
             {statsError && <p className="text-red-400 text-sm mb-4">{statsError}</p>}
@@ -700,7 +715,6 @@ export default function MissionControlPage() {
           </>
         )}
 
-        {/* ── SUBMISSIONS TAB ── */}
         {activeTab === 'submissions' && (
           <>
             <div className="flex items-center justify-between mb-6">
@@ -819,7 +833,6 @@ export default function MissionControlPage() {
           </>
         )}
 
-        {/* ── AFFILIATES TAB ── */}
         {activeTab === 'affiliates' && (
           <>
             <div className="flex items-center justify-between mb-4">
@@ -835,7 +848,6 @@ export default function MissionControlPage() {
               </button>
             </div>
 
-            {/* ── AFFILIATE LEDGER ── */}
             {approvedAffiliates.length > 0 && (
               <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl mb-6 overflow-hidden">
                 <div className="px-4 py-3 border-b border-zinc-800 flex items-center justify-between">
@@ -920,7 +932,6 @@ export default function MissionControlPage() {
               </div>
             )}
 
-            {/* ── Filter pills ── */}
             <div className="flex gap-2 mb-5 flex-wrap">
               {(['pending', 'approved', 'rejected', 'all'] as const).map(f => (
                 <button
@@ -1181,7 +1192,6 @@ export default function MissionControlPage() {
           </>
         )}
 
-        {/* ── USERS TAB ── */}
         {activeTab === 'users' && (
           <>
             <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
@@ -1275,61 +1285,105 @@ export default function MissionControlPage() {
                     </thead>
                     <tbody>
                       {sortedUsers().map((u) => (
-                        <tr
-                          key={u.id}
-                          className={`border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors ${u.banned ? 'opacity-50' : ''}`}
-                        >
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              {(u.flagged || u.banned) && (
-                                <span title={u.banned ? 'Banned' : 'Flagged'} className="text-xs">
-                                  {u.banned ? '🚫' : '🚩'}
-                                </span>
-                              )}
-                              <div>
-                                <p className="text-white font-medium text-xs">{u.ign !== '—' ? u.ign : u.email}</p>
-                                {u.ign !== '—' && <p className="text-zinc-600 text-[10px] font-mono">{u.email}</p>}
-                                <p className="text-zinc-700 text-[10px]">S{u.server}</p>
+                        <>
+                          <tr
+                            key={u.id}
+                            className={`border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors ${u.banned ? 'opacity-50' : ''}`}
+                          >
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                {(u.flagged || u.banned) && (
+                                  <span title={u.banned ? 'Banned' : 'Flagged'} className="text-xs">
+                                    {u.banned ? '🚫' : '🚩'}
+                                  </span>
+                                )}
+                                <div>
+                                  <p className="text-white font-medium text-xs">{u.ign !== '—' ? u.ign : u.email}</p>
+                                  {u.ign !== '—' && <p className="text-zinc-600 text-[10px] font-mono">{u.email}</p>}
+                                  <p className="text-zinc-700 text-[10px]">S{u.server}</p>
+                                </div>
                               </div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${tierBadgeColor(u.tier)}`}>
-                              {u.tier}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-zinc-400 text-xs">{u.hq}</td>
-                          <td className="px-4 py-3 text-zinc-500 text-[11px] font-mono whitespace-nowrap">
-                            {new Date(u.joined).toLocaleDateString()}
-                          </td>
-                          <td className="px-4 py-3 text-[11px] font-mono whitespace-nowrap">
-                            {u.lastActive
-                              ? <span className="text-zinc-400">{new Date(u.lastActive + 'T12:00:00').toLocaleDateString()}</span>
-                              : <span className="text-zinc-700">—</span>
-                            }
-                          </td>
-                          <td className="px-4 py-3 text-zinc-300 text-xs font-mono">{u.totalQuestions.toLocaleString()}</td>
-                          <td className="px-4 py-3 text-xs font-mono">
-                            {u.lifetimeRevenue > 0
-                              ? <span className="text-green-400">${u.lifetimeRevenue.toFixed(2)}</span>
-                              : <span className="text-zinc-700">—</span>
-                            }
-                          </td>
-                          <td className="px-4 py-3 text-[11px] text-zinc-500 max-w-[120px] truncate">
-                            {u.referredBy ?? <span className="text-zinc-700">—</span>}
-                          </td>
-                          <td className="px-4 py-3">
-                            {(u.flagged || u.banned) && (
-                              <button
-                                onClick={() => handleUnflag(u.id)}
-                                disabled={unflagActing === u.id}
-                                className="text-[11px] font-bold px-2.5 py-1 rounded-lg border border-green-700/50 text-green-500 hover:text-green-300 hover:border-green-500/60 transition-colors disabled:opacity-40 whitespace-nowrap"
-                              >
-                                {unflagActing === u.id ? '…' : '✓ Unflag'}
-                              </button>
-                            )}
-                          </td>
-                        </tr>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${tierBadgeColor(u.tier)}`}>
+                                {u.tier}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-zinc-400 text-xs">{u.hq}</td>
+                            <td className="px-4 py-3 text-zinc-500 text-[11px] font-mono whitespace-nowrap">
+                              {new Date(u.joined).toLocaleDateString()}
+                            </td>
+                            <td className="px-4 py-3 text-[11px] font-mono whitespace-nowrap">
+                              {u.lastActive
+                                ? <span className="text-zinc-400">{new Date(u.lastActive + 'T12:00:00').toLocaleDateString()}</span>
+                                : <span className="text-zinc-700">—</span>
+                              }
+                            </td>
+                            <td className="px-4 py-3 text-zinc-300 text-xs font-mono">{u.totalQuestions.toLocaleString()}</td>
+                            <td className="px-4 py-3 text-xs font-mono">
+                              {u.lifetimeRevenue > 0
+                                ? <span className="text-green-400">${u.lifetimeRevenue.toFixed(2)}</span>
+                                : <span className="text-zinc-700">—</span>
+                              }
+                            </td>
+                            <td className="px-4 py-3 text-[11px] text-zinc-500 max-w-[120px] truncate">
+                              {u.referredBy ?? <span className="text-zinc-700">—</span>}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                {(u.flagged || u.banned) && (
+                                  <button
+                                    onClick={() => handleUnflag(u.id)}
+                                    disabled={unflagActing === u.id}
+                                    className="text-[11px] font-bold px-2.5 py-1 rounded-lg border border-green-700/50 text-green-500 hover:text-green-300 hover:border-green-500/60 transition-colors disabled:opacity-40 whitespace-nowrap"
+                                  >
+                                    {unflagActing === u.id ? '…' : '✓ Unflag'}
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => setMessagePanelId(messagePanelId === u.id ? null : u.id)}
+                                  className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-colors whitespace-nowrap ${
+                                    messageSent[u.id]
+                                      ? 'border-green-700/50 text-green-400'
+                                      : 'border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500'
+                                  }`}
+                                >
+                                  {messageSent[u.id] ? '✓ Sent' : '✉ Message'}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                          {messagePanelId === u.id && (
+                            <tr key={`${u.id}-msg`} className="border-b border-zinc-800/50 bg-zinc-900/40">
+                              <td colSpan={9} className="px-4 py-3">
+                                <div className="flex gap-2 items-start">
+                                  <textarea
+                                    value={messageInputs[u.id] ?? ''}
+                                    onChange={e => setMessageInputs(prev => ({ ...prev, [u.id]: e.target.value }))}
+                                    placeholder="Message to display on this user's dashboard..."
+                                    rows={2}
+                                    className="flex-1 bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-white text-xs resize-none focus:outline-none focus:border-amber-500/60 placeholder:text-zinc-600"
+                                  />
+                                  <div className="flex flex-col gap-1.5">
+                                    <button
+                                      onClick={() => handleSendMessage(u.id)}
+                                      disabled={messageActing === u.id || !messageInputs[u.id]?.trim()}
+                                      className="text-[11px] font-bold px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black transition-colors disabled:opacity-40 whitespace-nowrap"
+                                    >
+                                      {messageActing === u.id ? '…' : 'Send'}
+                                    </button>
+                                    <button
+                                      onClick={() => setMessagePanelId(null)}
+                                      className="text-[11px] px-3 py-1.5 rounded-lg border border-zinc-700 text-zinc-500 hover:text-zinc-300 transition-colors"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </>
                       ))}
                     </tbody>
                   </table>
@@ -1371,7 +1425,6 @@ export default function MissionControlPage() {
           </>
         )}
 
-        {/* ── NEWS TAB ── */}
         {activeTab === 'news' && (
           <>
             <div className="flex items-center justify-between mb-6">
@@ -1387,11 +1440,9 @@ export default function MissionControlPage() {
               </button>
             </div>
 
-            {/* ── Compose form ── */}
             <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-5 mb-6">
               <p className="text-xs font-bold text-zinc-300 mb-4">Post new item</p>
 
-              {/* Badge picker */}
               <div className="flex gap-2 mb-4 flex-wrap">
                 {BADGE_OPTIONS.map(b => (
                   <button
@@ -1433,7 +1484,6 @@ export default function MissionControlPage() {
               </button>
             </div>
 
-            {/* ── Existing items ── */}
             {newsLoading && (
               <div className="flex items-center justify-center py-16">
                 <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
