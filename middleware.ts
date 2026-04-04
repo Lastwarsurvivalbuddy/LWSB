@@ -57,7 +57,8 @@ export async function middleware(req: NextRequest) {
   if (!pathname.startsWith('/api/')) return NextResponse.next()
   if (pathname.startsWith('/api/stripe/webhook')) return NextResponse.next()
   if (pathname.startsWith('/api/auth')) return NextResponse.next()
-  if (pathname.startsWith('/api/pulse')) return NextResponse.next()  // Public leaderboard — no auth, no rate limit
+  if (pathname.startsWith('/api/pulse')) return NextResponse.next()
+  if (pathname.startsWith('/api/admin')) return NextResponse.next()
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
