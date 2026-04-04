@@ -144,6 +144,7 @@ export default function MissionControlPage() {
   const [usersTierFilter, setUsersTierFilter] = useState('all')
   const [usersFlaggedOnly, setUsersFlaggedOnly] = useState(false)
   const [usersSort, setUsersSort] = useState<{ col: keyof UserRow; dir: 'asc' | 'desc' }>({ col: 'joined', dir: 'desc' })
+  const [unflagActing, setUnflagActing] = useState<string | null>(null)
 
   // News state
   const [newsItems, setNewsItems] = useState<NewsItem[]>([])
@@ -379,6 +380,20 @@ export default function MissionControlPage() {
       setPayoutPanelId(affiliateId)
       if (!payoutData[affiliateId] && token) fetchPayoutData(affiliateId, token)
     }
+  }
+
+  async function handleUnflag(userId: string) {
+    if (!token) return
+    setUnflagActing(userId)
+    const res = await fetch('/api/admin/unflag', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ userId }),
+    })
+    if (res.ok) {
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, flagged: false, banned: false } : u))
+    }
+    setUnflagActing(null)
   }
 
   async function handleNewsPost() {
@@ -1253,6 +1268,9 @@ export default function MissionControlPage() {
                             {label}<SortIcon col={col} />
                           </th>
                         ))}
+                        <th className="px-4 py-2.5 text-[11px] font-mono text-zinc-500 uppercase tracking-wide whitespace-nowrap">
+                          Actions
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1299,6 +1317,17 @@ export default function MissionControlPage() {
                           </td>
                           <td className="px-4 py-3 text-[11px] text-zinc-500 max-w-[120px] truncate">
                             {u.referredBy ?? <span className="text-zinc-700">—</span>}
+                          </td>
+                          <td className="px-4 py-3">
+                            {(u.flagged || u.banned) && (
+                              <button
+                                onClick={() => handleUnflag(u.id)}
+                                disabled={unflagActing === u.id}
+                                className="text-[11px] font-bold px-2.5 py-1 rounded-lg border border-green-700/50 text-green-500 hover:text-green-300 hover:border-green-500/60 transition-colors disabled:opacity-40 whitespace-nowrap"
+                              >
+                                {unflagActing === u.id ? '…' : '✓ Unflag'}
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}
