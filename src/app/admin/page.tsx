@@ -163,6 +163,16 @@ export default function MissionControlPage() {
       setToken(session.access_token)
       setAuthorized(true)
       setLoading(false)
+
+      // ── Reset new-signups badge counter on Mission Control load ──
+      try {
+        await fetch('/api/admin/badge-counts', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        })
+      } catch {
+        // Non-fatal
+      }
     }
     checkAuth()
   }, [router])

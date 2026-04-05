@@ -161,6 +161,7 @@ export default function Dashboard() {
     resets_on: '',
   })
   const [isAdmin, setIsAdmin] = useState(false)
+  const [adminBadge, setAdminBadge] = useState(0)
   const [affiliateStatus, setAffiliateStatus] = useState<'approved' | 'pending' | 'none'>('none')
   const [notifications, setNotifications] = useState<Notification[]>([])
   const router = useRouter()
@@ -176,6 +177,18 @@ export default function Dashboard() {
         const adminUserId = process.env.NEXT_PUBLIC_ADMIN_USER_ID
         if (adminUserId && session.user.id === adminUserId) {
           setIsAdmin(true)
+          // Fetch badge counts for Mission Control indicator
+          try {
+            const badgeRes = await fetch('/api/admin/badge-counts', {
+              headers: { Authorization: `Bearer ${session.access_token}` },
+            })
+            if (badgeRes.ok) {
+              const badgeData = await badgeRes.json()
+              setAdminBadge(badgeData.total ?? 0)
+            }
+          } catch {
+            // Non-fatal
+          }
         }
 
         const { data, error } = await supabase
@@ -411,7 +424,7 @@ export default function Dashboard() {
             {isAdmin && (
               <button
                 onClick={() => router.push('/admin')}
-                className="text-zinc-500 hover:text-amber-500 transition-colors"
+                className="relative text-zinc-500 hover:text-amber-500 transition-colors"
                 title="Mission Control"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16">
@@ -419,6 +432,19 @@ export default function Dashboard() {
                   <path d="M4 8h2M10 8h2M8 4v2M8 10v2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
                   <circle cx="8" cy="8" r="1.5" stroke="currentColor" strokeWidth="1.2"/>
                 </svg>
+                {adminBadge > 0 && (
+                  <span
+                    className="absolute -top-1.5 -right-1.5 flex items-center justify-center rounded-full text-[9px] font-bold leading-none text-black"
+                    style={{
+                      backgroundColor: '#ef4444',
+                      minWidth: '14px',
+                      height: '14px',
+                      padding: '0 2px',
+                    }}
+                  >
+                    {adminBadge > 99 ? '99+' : adminBadge}
+                  </span>
+                )}
               </button>
             )}
 
