@@ -11,37 +11,31 @@ import { createClient } from '@supabase/supabase-js'
 // Tier doesn't change the per-minute cap — it changes daily
 // quota. A Founding Member still can't fire 60 requests/min.
 // ─────────────────────────────────────────────────────────────
-
 const RATE_LIMITS: Record<string, Record<string, number>> = {
-  '/api/battle-report': {
-    free: 0, pro: 2, elite: 2, alliance: 2, founding: 2, anon: 1,
-  },
-  '/api/buddy': {
-    free: 2, pro: 2, elite: 2, alliance: 2, founding: 2, anon: 1,
-  },
-  '/api/pack-scanner': {
-    free: 0, pro: 2, elite: 2, alliance: 2, founding: 2, anon: 1,
-  },
-  '/api/briefing': {
-    free: 2, pro: 2, elite: 2, alliance: 2, founding: 2, anon: 1,
-  },
-  'default': {
-    free: 2, pro: 2, elite: 2, alliance: 2, founding: 2, anon: 1,
-  },
+  '/api/battle-report': { free: 0, pro: 2, elite: 2, alliance: 2, founding: 2, anon: 1 },
+  '/api/buddy':         { free: 2, pro: 2, elite: 2, alliance: 2, founding: 2, anon: 1 },
+  '/api/pack-scanner':  { free: 0, pro: 2, elite: 2, alliance: 2, founding: 2, anon: 1 },
+  '/api/briefing':      { free: 2, pro: 2, elite: 2, alliance: 2, founding: 2, anon: 1 },
+  'default':            { free: 2, pro: 2, elite: 2, alliance: 2, founding: 2, anon: 1 },
 }
 
 // How many rate limit hits per hour before flagging for manual review.
 // Set high — auto-flagging paying users on normal usage is worse than
 // missing a bot. Manual review in Mission Control is the right gate.
 const ABUSE_THRESHOLD_PER_HOUR = 20
-
 const WINDOW_SECONDS = 60
 const ABUSE_WINDOW_SECONDS = 3600
 
 // ─────────────────────────────────────────────────────────────
+// FOUNDER BYPASS
+// Boyd's user ID — skip abuse tracking entirely for this account.
+// Prevents false flags during heavy testing / development sessions.
+// ─────────────────────────────────────────────────────────────
+const FOUNDER_USER_ID = process.env.NEXT_PUBLIC_ADMIN_USER_ID ?? ''
+
+// ─────────────────────────────────────────────────────────────
 // MIDDLEWARE
 // ─────────────────────────────────────────────────────────────
-
 export async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname
 
@@ -50,6 +44,7 @@ export async function middleware(req: NextRequest) {
   if (pathname.startsWith('/api/auth')) return NextResponse.next()
   if (pathname.startsWith('/api/pulse')) return NextResponse.next()
   if (pathname.startsWith('/api/admin')) return NextResponse.next()
+  if (pathname.startsWith('/api/health')) return NextResponse.next()
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -104,32 +99,26 @@ export async function middleware(req: NextRequest) {
 
   // ── 3. Route limit ────────────────────────────────────────
   const routeKey =
-    Object.keys(RATE_LIMITS).find(
-      k => k !== 'default' && pathname.startsWith(k)
-    ) ?? 'default'
-
+    Object.keys(RATE_LIMITS).find(k => k !== 'default' && pathname.startsWith(k)) ?? 'default'
   const limit = RATE_LIMITS[routeKey][userTier] ?? RATE_LIMITS[routeKey]['anon'] ?? 1
 
-  // ── 4. Per-minute counter ─────────────────────────────────
+  // ── 4. Per-minute counter ──────────────────────────────────
   const windowStart = Math.floor(Date.now() / (WINDOW_SECONDS * 1000))
   const rateLimitKey = `${identifier}:${routeKey}:${windowStart}`
   const windowExpiry = new Date((windowStart + 1) * WINDOW_SECONDS * 1000).toISOString()
 
   let currentCount = 1
-
   try {
     const { error: insertErr } = await supabase
       .from('rate_limits')
       .insert({ key: rateLimitKey, count: 1, expires_at: windowExpiry })
 
     if (insertErr) {
-      // Row exists — read and increment
       const { data: row } = await supabase
         .from('rate_limits')
         .select('count')
         .eq('key', rateLimitKey)
         .single()
-
       currentCount = (row?.count ?? 0) + 1
       await supabase
         .from('rate_limits')
@@ -143,14 +132,17 @@ export async function middleware(req: NextRequest) {
 
   // ── 5. Rate limit exceeded ────────────────────────────────
   if (currentCount > limit) {
-
-    // Track abuse hits for authenticated users — logged only, no auto-flag.
+    // Track abuse hits for authenticated users — skip for founder.
     // Manual review in Mission Control is the right gate for any ban action.
-    if (userId) {
+    const isFounder = FOUNDER_USER_ID && userId === FOUNDER_USER_ID
+
+    if (userId && !isFounder) {
       try {
         const abuseWindowStart = Math.floor(Date.now() / (ABUSE_WINDOW_SECONDS * 1000))
         const abuseKey = `abuse:${userId}:${abuseWindowStart}`
-        const abuseExpiry = new Date((abuseWindowStart + 1) * ABUSE_WINDOW_SECONDS * 1000).toISOString()
+        const abuseExpiry = new Date(
+          (abuseWindowStart + 1) * ABUSE_WINDOW_SECONDS * 1000
+        ).toISOString()
 
         let abuseCount = 1
         const { error: abuseInsertErr } = await supabase
@@ -163,7 +155,6 @@ export async function middleware(req: NextRequest) {
             .select('count')
             .eq('key', abuseKey)
             .single()
-
           abuseCount = (abuseRow?.count ?? 0) + 1
           await supabase
             .from('rate_limits')
@@ -208,7 +199,7 @@ export async function middleware(req: NextRequest) {
     )
   }
 
-  // ── 6. Allow — attach headers ─────────────────────────────
+  // ── 6. Allow — attach headers ──────────────────────────────
   const remaining = Math.max(0, limit - currentCount)
   const res = NextResponse.next()
   res.headers.set('X-RateLimit-Limit', String(limit))

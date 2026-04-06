@@ -1,5 +1,4 @@
 'use client'
-
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -150,7 +149,8 @@ export default function UpgradePage() {
   const router = useRouter()
   const [loading, setLoading] = useState<string | null>(null)
   const [currentTier, setCurrentTier] = useState<string>('free')
-  const [foundingSpots] = useState(500)
+  const [foundingRemaining, setFoundingRemaining] = useState<number | null>(null)
+  const [foundingSold, setFoundingSold] = useState<number | null>(null)
 
   useEffect(() => {
     async function loadTier() {
@@ -166,11 +166,29 @@ export default function UpgradePage() {
     loadTier()
   }, [])
 
+  // ── Live Founding Member counter ──────────────────────────────────────────
+  useEffect(() => {
+    async function loadFoundingCount() {
+      try {
+        const res = await fetch('/api/admin/founding-count')
+        if (res.ok) {
+          const data = await res.json()
+          setFoundingRemaining(data.remaining ?? null)
+          setFoundingSold(data.sold ?? null)
+        }
+      } catch {
+        // Non-fatal — banner falls back to static copy
+      }
+    }
+    loadFoundingCount()
+  }, [])
+
   async function handleUpgrade(tierId: string) {
     setLoading(tierId)
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/signin'); return }
+
       const ref_code = getRefCookie()
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
@@ -191,6 +209,34 @@ export default function UpgradePage() {
       setLoading(null)
     }
   }
+
+  // Founding banner copy — uses live data when available, static fallback
+  const foundingBannerText = (() => {
+    if (foundingRemaining === null) {
+      // Still loading or fetch failed — static copy
+      return (
+        <>
+          <span className="font-bold">Founding Member offer:</span>{' '}
+          500 lifetime spots available. 300 questions/month + 25 screenshots/month — pay once, never again. Once gone, monthly-only pricing.
+        </>
+      )
+    }
+    if (foundingRemaining <= 0) {
+      return (
+        <>
+          <span className="font-bold">Founding Member spots are gone.</span>{' '}
+          All 500 lifetime spots have been claimed. Monthly plans below.
+        </>
+      )
+    }
+    return (
+      <>
+        <span className="font-bold">Founding Member offer:</span>{' '}
+        <span className="text-purple-300 font-bold">{foundingRemaining} of 500</span> lifetime spots remaining.
+        {' '}300 questions/month + 25 screenshots/month — pay once, never again. Once gone, monthly-only pricing.
+      </>
+    )
+  })()
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
@@ -280,14 +326,29 @@ export default function UpgradePage() {
           </div>
         </div>
 
-        {/* ── Founding Member banner ── */}
-        <div className="mb-8 bg-purple-950/30 border border-purple-900/50 rounded-xl px-4 py-3 flex items-center gap-3">
-          <div className="w-2 h-2 rounded-full bg-purple-400 animate-pulse flex-shrink-0" />
-          <p className="text-sm text-purple-200">
-            <span className="font-bold">Founding Member offer:</span>{' '}
-            {foundingSpots} lifetime spots available. 300 questions/month + 25 screenshots/month — pay once, never again. Once gone, monthly-only pricing.
-          </p>
-        </div>
+        {/* ── Founding Member banner — live counter ── */}
+        {(foundingRemaining === null || foundingRemaining > 0) && (
+          <div className="mb-8 bg-purple-950/30 border border-purple-900/50 rounded-xl px-4 py-3 flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full bg-purple-400 animate-pulse flex-shrink-0" />
+            <p className="text-sm text-purple-200">
+              {foundingBannerText}
+            </p>
+            {/* Progress bar — only show when we have live data */}
+            {foundingSold !== null && foundingRemaining !== null && foundingRemaining > 0 && (
+              <div className="ml-auto flex-shrink-0 w-20">
+                <div className="h-1.5 bg-purple-900/60 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-purple-500 rounded-full transition-all"
+                    style={{ width: `${Math.min(100, (foundingSold / 500) * 100)}%` }}
+                  />
+                </div>
+                <p className="text-[9px] text-purple-600 font-mono text-right mt-0.5">
+                  {foundingSold}/500 claimed
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── Tier cards ── */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -296,6 +357,7 @@ export default function UpgradePage() {
             const isCurrentTier = currentTier === tier.id
             const isLoadingTier = loading === tier.id
             const isFoundingTier = tier.id === 'founding'
+            const foundingClosed = isFoundingTier && foundingRemaining !== null && foundingRemaining <= 0
 
             return (
               <div
@@ -305,6 +367,7 @@ export default function UpgradePage() {
                   ${tier.id === 'elite' ? 'ring-1 ring-amber-700/50' : ''}
                   ${c.border}
                   bg-zinc-900/40 shadow-lg ${c.glow}
+                  ${foundingClosed ? 'opacity-50' : ''}
                 `}
               >
                 {tier.badge && (
@@ -332,9 +395,7 @@ export default function UpgradePage() {
 
                 <div className="grid grid-cols-3 gap-1.5 mb-4">
                   <div className="bg-zinc-800/60 rounded-lg px-1.5 py-2 text-center">
-                    <div className="text-sm font-bold text-white">
-                      {tier.questions}
-                    </div>
+                    <div className="text-sm font-bold text-white">{tier.questions}</div>
                     <div className="text-[9px] text-zinc-500 font-mono leading-tight">Q/mo</div>
                   </div>
                   <div className="bg-zinc-800/60 rounded-lg px-1.5 py-2 text-center">
@@ -362,11 +423,13 @@ export default function UpgradePage() {
 
                 <button
                   onClick={() => handleUpgrade(tier.id)}
-                  disabled={!!loading || isCurrentTier}
+                  disabled={!!loading || isCurrentTier || foundingClosed}
                   className={`
                     w-full py-2.5 rounded-lg font-bold text-sm transition-all duration-150 active:scale-[0.98]
                     ${isCurrentTier
                       ? 'bg-zinc-800 text-zinc-500 cursor-default border border-zinc-700'
+                      : foundingClosed
+                      ? 'bg-zinc-800 text-zinc-600 cursor-not-allowed border border-zinc-700'
                       : `${c.btn} shadow-md`
                     }
                     ${isLoadingTier ? 'opacity-70 cursor-wait' : ''}
@@ -374,6 +437,8 @@ export default function UpgradePage() {
                 >
                   {isCurrentTier
                     ? '✓ Current Plan'
+                    : foundingClosed
+                    ? 'Sold Out'
                     : isLoadingTier
                     ? 'Loading...'
                     : tier.id === 'founding'
@@ -394,15 +459,15 @@ export default function UpgradePage() {
           </div>
           <div className="divide-y divide-zinc-800/60">
             {[
-              { feature: 'Buddy AI Chat',            free: '20/mo',    pro: '100/mo',  elite: '250/mo',  founding: '300/mo'    },
-              { feature: 'Screenshot Analysis',       free: '—',        pro: '10/mo',   elite: '20/mo',   founding: '25/mo'     },
-              { feature: '⚔️ Battle Report Analyzer', free: '—',        pro: '8/mo',    elite: '16/mo',   founding: '16/mo'     },
-              { feature: 'Pack Scanner',              free: '—',        pro: '✓',       elite: '✓',       founding: '✓'         },
-              { feature: 'Daily Briefing',            free: '✓',        pro: '✓',       elite: '✓',       founding: '✓'         },
-              { feature: 'Daily Action Plan',         free: '✓',        pro: '✓',       elite: '✓',       founding: '✓'         },
-              { feature: '🏜️ DS War Room',            free: '✓',        pro: '✓',       elite: '✓',       founding: '✓'         },
-              { feature: 'Profile Context',           free: '✓',        pro: '✓',       elite: '✓',       founding: '✓'         },
-              { feature: 'New Features',              free: 'Basic',    pro: 'Standard', elite: 'Priority', founding: 'All — forever' },
+              { feature: 'Buddy AI Chat',               free: '20/mo',  pro: '100/mo',  elite: '250/mo',  founding: '300/mo' },
+              { feature: 'Screenshot Analysis',          free: '—',      pro: '10/mo',   elite: '20/mo',   founding: '25/mo'  },
+              { feature: '⚔️ Battle Report Analyzer',   free: '—',      pro: '8/mo',    elite: '16/mo',   founding: '16/mo'  },
+              { feature: 'Pack Scanner',                 free: '—',      pro: '✓',       elite: '✓',       founding: '✓'      },
+              { feature: 'Daily Briefing',               free: '✓',      pro: '✓',       elite: '✓',       founding: '✓'      },
+              { feature: 'Daily Action Plan',            free: '✓',      pro: '✓',       elite: '✓',       founding: '✓'      },
+              { feature: '🏜️ DS War Room',              free: '✓',      pro: '✓',       elite: '✓',       founding: '✓'      },
+              { feature: 'Profile Context',              free: '✓',      pro: '✓',       elite: '✓',       founding: '✓'      },
+              { feature: 'New Features',                 free: 'Basic',  pro: 'Standard', elite: 'Priority', founding: 'All — forever' },
             ].map(({ feature, free, pro, elite, founding }) => (
               <div key={feature} className="grid grid-cols-5 px-5 py-3 text-xs items-center">
                 <span className="text-zinc-300 font-medium col-span-1">{feature}</span>
