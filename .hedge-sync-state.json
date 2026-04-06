@@ -1,0 +1,18 @@
+{
+  "/api/data/stores/packs": "2026-04-03T21:40:19.901Z",
+  "/api/data/stores/passes": "2026-04-03T10:25:07.238Z",
+  "/api/data/stores/currencies": "2026-04-03T10:25:07.237Z",
+  "/api/data/stores/stores": "2026-04-03T21:40:19.902Z",
+  "/api/data/drone/parts": "2025-10-30T12:59:36.275Z",
+  "/api/data/drone/chips": "2026-04-05T14:57:20.026Z",
+  "/api/data/units/t11": "2026-04-05T15:00:58.932Z",
+  "/api/data/overlord/training": "2026-02-16T21:36:25.545Z",
+  "/api/data/overlord/promotion": "2025-05-24T18:30:52.814Z",
+  "/api/data/overlord/skills": "2025-11-20T17:11:53.361Z",
+  "/api/data/buildings/core": "2026-04-03T21:40:19.894Z",
+  "/api/data/buildings/season-1": "2026-04-03T21:40:19.894Z",
+  "/api/data/buildings/season-2": "2026-04-03T21:40:19.894Z",
+  "/api/data/buildings/season-3": "2026-04-03T21:40:19.894Z",
+  "/api/data/buildings/season-4": "2026-04-03T21:40:19.894Z",
+  "/api/data/buildings/season-5": "2026-04-03T21:40:19.894Z"
+}
