@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
 // ─────────────────────────────────────────────────────────────
-// RATE LIMIT CONFIG — 2 requests per minute across the board
+// RATE LIMIT CONFIG — requests per minute by route and tier
 //
 // Why 2/min: A human reading a battle report analysis takes
 // 30-60 seconds minimum. Buddy responses take 10-20 seconds
 // to read. 2/min = one request every 30 seconds.
 // Any script fires faster and hits the wall on request 3.
-// Tier doesn't change the per-minute cap — it changes daily
+// Tier doesn't change the per-minute cap — it changes monthly
 // quota. A Founding Member still can't fire 60 requests/min.
 // ─────────────────────────────────────────────────────────────
 const RATE_LIMITS: Record<string, Record<string, number>> = {
@@ -19,12 +19,38 @@ const RATE_LIMITS: Record<string, Record<string, number>> = {
   'default':            { free: 2, pro: 2, elite: 2, alliance: 2, founding: 2, anon: 1 },
 }
 
-// How many rate limit hits per hour before flagging for manual review.
-// Set high — auto-flagging paying users on normal usage is worse than
-// missing a bot. Manual review in Mission Control is the right gate.
+// ─────────────────────────────────────────────────────────────
+// ABUSE CONFIG
+//
+// Three-strike system:
+//   Strike 1 → Warning 1 (informational, no penalty)
+//   Strike 2 → Warning 2 (firm, final warning)
+//   Strike 3 → Flagged for review (temporarily restricted)
+//
+// Strikes are tracked via abuse_warning_count on profiles.
+// ABUSE_THRESHOLD_PER_HOUR controls how many rate limit hits
+// in a single hour constitute one strike.
+// ─────────────────────────────────────────────────────────────
 const ABUSE_THRESHOLD_PER_HOUR = 20
 const WINDOW_SECONDS = 60
 const ABUSE_WINDOW_SECONDS = 3600
+
+// ─────────────────────────────────────────────────────────────
+// WARNING & RESTRICTION MESSAGES
+// ─────────────────────────────────────────────────────────────
+const WARNING_1_MESSAGE =
+  "Commander, Buddy has a short cooldown between requests to keep the service fast and fair for everyone. " +
+  "You're moving a bit faster than that limit allows. No worries — just slow down a touch and you're good. " +
+  "This is a heads up, not a penalty."
+
+const WARNING_2_MESSAGE =
+  "Commander, this is your second warning. Buddy's request limit exists to prevent abuse and protect the service for all players. " +
+  "One more violation and your account will be temporarily restricted. " +
+  "If this is accidental, just slow down — you're still good."
+
+const RESTRICTED_MESSAGE =
+  "Commander, your account has been temporarily restricted due to repeated rate limit violations. " +
+  "If this was a mistake, contact us at support@lastwarsurvivalbuddy.com and we'll get you sorted."
 
 // ─────────────────────────────────────────────────────────────
 // FOUNDER BYPASS
@@ -85,6 +111,36 @@ export async function middleware(req: NextRequest) {
         }
 
         userTier = sub?.tier ?? 'free'
+
+        // ── 3. Restriction check (flagged_for_review) ─────
+        // Flagged users are blocked immediately with the restricted message.
+        // They must contact support to restore access.
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('abuse_warning_count')
+          .eq('id', user.id)
+          .single()
+
+        const { data: subFlagData } = await supabase
+          .from('subscriptions')
+          .select('flagged_for_review')
+          .eq('user_id', user.id)
+          .single()
+
+        if (subFlagData?.flagged_for_review) {
+          return new NextResponse(
+            JSON.stringify({
+              error: 'account_restricted',
+              message: RESTRICTED_MESSAGE,
+            }),
+            { status: 403, headers: { 'Content-Type': 'application/json' } }
+          )
+        }
+
+        // Attach warning count to request context for use below
+        // We stash it on a custom header internally (never exposed to client)
+        ;(req as unknown as Record<string, unknown>)._abuseWarningCount =
+          profileData?.abuse_warning_count ?? 0
       }
     } catch {
       // Invalid token — treat as anon
@@ -97,12 +153,12 @@ export async function middleware(req: NextRequest) {
     req.headers.get('x-real-ip') ??
     'unknown'
 
-  // ── 3. Route limit ────────────────────────────────────────
+  // ── 4. Route limit ────────────────────────────────────────
   const routeKey =
     Object.keys(RATE_LIMITS).find(k => k !== 'default' && pathname.startsWith(k)) ?? 'default'
   const limit = RATE_LIMITS[routeKey][userTier] ?? RATE_LIMITS[routeKey]['anon'] ?? 1
 
-  // ── 4. Per-minute counter ──────────────────────────────────
+  // ── 5. Per-minute counter ─────────────────────────────────
   const windowStart = Math.floor(Date.now() / (WINDOW_SECONDS * 1000))
   const rateLimitKey = `${identifier}:${routeKey}:${windowStart}`
   const windowExpiry = new Date((windowStart + 1) * WINDOW_SECONDS * 1000).toISOString()
@@ -130,14 +186,13 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
-  // ── 5. Rate limit exceeded ────────────────────────────────
+  // ── 6. Rate limit exceeded ────────────────────────────────
   if (currentCount > limit) {
-    // Track abuse hits for authenticated users — skip for founder.
-    // Manual review in Mission Control is the right gate for any ban action.
     const isFounder = FOUNDER_USER_ID && userId === FOUNDER_USER_ID
 
     if (userId && !isFounder) {
       try {
+        // Track abuse hits per hour
         const abuseWindowStart = Math.floor(Date.now() / (ABUSE_WINDOW_SECONDS * 1000))
         const abuseKey = `abuse:${userId}:${abuseWindowStart}`
         const abuseExpiry = new Date(
@@ -162,23 +217,121 @@ export async function middleware(req: NextRequest) {
             .eq('key', abuseKey)
         }
 
-        // Only flag at high threshold — manual review required before any ban
+        // Only act at the abuse threshold — not on every rate limit hit
         if (abuseCount >= ABUSE_THRESHOLD_PER_HOUR) {
-          await supabase
-            .from('subscriptions')
-            .update({
-              flagged_for_review: true,
-              flag_reason: `Rate limit hit ${abuseCount}x in 1 hour on ${routeKey}. Review before taking action.`,
-              flagged_at: new Date().toISOString(),
-            })
-            .eq('user_id', userId)
-            .eq('banned', false)
+          // Read current warning count fresh from DB
+          const { data: profileRow } = await supabase
+            .from('profiles')
+            .select('abuse_warning_count')
+            .eq('id', userId)
+            .single()
+
+          const warningCount = profileRow?.abuse_warning_count ?? 0
+
+          if (warningCount === 0) {
+            // ── Strike 1 — First warning ─────────────────
+            await supabase
+              .from('profiles')
+              .update({
+                abuse_warning_count: 1,
+                abuse_warning_issued: true,
+                abuse_warning_issued_at: new Date().toISOString(),
+              })
+              .eq('id', userId)
+
+            await supabase
+              .from('notifications')
+              .insert({
+                user_id: userId,
+                message: WARNING_1_MESSAGE,
+              })
+
+            return new NextResponse(
+              JSON.stringify({
+                error: 'rate_limit_warning',
+                warning: 1,
+                message: WARNING_1_MESSAGE,
+                retry_after: WINDOW_SECONDS,
+              }),
+              {
+                status: 429,
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Retry-After': String(WINDOW_SECONDS),
+                },
+              }
+            )
+          } else if (warningCount === 1) {
+            // ── Strike 2 — Second warning ─────────────────
+            await supabase
+              .from('profiles')
+              .update({ abuse_warning_count: 2 })
+              .eq('id', userId)
+
+            await supabase
+              .from('notifications')
+              .insert({
+                user_id: userId,
+                message: WARNING_2_MESSAGE,
+              })
+
+            return new NextResponse(
+              JSON.stringify({
+                error: 'rate_limit_warning',
+                warning: 2,
+                message: WARNING_2_MESSAGE,
+                retry_after: WINDOW_SECONDS,
+              }),
+              {
+                status: 429,
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Retry-After': String(WINDOW_SECONDS),
+                },
+              }
+            )
+          } else {
+            // ── Strike 3 — Flag and restrict ──────────────
+            await supabase
+              .from('profiles')
+              .update({ abuse_warning_count: 3 })
+              .eq('id', userId)
+
+            await supabase
+              .from('subscriptions')
+              .update({
+                flagged_for_review: true,
+                flag_reason: `Rate limit threshold hit 3 times. abuse_warning_count = 3. Review before taking action.`,
+                flagged_at: new Date().toISOString(),
+              })
+              .eq('user_id', userId)
+              .eq('banned', false)
+
+            await supabase
+              .from('notifications')
+              .insert({
+                user_id: userId,
+                message: RESTRICTED_MESSAGE,
+              })
+
+            return new NextResponse(
+              JSON.stringify({
+                error: 'account_restricted',
+                message: RESTRICTED_MESSAGE,
+              }),
+              {
+                status: 403,
+                headers: { 'Content-Type': 'application/json' },
+              }
+            )
+          }
         }
       } catch {
         // Abuse tracking failure is non-fatal
       }
     }
 
+    // Standard cooldown — under abuse threshold, just throttle
     return new NextResponse(
       JSON.stringify({
         error: 'rate_limit_exceeded',
@@ -199,7 +352,7 @@ export async function middleware(req: NextRequest) {
     )
   }
 
-  // ── 6. Allow — attach headers ──────────────────────────────
+  // ── 7. Allow — attach headers ─────────────────────────────
   const remaining = Math.max(0, limit - currentCount)
   const res = NextResponse.next()
   res.headers.set('X-RateLimit-Limit', String(limit))
