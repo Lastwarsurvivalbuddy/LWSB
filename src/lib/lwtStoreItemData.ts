@@ -8,10 +8,22 @@
 // Raw store item/price/availability data from cpt-hedge.com.
 // Strategic advice lives in lwtStoresData.ts — do not merge.
 
-export type StoreItem = any;
-export type StorePack = any;
-export type StoreMilestone = any;
-export type GameStore = any;
+export interface StoreItem {
+  name: string; availability: string; rotation: string; amount: number;
+  price: number; priceInBricks: number; priceInBricksReduced?: number; tag?: string;
+}
+export interface StorePack {
+  name: string; priceInBricks: number; items: { name: string; amount: number }[];
+  availability?: string;
+}
+export interface StoreMilestone {
+  spend: number; rewards: { name: string; amount: number }[];
+}
+export interface GameStore {
+  id: string; name: string; availabilitySchedule: string; currency: string;
+  bricksRate?: number; bricksRateReduced?: number;
+  items: StoreItem[]; packs?: StorePack[]; milestones?: StoreMilestone[];
+}
 
 export const GAME_STORES: GameStore[] = [
   {

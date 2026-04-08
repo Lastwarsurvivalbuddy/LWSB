@@ -1258,7 +1258,7 @@ export const BRICK_CURRENCIES: BrickCurrency[] = undefined;
 
 export function getPackDataSummary(): string {
   const tiered = TIERED_PACKS.map(p => {
-    const tierLines = p.tiers.map((t: any, i: any) =>
+    const tierLines = p.tiers.map((t, i) =>
       `  Tier ${i + 1} (${t.priceInBricks} bricks): ${t.items.map(it => `${it.amount}x ${it.name}`).join(', ')}`
     ).join('\n');
     return `[${p.name}] (${p.availability})\n${tierLines}`;
@@ -1269,7 +1269,7 @@ export function getPackDataSummary(): string {
   ).join('\n');
 
   const passList = BATTLE_PASSES.map(p => {
-    const tierLines = p.tiers.map((t: any) =>
+    const tierLines = p.tiers.map(t =>
       `  ${t.name} (${t.priceInBricks} bricks): ${t.items.map(it => `${it.amount}x ${it.name}`).join(', ')}`
     ).join('\n');
     return `[${p.name}] (${p.rotation})\n${tierLines}`;
