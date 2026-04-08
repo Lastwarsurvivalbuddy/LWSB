@@ -1,5 +1,4 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -7,7 +6,6 @@ import { supabase } from '@/lib/supabase';
 // ─────────────────────────────────────────────────────────────
 // TYPES
 // ─────────────────────────────────────────────────────────────
-
 type UserContext = 'day1' | 'week1' | 'established' | 'lost' | null;
 type SpendStyle = 'f2p' | 'low' | 'mid' | null;
 type ActiveTab = 'checklist' | 'avoid' | 'weekly' | 'heroes' | 'glossary';
@@ -36,7 +34,6 @@ interface WeekDay {
 // ─────────────────────────────────────────────────────────────
 // CHECKLIST DATA
 // ─────────────────────────────────────────────────────────────
-
 const checklistData: Record<string, CheckItem[]> = {
   day1: [
     { text: 'Join an alliance — everything important in this game happens inside one', tag: 'once' },
@@ -69,7 +66,7 @@ const checklistData: Record<string, CheckItem[]> = {
   ],
   lost: [
     { text: "Confirm you're in an active alliance — if not, find one today", tag: 'once' },
-    { text: 'Pick ONE squad type and stop upgrading all others until it\'s dominant', tag: 'once' },
+    { text: "Pick ONE squad type and stop upgrading all others until it's dominant", tag: 'once' },
     { text: 'Stop spending speed-ups randomly — hold everything for Alliance Duel day timing', tag: 'once' },
     { text: "Hit Code Boss daily — it's free progress most confused players are skipping", tag: 'daily' },
     { text: 'Learn the 6-day Alliance Duel cycle and align all resource spending to it', tag: 'once' },
@@ -80,7 +77,6 @@ const checklistData: Record<string, CheckItem[]> = {
 // ─────────────────────────────────────────────────────────────
 // HERO DATA
 // ─────────────────────────────────────────────────────────────
-
 const heroData: Record<string, HeroItem[]> = {
   f2p: [
     { name: 'Mason', role: 'Tank attacker', tip: 'Core damage dealer vs monsters. Bottom-left skill buffs your back row against monsters. Goes UR in Season 1 — get to 5 stars before that hits.', priority: true },
@@ -111,7 +107,6 @@ const heroData: Record<string, HeroItem[]> = {
 // ─────────────────────────────────────────────────────────────
 // WEEKLY RHYTHM DATA
 // ─────────────────────────────────────────────────────────────
-
 const weeklyDays: WeekDay[] = [
   {
     day: 'DAY 1',
@@ -167,7 +162,6 @@ const weeklyDays: WeekDay[] = [
 // ─────────────────────────────────────────────────────────────
 // GLOSSARY DATA
 // ─────────────────────────────────────────────────────────────
-
 const glossaryTerms = [
   { term: 'RSS', def: 'Resources — food, iron, gold. The currency of everything in the game.' },
   { term: 'HQ', def: 'Headquarters — your main base building. Its level unlocks higher troop tiers and buildings.' },
@@ -189,12 +183,11 @@ const glossaryTerms = [
 // ─────────────────────────────────────────────────────────────
 // SHARE STRIP COMPONENT
 // ─────────────────────────────────────────────────────────────
-
 function ShareStrip() {
   const [copied, setCopied] = useState(false);
 
   function handleCopy() {
-    navigator.clipboard.writeText('https://lwsb.vercel.app/guide').then(() => {
+    navigator.clipboard.writeText('https://LastWarSurvivalBuddy.com/guide').then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
@@ -216,7 +209,6 @@ function ShareStrip() {
 // ─────────────────────────────────────────────────────────────
 // COMPONENT
 // ─────────────────────────────────────────────────────────────
-
 export default function GuidePage() {
   const router = useRouter();
   const [authTier, setAuthTier] = useState<AuthTier>('loading');
@@ -228,7 +220,10 @@ export default function GuidePage() {
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) { setAuthTier('guest'); return; }
+      if (!session) {
+        setAuthTier('guest');
+        return;
+      }
       const { data } = await supabase
         .from('subscriptions')
         .select('tier')
@@ -289,9 +284,7 @@ export default function GuidePage() {
           <div style={s.ctaLabel}>LAST WAR: SURVIVAL BUDDY</div>
           <p style={s.ctaHeading}>Want a plan built around your actual profile?</p>
           <p style={s.ctaSub}>
-            This guide covers the fundamentals for any new commander. Buddy AI gives you a
-            personalized daily action plan built around your exact server, HQ level, spend
-            style, troop type, and goals — every single day.
+            This guide covers the fundamentals for any new commander. Buddy AI gives you a personalized daily action plan built around your exact server, HQ level, spend style, troop type, and goals — every single day.
           </p>
           <button style={s.ctaBtn} onClick={() => router.push('/')}>
             Create your free account →
@@ -306,9 +299,7 @@ export default function GuidePage() {
           <div style={s.ctaLabel}>UPGRADE YOUR GAME</div>
           <p style={s.ctaHeading}>Ready for advice tailored to you specifically?</p>
           <p style={s.ctaSub}>
-            This guide uses general advice. Buddy Pro gives you a daily action plan
-            personalized to your server, HQ level, troop type, and goals — not just
-            general tips for all new players.
+            This guide uses general advice. Buddy Pro gives you a daily action plan personalized to your server, HQ level, troop type, and goals — not just general tips for all new players.
           </p>
           <button style={s.ctaBtn} onClick={() => router.push('/upgrade')}>
             Upgrade to Buddy Pro →
@@ -322,8 +313,7 @@ export default function GuidePage() {
         <div style={{ ...s.ctaLabel, color: '#1D9E75' }}>YOUR PROFILE IS ACTIVE</div>
         <p style={s.ctaHeading}>Go deeper with Buddy.</p>
         <p style={s.ctaSub}>
-          This guide covers the fundamentals. Buddy AI knows your specific server,
-          HQ level, and troop situation — ask it anything and get answers built around you.
+          This guide covers the fundamentals. Buddy AI knows your specific server, HQ level, and troop situation — ask it anything and get answers built around you.
         </p>
         <button
           style={{ ...s.ctaBtn, backgroundColor: '#1D9E75', borderColor: '#0F6E56', color: '#fff' }}
@@ -347,7 +337,6 @@ export default function GuidePage() {
 
   return (
     <div style={s.root}>
-
       {/* HEADER */}
       <div style={s.header}>
         <div style={s.headerInner}>
@@ -370,20 +359,21 @@ export default function GuidePage() {
       <div style={s.disclaimerBar}>
         <span style={s.disclaimerIcon}>ℹ</span>
         <span style={s.disclaimerText}>
-          {isPaidMember
-            ? <>
-                This guide uses general advice for all new commanders — it does not read your profile.{' '}
-                <button style={s.inlineLink} onClick={() => router.push('/buddy')}>
-                  Ask Buddy for advice tailored to your situation →
-                </button>
-              </>
-            : 'This guide uses general advice for all new commanders. Create an account for a personalized daily plan.'}
+          {isPaidMember ? (
+            <>
+              This guide uses general advice for all new commanders — it does not read your profile.{' '}
+              <button style={s.inlineLink} onClick={() => router.push('/buddy')}>
+                Ask Buddy for advice tailored to your situation →
+              </button>
+            </>
+          ) : (
+            'This guide uses general advice for all new commanders. Create an account for a personalized daily plan.'
+          )}
         </span>
       </div>
 
       {/* CONTENT */}
       <div style={s.content}>
-
         {/* ══ START SCREEN ══ */}
         {screen === 'start' && (
           <div>
@@ -463,10 +453,7 @@ export default function GuidePage() {
                 <div style={s.mindsetBox}>
                   <div style={s.mindsetLabel}>// THE #1 MINDSET SHIFT</div>
                   <p style={s.mindsetText}>
-                    Do <strong style={{ color: '#e8f0f8' }}>not</strong> spend speed-ups, shards,
-                    hero EXP, or skill medals the moment you get them. Timing your spending around
-                    Alliance Duel days is the single biggest advantage in this game. New players
-                    who ignore this regret it — every time.
+                    Do <strong style={{ color: '#e8f0f8' }}>not</strong> spend speed-ups, shards, hero EXP, or skill medals the moment you get them. Timing your spending around Alliance Duel days is the single biggest advantage in this game. New players who ignore this regret it — every time.
                   </p>
                 </div>
                 <div style={s.progressWrap}>
@@ -560,10 +547,8 @@ export default function GuidePage() {
                 <div style={s.mindsetBox}>
                   <div style={s.mindsetLabel}>// THE CORE PRINCIPLE</div>
                   <p style={s.mindsetText}>
-                    Alliance Duel runs on a 6-day rotating cycle (Day 7 is an off day). Arms Race runs at the same time.
-                    On Days 2 and 3, specific actions score{' '}
-                    <strong style={{ color: '#e8f0f8' }}>both simultaneously</strong> — that is
-                    your highest efficiency window of the week. Learn this cycle. Align everything to it.
+                    Alliance Duel runs on a 6-day rotating cycle (Day 7 is an off day). Arms Race runs at the same time. On Days 2 and 3, specific actions score{' '}
+                    <strong style={{ color: '#e8f0f8' }}>both simultaneously</strong> — that is your highest efficiency window of the week. Learn this cycle. Align everything to it.
                   </p>
                 </div>
                 <div style={s.weekGrid}>
@@ -581,8 +566,7 @@ export default function GuidePage() {
                   ))}
                 </div>
                 <p style={s.weekFootnote}>
-                  Aim for 7–9 Alliance Duel boxes per day. Save radar tasks before radar days (1, 3, 5).
-                  Highlighted days = highest scoring density.
+                  Aim for 7–9 Alliance Duel boxes per day. Save radar tasks before radar days (1, 3, 5). Highlighted days = highest scoring density.
                 </p>
                 {renderTabFooter()}
               </div>
@@ -640,7 +624,6 @@ export default function GuidePage() {
 // ─────────────────────────────────────────────────────────────
 // STYLES
 // ─────────────────────────────────────────────────────────────
-
 const s: Record<string, React.CSSProperties> = {
   root: {
     minHeight: '100vh',
