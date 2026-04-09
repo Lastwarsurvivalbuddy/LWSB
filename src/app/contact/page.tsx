@@ -1,178 +1,370 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 
-type SubmitState = 'idle' | 'sending' | 'success' | 'error'
+type Category = 'bug' | 'feedback' | 'billing' | 'other'
+
+const CATEGORIES: { value: Category; label: string; icon: string; desc: string }[] = [
+  { value: 'bug', label: 'Bug Report', icon: '🐛', desc: 'Something is broken' },
+  { value: 'feedback', label: 'Feedback', icon: '💬', desc: 'Suggestions or ideas' },
+  { value: 'billing', label: 'Billing Issue', icon: '💳', desc: 'Charges, refunds, upgrades' },
+  { value: 'other', label: 'Other', icon: '📡', desc: 'Anything else' },
+]
 
 export default function ContactPage() {
   const router = useRouter()
-  const [submitState, setSubmitState] = useState<SubmitState>('idle')
+  const [accessToken, setAccessToken] = useState('')
+  const [userEmail, setUserEmail] = useState('')
+  const [category, setCategory] = useState<Category | ''>('')
+  const [message, setMessage] = useState('')
+  const [email, setEmail] = useState('')
+  const [screenshot, setScreenshot] = useState<{ base64: string; name: string } | null>(null)
+  const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [authLoading, setAuthLoading] = useState(true)
+  const fileRef = useRef<HTMLInputElement>(null)
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    setSubmitState('sending')
+  useEffect(() => {
+    async function init() {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push('/signin')
+        return
+      }
+      setAccessToken(session.access_token)
+      setUserEmail(session.user.email ?? '')
+      setEmail(session.user.email ?? '')
+      setAuthLoading(false)
+    }
+    init()
+  }, [router])
 
-    const form = e.currentTarget
-    const data = new FormData(form)
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // 5MB cap
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Screenshot must be under 5MB.')
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = reader.result as string
+      const base64 = result.split(',')[1]
+      setScreenshot({ base64, name: file.name })
+      setScreenshotPreview(result)
+      setError(null)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  function removeScreenshot() {
+    setScreenshot(null)
+    setScreenshotPreview(null)
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
+  async function handleSubmit() {
+    if (!category) { setError('Pick a category.'); return }
+    if (!message.trim()) { setError('Message is required.'); return }
+    if (message.trim().length < 10) { setError('Give us a bit more detail.'); return }
+
+    setError(null)
+    setSubmitting(true)
 
     try {
-      const res = await fetch('https://formspree.io/f/xjgaapnb', {
+      const res = await fetch('/api/contact', {
         method: 'POST',
-        body: data,
-        headers: { Accept: 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          category,
+          message,
+          email,
+          screenshot_base64: screenshot?.base64 ?? null,
+          screenshot_name: screenshot?.name ?? null,
+        }),
       })
-      if (res.ok) {
-        setSubmitState('success')
-      } else {
-        setSubmitState('error')
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setError(data.error ?? 'Submission failed. Try again.')
+        setSubmitting(false)
+        return
       }
+
+      setSubmitted(true)
     } catch {
-      setSubmitState('error')
+      setError('Network error. Check your connection and try again.')
+      setSubmitting(false)
     }
   }
 
+  // ── Loading ──
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  // ── Success ──
+  if (submitted) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center px-4">
+        <div className="w-full max-w-sm text-center space-y-5">
+          <div
+            className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto text-2xl"
+            style={{ backgroundColor: 'rgba(240,165,0,0.12)', border: '1px solid rgba(240,165,0,0.3)' }}
+          >
+            ✅
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-white mb-2">Transmission Received</h2>
+            <p className="text-sm text-zinc-400 leading-relaxed">
+              Your message is logged. We&apos;ll follow up at{' '}
+              <span className="text-amber-400">{email || userEmail}</span> if we need more intel.
+            </p>
+          </div>
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="w-full py-3 rounded-xl font-bold text-sm text-black transition-all active:scale-95"
+            style={{ backgroundColor: '#f0a500' }}
+          >
+            Back to Dashboard
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Form ──
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
-
-      {/* ── Nav ── */}
-      <header className="border-b border-zinc-800/80 bg-zinc-950/95 sticky top-0 z-20 backdrop-blur-sm">
-        <div className="max-w-2xl mx-auto px-4 h-12 flex items-center gap-3">
+      {/* Header */}
+      <header
+        className="sticky top-0 z-20 backdrop-blur-sm"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', backgroundColor: 'rgba(9,9,11,0.95)' }}
+      >
+        <div className="max-w-lg mx-auto px-4 h-12 flex items-center gap-3">
           <button
             onClick={() => router.back()}
-            className="text-zinc-500 hover:text-zinc-300 transition-colors"
-            aria-label="Go back"
+            className="text-zinc-500 hover:text-zinc-300 transition-colors flex-shrink-0"
+            title="Back"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16">
               <path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-amber-500 rounded-sm flex items-center justify-center">
-              <svg className="w-3.5 h-3.5 text-black" fill="currentColor" viewBox="0 0 16 16">
-                <path d="M8 1L2 5v6l6 4 6-4V5L8 1z" />
-              </svg>
-            </div>
-            <span className="text-sm font-bold tracking-wide text-white">Contact</span>
-          </div>
+          <span className="text-sm font-bold tracking-wide text-white">Contact Support</span>
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto px-4 py-10">
+      <main className="max-w-lg mx-auto px-4 py-6 pb-24 space-y-6">
 
-        {/* Header */}
-        <div className="mb-8">
-          <p className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest mb-2">Get In Touch</p>
-          <h1 className="text-2xl font-bold text-white mb-2">Talk to the Builder</h1>
-          <p className="text-sm text-zinc-400 leading-relaxed">
-            Built by an active Last War player — 500+ days, Server 1032. I read every message.
+        {/* Intro */}
+        <div>
+          <p className="text-[10px] font-mono tracking-widest text-zinc-600 uppercase mb-1">
+            HQ Transmission
+          </p>
+          <p className="text-xs text-zinc-500 leading-relaxed">
+            Hit a bug? Have feedback? Billing question? Drop it here — submissions go straight to the Commander.
           </p>
         </div>
 
-        {/* Reason pills */}
-        <div className="flex flex-wrap gap-2 mb-8">
-          {['Bug / Wrong Data', 'Feature Request', 'Partnership', 'Just Saying Hi'].map(r => (
-            <span key={r} className="text-[11px] font-mono text-zinc-500 border border-zinc-800 rounded-full px-3 py-1">
-              {r}
-            </span>
-          ))}
+        {/* Category picker */}
+        <div>
+          <p className="text-[10px] font-mono tracking-widest text-zinc-600 uppercase mb-3">
+            Category
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            {CATEGORIES.map((cat) => {
+              const selected = category === cat.value
+              return (
+                <button
+                  key={cat.value}
+                  onClick={() => { setCategory(cat.value); setError(null) }}
+                  className="text-left rounded-xl px-3 py-3 transition-all active:scale-[0.98]"
+                  style={{
+                    backgroundColor: selected
+                      ? 'rgba(240,165,0,0.10)'
+                      : 'rgba(255,255,255,0.03)',
+                    border: selected
+                      ? '1px solid rgba(240,165,0,0.40)'
+                      : '1px solid rgba(255,255,255,0.07)',
+                    borderLeft: selected ? '3px solid #f0a500' : undefined,
+                  }}
+                >
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-base leading-none">{cat.icon}</span>
+                    <span className={`text-xs font-bold ${selected ? 'text-amber-400' : 'text-zinc-300'}`}>
+                      {cat.label}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-zinc-600 pl-6">{cat.desc}</p>
+                </button>
+              )
+            })}
+          </div>
         </div>
 
-        {/* Form */}
-        {submitState === 'success' ? (
-          <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6 text-center space-y-3">
-            <div className="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto">
-              <svg className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 16 16">
-                <path d="M3 8l3.5 3.5L13 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-            <p className="text-sm font-bold text-white">Message received.</p>
-            <p className="text-xs text-zinc-500">I&apos;ll get back to you — usually within 24 hours.</p>
-            <button
-              onClick={() => router.back()}
-              className="mt-2 text-xs text-amber-600 hover:text-amber-400 transition-colors underline underline-offset-2"
+        {/* Email */}
+        <div>
+          <label className="block text-[10px] font-mono tracking-widest text-zinc-600 uppercase mb-2">
+            Your Email
+          </label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder={userEmail || 'commander@example.com'}
+            className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 outline-none transition-all"
+            style={{
+              backgroundColor: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.09)',
+            }}
+            onFocus={(e) => (e.currentTarget.style.border = '1px solid rgba(240,165,0,0.4)')}
+            onBlur={(e) => (e.currentTarget.style.border = '1px solid rgba(255,255,255,0.09)')}
+          />
+        </div>
+
+        {/* Message */}
+        <div>
+          <label className="block text-[10px] font-mono tracking-widest text-zinc-600 uppercase mb-2">
+            Message
+          </label>
+          <textarea
+            value={message}
+            onChange={(e) => { setMessage(e.target.value); setError(null) }}
+            placeholder={
+              category === 'bug'
+                ? 'Describe what happened and what you expected...'
+                : category === 'billing'
+                ? 'Describe the billing issue in detail...'
+                : category === 'feedback'
+                ? "What would make Buddy better for you?"
+                : "What's on your mind, Commander?"
+            }
+            rows={5}
+            className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 outline-none resize-none transition-all"
+            style={{
+              backgroundColor: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.09)',
+            }}
+            onFocus={(e) => (e.currentTarget.style.border = '1px solid rgba(240,165,0,0.4)')}
+            onBlur={(e) => (e.currentTarget.style.border = '1px solid rgba(255,255,255,0.09)')}
+          />
+          <p className="text-[10px] text-zinc-700 mt-1.5 text-right font-mono">
+            {message.length} chars
+          </p>
+        </div>
+
+        {/* Screenshot */}
+        <div>
+          <p className="text-[10px] font-mono tracking-widest text-zinc-600 uppercase mb-2">
+            Screenshot <span className="text-zinc-700 normal-case tracking-normal font-sans">— optional</span>
+          </p>
+
+          {screenshotPreview ? (
+            <div
+              className="relative rounded-xl overflow-hidden"
+              style={{ border: '1px solid rgba(240,165,0,0.25)' }}
             >
-              Back to dashboard
-            </button>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest" htmlFor="name">
-                Name / IGN
-              </label>
-              <input
-                id="name"
-                name="name"
-                type="text"
-                required
-                placeholder="Your name or in-game name"
-                className="w-full bg-zinc-900/50 border border-zinc-800 focus:border-amber-600 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 outline-none transition-colors"
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={screenshotPreview}
+                alt="Screenshot preview"
+                className="w-full max-h-48 object-cover"
               />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest" htmlFor="email">
-                Email
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                placeholder="your@email.com"
-                className="w-full bg-zinc-900/50 border border-zinc-800 focus:border-amber-600 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 outline-none transition-colors"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest" htmlFor="reason">
-                Reason
-              </label>
-              <select
-                id="reason"
-                name="reason"
-                className="w-full bg-zinc-900/50 border border-zinc-800 focus:border-amber-600 rounded-xl px-4 py-3 text-sm text-white outline-none transition-colors appearance-none"
+              <button
+                onClick={removeScreenshot}
+                className="absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center transition-colors"
+                style={{ backgroundColor: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.15)' }}
               >
-                <option value="">Select a reason...</option>
-                <option value="bug">Bug / Wrong Game Data</option>
-                <option value="feature">Feature Request</option>
-                <option value="partner">Partnership / Data Integration</option>
-                <option value="press">Press / Content Creator</option>
-                <option value="community">Alliance / Community</option>
-                <option value="other">Just Saying Hi</option>
-              </select>
+                <svg className="w-3.5 h-3.5 text-zinc-300" fill="none" viewBox="0 0 16 16">
+                  <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </button>
+              <div
+                className="px-3 py-2"
+                style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+              >
+                <p className="text-[10px] text-zinc-500 font-mono truncate">{screenshot?.name}</p>
+              </div>
             </div>
-
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest" htmlFor="message">
-                Message
-              </label>
-              <textarea
-                id="message"
-                name="message"
-                required
-                rows={5}
-                placeholder="What's on your mind?"
-                className="w-full bg-zinc-900/50 border border-zinc-800 focus:border-amber-600 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 outline-none transition-colors resize-none leading-relaxed"
-              />
-            </div>
-
-            {submitState === 'error' && (
-              <p className="text-xs text-red-400">Something went wrong. Try again or email directly.</p>
-            )}
-
+          ) : (
             <button
-              type="submit"
-              disabled={submitState === 'sending'}
-              className="w-full bg-amber-500 hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed text-black font-bold text-sm px-6 py-3 rounded-xl transition-colors active:scale-95"
+              onClick={() => fileRef.current?.click()}
+              className="w-full rounded-xl px-4 py-4 flex items-center justify-center gap-2.5 transition-all active:scale-[0.99]"
+              style={{
+                backgroundColor: 'rgba(255,255,255,0.02)',
+                border: '1px dashed rgba(255,255,255,0.12)',
+              }}
             >
-              {submitState === 'sending' ? 'Sending...' : 'Send Message →'}
+              <svg className="w-4 h-4 text-zinc-600" fill="none" viewBox="0 0 16 16">
+                <rect x="1" y="3" width="14" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+                <circle cx="5.5" cy="6.5" r="1" stroke="currentColor" strokeWidth="1.3" />
+                <path d="M1 11l3.5-3.5 2.5 2.5 2.5-3 4.5 5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <span className="text-xs text-zinc-600">Attach a screenshot</span>
+              <span className="text-[10px] text-zinc-700 font-mono">max 5MB</span>
             </button>
+          )}
 
-          </form>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+        </div>
+
+        {/* Error */}
+        {error && (
+          <div
+            className="rounded-xl px-4 py-3 flex items-center gap-2.5"
+            style={{
+              backgroundColor: 'rgba(239,68,68,0.08)',
+              border: '1px solid rgba(239,68,68,0.25)',
+            }}
+          >
+            <span className="text-red-400 text-sm flex-shrink-0">⚠</span>
+            <p className="text-xs text-red-300">{error}</p>
+          </div>
         )}
+
+        {/* Submit */}
+        <button
+          onClick={handleSubmit}
+          disabled={submitting}
+          className="w-full py-3.5 rounded-xl font-bold text-sm text-black transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ backgroundColor: '#f0a500' }}
+        >
+          {submitting ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="w-4 h-4 border-2 border-black/40 border-t-black rounded-full animate-spin" />
+              Transmitting...
+            </span>
+          ) : (
+            'Send to HQ →'
+          )}
+        </button>
+
+        {/* Footer note */}
+        <p className="text-center text-[10px] text-zinc-700 font-mono">
+          All submissions are read by the Commander personally.
+        </p>
       </main>
     </div>
   )
