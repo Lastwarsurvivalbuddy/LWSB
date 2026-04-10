@@ -1079,24 +1079,25 @@ export const SKILL_MEDALS_META = {
 
 export function heroXpToLevel(targetLevel: number): number {
   return HERO_EXP_LEVELS
-    .filter(l => l.level <= targetLevel)
-    .reduce((sum, l) => sum + l.xpRequired, 0);
+    .filter(l => (l.heroLevel ?? l.level) <= targetLevel)
+    .reduce((sum, l) => sum + (l.experience ?? l.xpRequired ?? 0), 0);
 }
 
 export function heroShardsToStar(targetStar: number, type: 'regular' | 'ssr' = 'regular'): number {
   const tiers = type === 'ssr' ? HERO_SHARDS_SSR : HERO_SHARDS_REGULAR;
   return tiers
-    .filter(t => t.toStar <= targetStar)
-    .reduce((sum, t) => sum + t.shards, 0);
+    .filter(t => (t.starTo ?? t.toStar) <= targetStar)
+    .reduce((sum, t) => sum + (t.totalShards ?? t.shards ?? 0), 0);
 }
 
 export function weaponShardsToLevel(targetLevel: number): number {
   return WEAPON_SHARD_SEGMENTS
-    .filter(s => s.toLevel <= targetLevel)
-    .reduce((sum, s) => sum + s.totalShards, 0);
+    .filter(s => (s.maxLevel ?? s.toLevel) <= targetLevel)
+    .reduce((sum, s) => sum + (s.totalForSegment ?? s.totalShards ?? 0), 0);
 }
 
 export function skillMedalsToLevel(targetLevel: number, rarity: string): number {
+  if (!SKILL_MEDALS_BY_RARITY.length) return 0;
   const rarityData = SKILL_MEDALS_BY_RARITY.find(r => r.rarity.toLowerCase() === rarity.toLowerCase());
   if (!rarityData) return 0;
   return rarityData.levels
@@ -1105,24 +1106,25 @@ export function skillMedalsToLevel(targetLevel: number, rarity: string): number 
 }
 
 export function getHeroCostDataSummary(): string {
-  const maxHeroLevel = HERO_EXP_META.maxLevel ?? HERO_EXP_LEVELS[HERO_EXP_LEVELS.length - 1]?.level ?? '?';
+  const maxHeroLevel = HERO_EXP_META.maxLevel ?? HERO_EXP_LEVELS[HERO_EXP_LEVELS.length - 1]?.heroLevel ?? 175;
   const totalXpToMax = heroXpToLevel(Number(maxHeroLevel));
 
   const shardRows = HERO_SHARDS_REGULAR.map(t =>
-    `  ${t.fromStar}* → ${t.toStar}*: ${t.shards.toLocaleString()} shards (regular) / ${(t.shards * 2).toLocaleString()} (SSR upgrade)`
+    `  ${t.starFrom ?? t.fromStar}* → ${t.starTo ?? t.toStar}*: ${(t.totalShards ?? t.shards ?? 0).toLocaleString()} shards (regular)`
   ).join('\n');
 
-  const weaponMax = WEAPON_SHARD_META.maxLevel ?? '?';
-  const weaponTotal = WEAPON_SHARD_META.totalShardsToMax ?? weaponShardsToLevel(Number(weaponMax));
+  const weaponTotal = WEAPON_SHARD_SEGMENTS.reduce((s, seg) => s + (seg.totalForSegment ?? seg.totalShards ?? 0), 0);
 
-  const gearRows = GEAR_BY_RARITY.map(r =>
-    `  ${r.rarity}: ${r.levels.length} levels, ${r.starUpgrades.length} star upgrades`
-  ).join('\n');
+  const gearRows = GEAR_BY_RARITY.length
+    ? GEAR_BY_RARITY.map(r => `  ${r.rarity}: ${r.levels.length} levels, ${r.starUpgrades.length} star upgrades`).join('\n')
+    : '  (data pending sync)';
 
-  const medalRows = SKILL_MEDALS_BY_RARITY.map(r => {
-    const total = r.levels.reduce((s, l) => s + l.medals, 0);
-    return `  ${r.rarity}: ${total.toLocaleString()} medals to max`;
-  }).join('\n');
+  const medalRows = SKILL_MEDALS_BY_RARITY.length
+    ? SKILL_MEDALS_BY_RARITY.map(r => {
+        const total = r.levels.reduce((s, l) => s + l.medals, 0);
+        return `  ${r.rarity}: ${total.toLocaleString()} medals to max`;
+      }).join('\n')
+    : '  (data pending sync)';
 
   return `=== HERO COST DATA (Powered by cpt-hedge.com) ===
 
@@ -1132,7 +1134,7 @@ Total XP to max: ${totalXpToMax.toLocaleString()}
 Hero Shards (0* → 5*):
 ${shardRows}
 
-Weapon Shards — max level: ${weaponMax}
+Weapon Shards — max level: 30
 Total weapon shards to max: ${weaponTotal.toLocaleString()}
 
 Gear upgrade costs by rarity:
