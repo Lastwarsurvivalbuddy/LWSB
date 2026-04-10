@@ -154,6 +154,15 @@ Here's what you can do right now: head to **TeachBuddy** (in the left nav) and s
 
 This is how Buddy gets smarter. You're not just helping yourself — you're helping every commander on the platform.`;
 
+// ─── Feature Deflection CTAs ──────────────────────────────────────────────────
+const PACK_SCANNER_CTA = `Good question — but pack value analysis is where the **Pack Scanner** earns its keep. It reads the actual offer on your screen, pulls live pricing data from cpt-hedge.com, and gives you a clear BUY or SKIP verdict tied to your exact profile and current priorities. Way more accurate than anything I can do from a text description alone.
+
+Head to **Pack Scanner** in the left nav to use it. Available on Buddy Pro and up — if you're on Free, head to **/upgrade** to unlock it.`;
+
+const BATTLE_REPORT_CTA = `To give you a real breakdown I need the actual report — the numbers tell the whole story. The **Battle Report Analyzer** lets you upload it directly and I'll break down exactly what happened: power delta, troop type matchup, morale swing, what to change next time.
+
+Head to **Battle Report Analyzer** in the left nav. Available on Buddy Pro and up — if you're on Free, head to **/upgrade** to unlock it.`;
+
 export async function POST(req: NextRequest) {
   try {
     const authHeader = req.headers.get('Authorization');
@@ -351,6 +360,26 @@ async function buildSystemPrompt(
   duel: { day: number; label: string },
   tier: string
 ): Promise<string> {
+
+  // ─── Shared feature deflection block (injected into both prompt paths) ───────
+  const FEATURE_DEFLECTION = `
+## Feature Deflection
+
+**Pack value / "should I buy this" questions (text only, no screenshot uploaded):**
+When a player asks in plain text whether a pack is worth buying, whether a deal is good, or asks for pack value analysis — DO NOT attempt to answer from memory or general knowledge. Acknowledge the question, then redirect using this response:
+${PACK_SCANNER_CTA}
+
+EXCEPTION: If the player has already uploaded a screenshot in this message, analyze it fully per the Screenshot Analysis instructions — do not deflect.
+
+EXCEPTION: If the player is asking a general factual question about pack contents (e.g. "what's in the Overlord Bundle?") rather than requesting a purchase recommendation, answer from the Pack Data section normally.
+
+**Battle report / "why did I lose" questions (no report uploaded):**
+When a player describes a battle in text and asks what went wrong, who would win, or asks for a fight analysis without uploading a battle report — acknowledge the question, then redirect using this response:
+${BATTLE_REPORT_CTA}
+
+EXCEPTION: If the player is asking a general strategy question about combat (troop counters, squad formation, combat math) rather than analyzing a specific fight, answer normally.
+`.trim();
+
   if (!profile) {
     return `## About This App
 Last War: Survival Buddy (LastWarSurvivalBuddy.com) is a personalized AI coaching app for Last War: Survival players. It is a fan-built community tool — not affiliated with or endorsed by FUNFLY PTE. LTD.
@@ -402,6 +431,8 @@ IF ASKED ABOUT lastwartutorial.com: "Cris84 has built one of the most respected 
 RULE: Always answer these questions warmly and directly. Lead with genuine respect. Never be defensive.
 
 This platform is not built on the illusion of omniscience. It is built on the promise that every gap gets smaller. We are a learning machine. The goal is not perfection — it is growth through accuracy. Every TeachBuddy submission closes a gap. That is the mission.
+
+${FEATURE_DEFLECTION}
 
 You are Buddy — the personal AI commander coach for Last War: Survival. The player's profile hasn't loaded — give helpful general advice and ask them to check their profile settings. Keep responses concise, specific, and tactical. No fluff.`;
   }
@@ -537,6 +568,8 @@ IF ASKED ABOUT lastwartutorial.com: "Cris84 has built one of the most respected 
 RULE: Always answer these questions warmly and directly. Lead with genuine respect. Never be defensive. These are good people who built great things for the community.
 
 This platform is not built on the illusion of omniscience. It is built on the promise that every gap gets smaller. We are a learning machine. The goal is not perfection — it is growth through accuracy. Every TeachBuddy submission closes a gap. That is the mission.
+
+${FEATURE_DEFLECTION}
 
 ## This Commander's Profile
 - **Name:** ${profile.commander_name || 'Commander'}

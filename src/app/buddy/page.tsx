@@ -16,9 +16,9 @@ type FeedbackState = Record<string, 'up' | 'down' | null>;
 
 const SUGGESTED_PROMPTS = [
   "What should I focus on today?",
-  "Is this pack worth buying?",
   "How do I score more in Arms Race?",
-  "How do I get stronger faster?",
+  "How do I build my heroes faster?",
+  "Ask Buddy something else →",
 ];
 
 export default function BuddyPage() {
@@ -129,6 +129,16 @@ export default function BuddyPage() {
 
   function clearPendingImage() {
     setPendingImage(null);
+  }
+
+  function handlePromptChip(prompt: string) {
+    // "Ask Buddy something else" just focuses the input — no prefill
+    if (prompt === 'Ask Buddy something else →') {
+      setTimeout(() => textareaRef.current?.focus(), 50);
+      return;
+    }
+    setInput(prompt);
+    setTimeout(() => textareaRef.current?.focus(), 50);
   }
 
   async function sendMessage() {
@@ -298,11 +308,8 @@ export default function BuddyPage() {
               {SUGGESTED_PROMPTS.map(prompt => (
                 <button
                   key={prompt}
-                  className="prompt-chip"
-                  onClick={() => {
-                    setInput(prompt);
-                    setTimeout(() => textareaRef.current?.focus(), 50);
-                  }}
+                  className={`prompt-chip${prompt === 'Ask Buddy something else →' ? ' chip-other' : ''}`}
+                  onClick={() => handlePromptChip(prompt)}
                 >
                   {prompt}
                 </button>
@@ -607,6 +614,15 @@ export default function BuddyPage() {
           white-space: nowrap;
         }
         .prompt-chip:hover {
+          border-color: #c9b87a;
+          color: #c9b87a;
+          background: #0f1420;
+        }
+        .chip-other {
+          border-style: dashed;
+          color: #5a6880;
+        }
+        .chip-other:hover {
           border-color: #c9b87a;
           color: #c9b87a;
           background: #0f1420;
