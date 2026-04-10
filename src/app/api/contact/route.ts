@@ -1,6 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
+
+async function verifyAdmin(req: NextRequest): Promise<string | null> {
+  const auth = req.headers.get('Authorization')
+  if (!auth?.startsWith('Bearer ')) return null
+  const token = auth.slice(7)
+  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
+  if (error || !user) return null
+  const { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('tier')
+    .eq('id', user.id)
+    .single()
+  if (profile?.tier !== 'admin') return null
+  return user.id
+}
+
+// ── User-facing: submit a contact form entry ──────────────────────────────────
 export async function POST(req: NextRequest) {
   const authHeader = req.headers.get('Authorization')
   if (!authHeader?.startsWith('Bearer ')) {
@@ -35,13 +56,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'invalid category' }, { status: 400 })
   }
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-
   // Write to DB — always, regardless of email success
-  const { data: submission, error: dbError } = await supabase
+  const { data: submission, error: dbError } = await supabaseAdmin
     .from('contact_submissions')
     .insert({
       user_id: user.id,
@@ -105,4 +121,58 @@ ${screenshot_base64 ? `Screenshot attached: ${screenshot_name || 'screenshot.jpg
   }
 
   return NextResponse.json({ success: true, id: submission.id })
+}
+
+// ── Admin: list all contact submissions ──────────────────────────────────────
+export async function GET(req: NextRequest) {
+  const adminId = await verifyAdmin(req)
+  if (!adminId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+  const { searchParams } = new URL(req.url)
+  const status = searchParams.get('status')
+
+  let query = supabaseAdmin
+    .from('contact_submissions')
+    .select('id, user_id, email, category, message, screenshot_base64, screenshot_name, status, admin_notes, created_at, updated_at')
+    .order('created_at', { ascending: false })
+
+  if (status && status !== 'all') {
+    query = query.eq('status', status)
+  }
+
+  const { data, error } = await query
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  return NextResponse.json({ submissions: data ?? [] })
+}
+
+// ── Admin: update status and/or admin_notes on a submission ──────────────────
+export async function PATCH(req: NextRequest) {
+  const adminId = await verifyAdmin(req)
+  if (!adminId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+  const body = await req.json()
+  const { id, status, admin_notes } = body
+
+  if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
+
+  const validStatuses = ['open', 'in_progress', 'resolved', 'closed']
+  if (status && !validStatuses.includes(status)) {
+    return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
+  }
+
+  const updates: Record<string, string> = { updated_at: new Date().toISOString() }
+  if (status) updates.status = status
+  if (typeof admin_notes === 'string') updates.admin_notes = admin_notes
+
+  const { data, error } = await supabaseAdmin
+    .from('contact_submissions')
+    .update(updates)
+    .eq('id', id)
+    .select('id, status, admin_notes, updated_at')
+    .single()
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  return NextResponse.json({ submission: data })
 }

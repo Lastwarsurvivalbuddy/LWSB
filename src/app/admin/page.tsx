@@ -96,6 +96,20 @@ interface NewsItem {
   active: boolean
 }
 
+interface ContactSubmission {
+  id: string
+  user_id: string | null
+  email: string | null
+  category: string
+  message: string
+  screenshot_base64: string | null
+  screenshot_name: string | null
+  status: string
+  admin_notes: string | null
+  created_at: string
+  updated_at: string
+}
+
 const BADGE_OPTIONS = ['KB UPDATE', 'NEW', 'FIXED', 'EVENT']
 
 const PAYOUT_METHOD_LABELS: Record<string, string> = {
@@ -106,13 +120,38 @@ const PAYOUT_METHOD_LABELS: Record<string, string> = {
   other: 'Other',
 }
 
+const CONTACT_STATUS_OPTIONS = ['open', 'in_progress', 'resolved', 'closed'] as const
+type ContactStatus = typeof CONTACT_STATUS_OPTIONS[number]
+
+const contactStatusStyle = (status: string) => {
+  if (status === 'open')        return 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+  if (status === 'in_progress') return 'bg-sky-500/10 border-sky-500/30 text-sky-400'
+  if (status === 'resolved')    return 'bg-green-500/10 border-green-500/30 text-green-400'
+  if (status === 'closed')      return 'bg-zinc-700/30 border-zinc-600/40 text-zinc-500'
+  return 'bg-zinc-800 border-zinc-700 text-zinc-400'
+}
+
+const contactCategoryStyle = (category: string) => {
+  if (category === 'bug')      return 'bg-red-500/10 border-red-500/30 text-red-400'
+  if (category === 'billing')  return 'bg-violet-500/10 border-violet-500/30 text-violet-400'
+  if (category === 'feedback') return 'bg-sky-500/10 border-sky-500/30 text-sky-400'
+  return 'bg-zinc-700/30 border-zinc-600/40 text-zinc-400'
+}
+
+const categoryLabel: Record<string, string> = {
+  bug: '🐛 Bug',
+  feedback: '💬 Feedback',
+  billing: '💳 Billing',
+  other: '📡 Other',
+}
+
 export default function MissionControlPage() {
   const router = useRouter()
   const [authorized, setAuthorized] = useState(false)
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<StatsData | null>(null)
   const [statsError, setStatsError] = useState('')
-  const [activeTab, setActiveTab] = useState<'overview' | 'submissions' | 'affiliates' | 'users' | 'news'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'submissions' | 'affiliates' | 'users' | 'news' | 'contact'>('overview')
   const [token, setToken] = useState<string | null>(null)
 
   const [screenshotUrls, setScreenshotUrls] = useState<Record<string, string>>({})
@@ -155,6 +194,19 @@ export default function MissionControlPage() {
   const [newsActing, setNewsActing] = useState(false)
   const [newsDeleteActing, setNewsDeleteActing] = useState<string | null>(null)
   const [newsToggleActing, setNewsToggleActing] = useState<string | null>(null)
+
+  // ── Contact inbox state ──────────────────────────────────────────────────────
+  const [contactSubmissions, setContactSubmissions] = useState<ContactSubmission[]>([])
+  const [contactLoading, setContactLoading] = useState(false)
+  const [contactFilter, setContactFilter] = useState<ContactStatus | 'all'>('all')
+  const [contactExpandedId, setContactExpandedId] = useState<string | null>(null)
+  const [contactNotesInputs, setContactNotesInputs] = useState<Record<string, string>>({})
+  const [contactStatusInputs, setContactStatusInputs] = useState<Record<string, ContactStatus>>({})
+  const [contactActing, setContactActing] = useState<string | null>(null)
+  const [contactNotifyPanelId, setContactNotifyPanelId] = useState<string | null>(null)
+  const [contactNotifyInputs, setContactNotifyInputs] = useState<Record<string, string>>({})
+  const [contactNotifyActing, setContactNotifyActing] = useState<string | null>(null)
+  const [contactNotifySent, setContactNotifySent] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -290,6 +342,70 @@ export default function MissionControlPage() {
     setNewsLoading(false)
   }, [])
 
+  const fetchContact = useCallback(async (accessToken: string, status: ContactStatus | 'all' = 'all') => {
+    setContactLoading(true)
+    const params = new URLSearchParams()
+    if (status !== 'all') params.set('status', status)
+    const res = await fetch(`/api/contact?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (res.ok) {
+      const data = await res.json()
+      const list: ContactSubmission[] = data.submissions ?? []
+      setContactSubmissions(list)
+      // Seed local state for notes + status inputs
+      const notes: Record<string, string> = {}
+      const statuses: Record<string, ContactStatus> = {}
+      for (const s of list) {
+        notes[s.id] = s.admin_notes ?? ''
+        statuses[s.id] = s.status as ContactStatus
+      }
+      setContactNotesInputs(notes)
+      setContactStatusInputs(statuses)
+    }
+    setContactLoading(false)
+  }, [])
+
+  async function handleContactUpdate(id: string) {
+    if (!token) return
+    setContactActing(id)
+    const res = await fetch('/api/contact', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        id,
+        status: contactStatusInputs[id],
+        admin_notes: contactNotesInputs[id] ?? '',
+      }),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      setContactSubmissions(prev =>
+        prev.map(s => s.id === id ? { ...s, ...data.submission } : s)
+      )
+    }
+    setContactActing(null)
+  }
+
+  async function handleContactNotify(userId: string, submissionId: string) {
+    if (!token) return
+    const message = contactNotifyInputs[submissionId]?.trim()
+    if (!message) return
+    setContactNotifyActing(submissionId)
+    const res = await fetch('/api/admin/notify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ userId, message }),
+    })
+    if (res.ok) {
+      setContactNotifySent(prev => ({ ...prev, [submissionId]: true }))
+      setContactNotifyInputs(prev => ({ ...prev, [submissionId]: '' }))
+      setContactNotifyPanelId(null)
+      setTimeout(() => setContactNotifySent(prev => ({ ...prev, [submissionId]: false })), 3000)
+    }
+    setContactNotifyActing(null)
+  }
+
   useEffect(() => {
     if (authorized && token) fetchStats(token)
   }, [authorized, token, fetchStats])
@@ -305,6 +421,10 @@ export default function MissionControlPage() {
   useEffect(() => {
     if (authorized && activeTab === 'news') fetchNews()
   }, [authorized, activeTab, fetchNews])
+
+  useEffect(() => {
+    if (authorized && token && activeTab === 'contact') fetchContact(token, contactFilter)
+  }, [authorized, token, activeTab]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleAction(id: string, action: 'approved' | 'rejected') {
     if (!token) return
@@ -511,6 +631,11 @@ export default function MissionControlPage() {
   const filteredAffiliates = affiliateFilter === 'all' ? affiliates : affiliates.filter(a => a.status === affiliateFilter)
   const approvedAffiliates = affiliates.filter(a => a.status === 'approved')
 
+  const openContactCount = contactSubmissions.filter(s => s.status === 'open').length
+  const filteredContact = contactFilter === 'all'
+    ? contactSubmissions
+    : contactSubmissions.filter(s => s.status === contactFilter)
+
   const ledgerRows = approvedAffiliates.map(a => {
     const pd = payoutData[a.id]
     return {
@@ -595,12 +720,12 @@ export default function MissionControlPage() {
       </header>
 
       <div className="border-b border-zinc-800 bg-zinc-950">
-        <div className="max-w-5xl mx-auto px-4 flex gap-0">
-          {(['overview', 'submissions', 'affiliates', 'users', 'news'] as const).map(tab => (
+        <div className="max-w-5xl mx-auto px-4 flex gap-0 overflow-x-auto">
+          {(['overview', 'submissions', 'affiliates', 'users', 'news', 'contact'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-3 text-sm font-mono transition-colors border-b-2 -mb-px ${
+              className={`px-4 py-3 text-sm font-mono transition-colors border-b-2 -mb-px whitespace-nowrap ${
                 activeTab === tab
                   ? 'text-amber-400 border-amber-500'
                   : 'text-zinc-500 border-transparent hover:text-zinc-300'
@@ -611,6 +736,16 @@ export default function MissionControlPage() {
               {tab === 'affiliates' && `Affiliates${pendingAffiliates > 0 ? ` (${pendingAffiliates})` : ''}`}
               {tab === 'users' && `Users${usersTotal > 0 ? ` (${usersTotal})` : ''}`}
               {tab === 'news' && `News${newsItems.length > 0 ? ` (${newsItems.filter(n => n.active).length})` : ''}`}
+              {tab === 'contact' && (
+                <span className="flex items-center gap-1.5">
+                  Contact
+                  {openContactCount > 0 && (
+                    <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-500 text-black text-[10px] font-bold leading-none">
+                      {openContactCount}
+                    </span>
+                  )}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -618,6 +753,7 @@ export default function MissionControlPage() {
 
       <main className="max-w-5xl mx-auto px-4 py-6 pb-24">
 
+        {/* ── Overview ── */}
         {activeTab === 'overview' && (
           <>
             {statsError && <p className="text-red-400 text-sm mb-4">{statsError}</p>}
@@ -725,6 +861,7 @@ export default function MissionControlPage() {
           </>
         )}
 
+        {/* ── Submissions ── */}
         {activeTab === 'submissions' && (
           <>
             <div className="flex items-center justify-between mb-6">
@@ -843,6 +980,7 @@ export default function MissionControlPage() {
           </>
         )}
 
+        {/* ── Affiliates ── */}
         {activeTab === 'affiliates' && (
           <>
             <div className="flex items-center justify-between mb-4">
@@ -1202,6 +1340,7 @@ export default function MissionControlPage() {
           </>
         )}
 
+        {/* ── Users ── */}
         {activeTab === 'users' && (
           <>
             <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
@@ -1435,6 +1574,7 @@ export default function MissionControlPage() {
           </>
         )}
 
+        {/* ── News ── */}
         {activeTab === 'news' && (
           <>
             <div className="flex items-center justify-between mb-6">
@@ -1549,6 +1689,207 @@ export default function MissionControlPage() {
                 </div>
               </div>
             ))}
+          </>
+        )}
+
+        {/* ── Contact Inbox ── */}
+        {activeTab === 'contact' && (
+          <>
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+              <div>
+                <h2 className="text-base font-bold text-amber-400">📬 Contact Inbox</h2>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  {contactSubmissions.length} total · {openContactCount} open
+                </p>
+              </div>
+              <button
+                onClick={() => token && fetchContact(token, contactFilter)}
+                className="text-xs font-bold px-3 py-1.5 rounded-lg border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-colors"
+              >
+                ↻ Refresh
+              </button>
+            </div>
+
+            {/* Status filter pills */}
+            <div className="flex gap-2 mb-5 flex-wrap">
+              {(['all', 'open', 'in_progress', 'resolved', 'closed'] as const).map(f => {
+                const count = f === 'all'
+                  ? contactSubmissions.length
+                  : contactSubmissions.filter(s => s.status === f).length
+                return (
+                  <button
+                    key={f}
+                    onClick={() => {
+                      setContactFilter(f)
+                      if (token) fetchContact(token, f)
+                    }}
+                    className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider border transition-colors ${
+                      contactFilter === f
+                        ? 'bg-amber-500/15 border-amber-500/40 text-amber-400'
+                        : 'border-zinc-700 text-zinc-500 hover:text-zinc-300'
+                    }`}
+                  >
+                    {f.replace('_', ' ')} ({count})
+                  </button>
+                )
+              })}
+            </div>
+
+            {contactLoading && (
+              <div className="flex items-center justify-center py-16">
+                <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+
+            {!contactLoading && filteredContact.length === 0 && (
+              <div className="text-center py-16">
+                <p className="text-zinc-600 text-sm">
+                  {contactFilter === 'all' ? 'No submissions yet.' : `No ${contactFilter.replace('_', ' ')} submissions.`}
+                </p>
+              </div>
+            )}
+
+            {!contactLoading && filteredContact.map(sub => {
+              const isExpanded = contactExpandedId === sub.id
+              return (
+                <div
+                  key={sub.id}
+                  className={`bg-zinc-900/60 border rounded-2xl mb-3 overflow-hidden transition-colors ${
+                    sub.status === 'open' ? 'border-amber-500/20' : 'border-zinc-800'
+                  }`}
+                >
+                  {/* ── Row header — always visible ── */}
+                  <button
+                    onClick={() => setContactExpandedId(isExpanded ? null : sub.id)}
+                    className="w-full px-5 py-4 flex items-center gap-3 text-left hover:bg-zinc-800/20 transition-colors"
+                  >
+                    <span className={`flex-shrink-0 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${contactCategoryStyle(sub.category)}`}>
+                      {categoryLabel[sub.category] ?? sub.category}
+                    </span>
+                    <span className={`flex-shrink-0 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${contactStatusStyle(sub.status)}`}>
+                      {sub.status.replace('_', ' ')}
+                    </span>
+                    <span className="flex-1 text-sm text-zinc-300 truncate min-w-0">
+                      {sub.message}
+                    </span>
+                    <div className="flex-shrink-0 text-right ml-2">
+                      <p className="text-[11px] text-zinc-400 font-mono">{sub.email ?? '—'}</p>
+                      <p className="text-[10px] text-zinc-600 font-mono">{new Date(sub.created_at).toLocaleDateString()}</p>
+                    </div>
+                    <span className="text-zinc-600 text-xs ml-1">{isExpanded ? '▲' : '▼'}</span>
+                  </button>
+
+                  {/* ── Expanded detail panel ── */}
+                  {isExpanded && (
+                    <div className="px-5 pb-5 border-t border-zinc-800/60">
+                      {/* Full message */}
+                      <div className="bg-zinc-950/60 rounded-xl p-4 mt-4 mb-4">
+                        <p className="text-[10px] text-zinc-600 font-mono uppercase tracking-wide mb-2">Message</p>
+                        <p className="text-sm text-zinc-200 leading-relaxed whitespace-pre-wrap">{sub.message}</p>
+                      </div>
+
+                      {/* Screenshot */}
+                      {sub.screenshot_base64 && (
+                        <div className="mb-4">
+                          <p className="text-[10px] text-zinc-600 font-mono uppercase tracking-wide mb-2">
+                            Screenshot {sub.screenshot_name && <span className="text-zinc-700">· {sub.screenshot_name}</span>}
+                          </p>
+                          <img
+                            src={`data:image/jpeg;base64,${sub.screenshot_base64}`}
+                            alt="Submitted screenshot"
+                            className="max-w-full max-h-64 rounded-xl border border-zinc-800 block"
+                          />
+                        </div>
+                      )}
+
+                      {/* Status + notes controls */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                        <div>
+                          <label className="text-[10px] text-zinc-500 font-mono uppercase tracking-wide block mb-1.5">
+                            Status
+                          </label>
+                          <select
+                            value={contactStatusInputs[sub.id] ?? sub.status}
+                            onChange={e => setContactStatusInputs(prev => ({ ...prev, [sub.id]: e.target.value as ContactStatus }))}
+                            className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500/60"
+                          >
+                            {CONTACT_STATUS_OPTIONS.map(s => (
+                              <option key={s} value={s}>{s.replace('_', ' ')}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-zinc-500 font-mono uppercase tracking-wide block mb-1.5">
+                            Admin Notes
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Internal note..."
+                            value={contactNotesInputs[sub.id] ?? ''}
+                            onChange={e => setContactNotesInputs(prev => ({ ...prev, [sub.id]: e.target.value }))}
+                            className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500/60 placeholder:text-zinc-600"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleContactUpdate(sub.id)}
+                          disabled={contactActing === sub.id}
+                          className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm transition-colors disabled:opacity-50"
+                        >
+                          {contactActing === sub.id ? '…' : '💾 Save'}
+                        </button>
+
+                        {/* Notify button — only if we have a user_id */}
+                        {sub.user_id && (
+                          <button
+                            onClick={() => setContactNotifyPanelId(contactNotifyPanelId === sub.id ? null : sub.id)}
+                            className={`px-4 py-2.5 rounded-xl border font-bold text-sm transition-colors ${
+                              contactNotifySent[sub.id]
+                                ? 'border-green-700/50 text-green-400'
+                                : contactNotifyPanelId === sub.id
+                                  ? 'border-sky-500/40 text-sky-400 bg-sky-500/5'
+                                  : 'border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500'
+                            }`}
+                          >
+                            {contactNotifySent[sub.id] ? '✓ Sent' : '✉ Notify User'}
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Notify panel */}
+                      {contactNotifyPanelId === sub.id && sub.user_id && (
+                        <div className="mt-3 flex gap-2 items-start">
+                          <textarea
+                            value={contactNotifyInputs[sub.id] ?? ''}
+                            onChange={e => setContactNotifyInputs(prev => ({ ...prev, [sub.id]: e.target.value }))}
+                            placeholder="Message to show on the user's dashboard..."
+                            rows={2}
+                            className="flex-1 bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-white text-xs resize-none focus:outline-none focus:border-sky-500/60 placeholder:text-zinc-600"
+                          />
+                          <div className="flex flex-col gap-1.5">
+                            <button
+                              onClick={() => handleContactNotify(sub.user_id!, sub.id)}
+                              disabled={contactNotifyActing === sub.id || !contactNotifyInputs[sub.id]?.trim()}
+                              className="text-[11px] font-bold px-3 py-1.5 rounded-lg bg-sky-500 hover:bg-sky-400 text-black transition-colors disabled:opacity-40 whitespace-nowrap"
+                            >
+                              {contactNotifyActing === sub.id ? '…' : 'Send'}
+                            </button>
+                            <button
+                              onClick={() => setContactNotifyPanelId(null)}
+                              className="text-[11px] px-3 py-1.5 rounded-lg border border-zinc-700 text-zinc-500 hover:text-zinc-300 transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </>
         )}
 
