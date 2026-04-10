@@ -3043,7 +3043,7 @@ export function getStore(name: string): GameStore | undefined {
 
 export function getStoreItemData(): string {
   return GAME_STORES.map(store => {
-    const items = store.items.map(it => {
+    const items = (store.items ?? []).map(it => {
       const reduced = it.priceInBricksReduced ? ` (reduced: ${it.priceInBricksReduced})` : '';
       const tag = it.tag ? ` [${it.tag}]` : '';
       return `  ${it.name} x${it.amount} — ${it.priceInBricks} bricks${reduced}${tag} (${it.availability}, ${it.rotation})`;
