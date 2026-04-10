@@ -23,9 +23,9 @@ const RATE_LIMITS: Record<string, Record<string, number>> = {
 // ABUSE CONFIG
 //
 // Three-strike system:
-//   Strike 1 → Warning 1 (informational, no penalty)
-//   Strike 2 → Warning 2 (firm, final warning)
-//   Strike 3 → Flagged for review (temporarily restricted)
+// Strike 1 → Warning 1 (informational, no penalty)
+// Strike 2 → Warning 2 (firm, final warning)
+// Strike 3 → Flagged for review (temporarily restricted)
 //
 // Strikes are tracked via abuse_warning_count on profiles.
 // ABUSE_THRESHOLD_PER_HOUR controls how many rate limit hits
@@ -66,11 +66,17 @@ export async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname
 
   if (!pathname.startsWith('/api/')) return NextResponse.next()
-  if (pathname.startsWith('/api/stripe/webhook')) return NextResponse.next()
-  if (pathname.startsWith('/api/auth')) return NextResponse.next()
-  if (pathname.startsWith('/api/pulse')) return NextResponse.next()
-  if (pathname.startsWith('/api/admin')) return NextResponse.next()
-  if (pathname.startsWith('/api/health')) return NextResponse.next()
+
+  // ── Exempt routes — bypass rate limiter entirely ──────────
+  if (pathname.startsWith('/api/stripe/webhook'))  return NextResponse.next()
+  if (pathname.startsWith('/api/auth'))            return NextResponse.next()
+  if (pathname.startsWith('/api/pulse'))           return NextResponse.next()
+  if (pathname.startsWith('/api/admin'))           return NextResponse.next()
+  if (pathname.startsWith('/api/health'))          return NextResponse.next()
+  if (pathname.startsWith('/api/notifications'))   return NextResponse.next()
+  if (pathname.startsWith('/api/submissions'))     return NextResponse.next()
+  if (pathname.startsWith('/api/buddy/quota'))     return NextResponse.next()
+  if (pathname.startsWith('/api/contact'))         return NextResponse.next()
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -113,8 +119,6 @@ export async function middleware(req: NextRequest) {
         userTier = sub?.tier ?? 'free'
 
         // ── 3. Restriction check (flagged_for_review) ─────
-        // Flagged users are blocked immediately with the restricted message.
-        // They must contact support to restore access.
         const { data: profileData } = await supabase
           .from('profiles')
           .select('abuse_warning_count')
@@ -137,8 +141,6 @@ export async function middleware(req: NextRequest) {
           )
         }
 
-        // Attach warning count to request context for use below
-        // We stash it on a custom header internally (never exposed to client)
         ;(req as unknown as Record<string, unknown>)._abuseWarningCount =
           profileData?.abuse_warning_count ?? 0
       }
@@ -175,7 +177,9 @@ export async function middleware(req: NextRequest) {
         .select('count')
         .eq('key', rateLimitKey)
         .single()
+
       currentCount = (row?.count ?? 0) + 1
+
       await supabase
         .from('rate_limits')
         .update({ count: currentCount })
@@ -192,7 +196,6 @@ export async function middleware(req: NextRequest) {
 
     if (userId && !isFounder) {
       try {
-        // Track abuse hits per hour
         const abuseWindowStart = Math.floor(Date.now() / (ABUSE_WINDOW_SECONDS * 1000))
         const abuseKey = `abuse:${userId}:${abuseWindowStart}`
         const abuseExpiry = new Date(
@@ -210,6 +213,7 @@ export async function middleware(req: NextRequest) {
             .select('count')
             .eq('key', abuseKey)
             .single()
+
           abuseCount = (abuseRow?.count ?? 0) + 1
           await supabase
             .from('rate_limits')
@@ -217,9 +221,7 @@ export async function middleware(req: NextRequest) {
             .eq('key', abuseKey)
         }
 
-        // Only act at the abuse threshold — not on every rate limit hit
         if (abuseCount >= ABUSE_THRESHOLD_PER_HOUR) {
-          // Read current warning count fresh from DB
           const { data: profileRow } = await supabase
             .from('profiles')
             .select('abuse_warning_count')
@@ -229,7 +231,6 @@ export async function middleware(req: NextRequest) {
           const warningCount = profileRow?.abuse_warning_count ?? 0
 
           if (warningCount === 0) {
-            // ── Strike 1 — First warning ─────────────────
             await supabase
               .from('profiles')
               .update({
@@ -239,64 +240,22 @@ export async function middleware(req: NextRequest) {
               })
               .eq('id', userId)
 
-            await supabase
-              .from('notifications')
-              .insert({
-                user_id: userId,
-                message: WARNING_1_MESSAGE,
-              })
+            await supabase.from('notifications').insert({ user_id: userId, message: WARNING_1_MESSAGE })
 
             return new NextResponse(
-              JSON.stringify({
-                error: 'rate_limit_warning',
-                warning: 1,
-                message: WARNING_1_MESSAGE,
-                retry_after: WINDOW_SECONDS,
-              }),
-              {
-                status: 429,
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Retry-After': String(WINDOW_SECONDS),
-                },
-              }
+              JSON.stringify({ error: 'rate_limit_warning', warning: 1, message: WARNING_1_MESSAGE, retry_after: WINDOW_SECONDS }),
+              { status: 429, headers: { 'Content-Type': 'application/json', 'Retry-After': String(WINDOW_SECONDS) } }
             )
           } else if (warningCount === 1) {
-            // ── Strike 2 — Second warning ─────────────────
-            await supabase
-              .from('profiles')
-              .update({ abuse_warning_count: 2 })
-              .eq('id', userId)
-
-            await supabase
-              .from('notifications')
-              .insert({
-                user_id: userId,
-                message: WARNING_2_MESSAGE,
-              })
+            await supabase.from('profiles').update({ abuse_warning_count: 2 }).eq('id', userId)
+            await supabase.from('notifications').insert({ user_id: userId, message: WARNING_2_MESSAGE })
 
             return new NextResponse(
-              JSON.stringify({
-                error: 'rate_limit_warning',
-                warning: 2,
-                message: WARNING_2_MESSAGE,
-                retry_after: WINDOW_SECONDS,
-              }),
-              {
-                status: 429,
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Retry-After': String(WINDOW_SECONDS),
-                },
-              }
+              JSON.stringify({ error: 'rate_limit_warning', warning: 2, message: WARNING_2_MESSAGE, retry_after: WINDOW_SECONDS }),
+              { status: 429, headers: { 'Content-Type': 'application/json', 'Retry-After': String(WINDOW_SECONDS) } }
             )
           } else {
-            // ── Strike 3 — Flag and restrict ──────────────
-            await supabase
-              .from('profiles')
-              .update({ abuse_warning_count: 3 })
-              .eq('id', userId)
-
+            await supabase.from('profiles').update({ abuse_warning_count: 3 }).eq('id', userId)
             await supabase
               .from('subscriptions')
               .update({
@@ -306,23 +265,11 @@ export async function middleware(req: NextRequest) {
               })
               .eq('user_id', userId)
               .eq('banned', false)
-
-            await supabase
-              .from('notifications')
-              .insert({
-                user_id: userId,
-                message: RESTRICTED_MESSAGE,
-              })
+            await supabase.from('notifications').insert({ user_id: userId, message: RESTRICTED_MESSAGE })
 
             return new NextResponse(
-              JSON.stringify({
-                error: 'account_restricted',
-                message: RESTRICTED_MESSAGE,
-              }),
-              {
-                status: 403,
-                headers: { 'Content-Type': 'application/json' },
-              }
+              JSON.stringify({ error: 'account_restricted', message: RESTRICTED_MESSAGE }),
+              { status: 403, headers: { 'Content-Type': 'application/json' } }
             )
           }
         }
@@ -331,7 +278,6 @@ export async function middleware(req: NextRequest) {
       }
     }
 
-    // Standard cooldown — under abuse threshold, just throttle
     return new NextResponse(
       JSON.stringify({
         error: 'rate_limit_exceeded',

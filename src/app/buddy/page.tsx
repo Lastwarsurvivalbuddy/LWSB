@@ -37,7 +37,6 @@ export default function BuddyPage() {
   const [feedback, setFeedback] = useState<FeedbackState>({});
   const [feedbackSending, setFeedbackSending] = useState<Record<string, boolean>>({});
   const [accessToken, setAccessToken] = useState<string>('');
-
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -74,39 +73,28 @@ export default function BuddyPage() {
     const {
       data: { session },
     } = await supabase.auth.getSession();
+
     if (!session) {
       router.push('/signin');
       return;
     }
 
-    setAccessToken(session.access_token);
+    const token = session.access_token;
+    setAccessToken(token);
 
-    const { data: sub } = await supabase
-      .from('subscriptions')
-      .select('tier')
-      .eq('user_id', session.user.id)
-      .single();
-    if (sub) setTier(sub.tier);
-
-    const monthKey = new Date().toISOString().slice(0, 7);
-    const { data: usage } = await supabase
-      .from('daily_usage')
-      .select('question_count')
-      .eq('user_id', session.user.id)
-      .eq('date', monthKey)
-      .single();
-
-    const limits: Record<string, number> = {
-      free: 20,
-      pro: 100,
-      elite: 250,
-      founding: 300,
-      alliance: 250,
-    };
-    const userTier = sub?.tier || 'free';
-    const userLimit = limits[userTier] || 20;
-    const used = usage?.question_count || 0;
-    setMonthlyLimit({ used, limit: userLimit });
+    // Fetch quota via API (service role key — avoids client RLS / date type issues)
+    try {
+      const res = await fetch('/api/buddy/quota', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTier(data.tier || 'free');
+        setMonthlyLimit({ used: data.used ?? 0, limit: data.limit ?? 20 });
+      }
+    } catch {
+      // Non-fatal — quota display degrades gracefully
+    }
   }
 
   function handleScreenshotClick() {
@@ -176,6 +164,7 @@ export default function BuddyPage() {
         message: userMessage.content,
         history: messages.map(m => ({ role: m.role, content: m.content })),
       };
+
       if (imageToSend) {
         body.image = { base64: imageToSend.base64, mimeType: imageToSend.mimeType };
       }
@@ -211,6 +200,7 @@ export default function BuddyPage() {
 
       const data = await res.json();
       const assistantId = crypto.randomUUID();
+
       setMessages(prev => [
         ...prev,
         {
@@ -220,6 +210,7 @@ export default function BuddyPage() {
           timestamp: new Date(),
         },
       ]);
+
       // Pre-seed feedback state as null (not voted)
       setFeedback(prev => ({ ...prev, [assistantId]: null }));
       setMonthlyLimit(prev => (prev ? { ...prev, used: prev.used + 1 } : prev));
@@ -343,6 +334,7 @@ export default function BuddyPage() {
                       </div>
                     )}
                   </div>
+
                   {/* Feedback buttons — assistant only, only if pre-seeded in feedback state */}
                   {msg.role === 'assistant' && msg.id in feedback && (
                     <div className="feedback-row">
@@ -564,7 +556,10 @@ export default function BuddyPage() {
         }
         .messages-area::-webkit-scrollbar { width: 4px; }
         .messages-area::-webkit-scrollbar-track { background: transparent; }
-        .messages-area::-webkit-scrollbar-thumb { background: #1e2535; border-radius: 2px; }
+        .messages-area::-webkit-scrollbar-thumb {
+          background: #1e2535;
+          border-radius: 2px;
+        }
         .empty-state {
           display: flex;
           flex-direction: column;
@@ -611,7 +606,11 @@ export default function BuddyPage() {
           letter-spacing: 0.01em;
           white-space: nowrap;
         }
-        .prompt-chip:hover { border-color: #c9b87a; color: #c9b87a; background: #0f1420; }
+        .prompt-chip:hover {
+          border-color: #c9b87a;
+          color: #c9b87a;
+          background: #0f1420;
+        }
         .messages-list {
           display: flex;
           flex-direction: column;
@@ -634,7 +633,10 @@ export default function BuddyPage() {
           flex-shrink: 0;
           margin-top: 2px;
         }
-        .assistant-avatar { background: #12182a; border: 1px solid #1e2535; }
+        .assistant-avatar {
+          background: #12182a;
+          border: 1px solid #1e2535;
+        }
         .bubble-wrapper {
           display: flex;
           flex-direction: column;
@@ -658,7 +660,10 @@ export default function BuddyPage() {
           border: 1px solid #1e2535;
           color: #d0c9b5;
         }
-        .bubble-text { white-space: pre-wrap; word-break: break-word; }
+        .bubble-text {
+          white-space: pre-wrap;
+          word-break: break-word;
+        }
         .image-preview-in-bubble {
           margin-bottom: 10px;
           border-radius: 8px;
@@ -790,7 +795,10 @@ export default function BuddyPage() {
           border-radius: 8px;
           padding: 8px 12px;
         }
-        .pending-thumb-wrap { position: relative; flex-shrink: 0; }
+        .pending-thumb-wrap {
+          position: relative;
+          flex-shrink: 0;
+        }
         .pending-thumb {
           width: 52px;
           height: 52px;
@@ -838,7 +846,10 @@ export default function BuddyPage() {
           gap: 6px;
           transition: border-color 0.2s, color 0.2s;
         }
-        .screenshot-btn:hover:not(:disabled) { border-color: #c9b87a; color: #c9b87a; }
+        .screenshot-btn:hover:not(:disabled) {
+          border-color: #c9b87a;
+          color: #c9b87a;
+        }
         .screenshot-btn:disabled { opacity: 0.4; cursor: not-allowed; }
         .pro-badge {
           background: #c9b87a;
@@ -850,7 +861,11 @@ export default function BuddyPage() {
           letter-spacing: 0.08em;
           margin-left: 2px;
         }
-        .text-input-row { display: flex; gap: 8px; align-items: flex-end; }
+        .text-input-row {
+          display: flex;
+          gap: 8px;
+          align-items: flex-end;
+        }
         .chat-input {
           flex: 1;
           background: #0a0e18;
@@ -885,7 +900,11 @@ export default function BuddyPage() {
           transition: background 0.2s, opacity 0.2s;
         }
         .send-btn:hover:not(.disabled) { background: #d9cc8e; }
-        .send-btn.disabled { background: #1e2535; color: #3a4560; cursor: not-allowed; }
+        .send-btn.disabled {
+          background: #1e2535;
+          color: #3a4560;
+          cursor: not-allowed;
+        }
         .spinner {
           width: 16px;
           height: 16px;

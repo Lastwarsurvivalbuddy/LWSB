@@ -1,27 +1,26 @@
 'use client'
-
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 
 const CATEGORIES = [
-  { value: 'unit', label: '⚔️ Unit' },
-  { value: 'event', label: '📅 Event' },
-  { value: 'mechanic', label: '⚙️ Mechanic' },
-  { value: 'pack', label: '💰 Pack' },
-  { value: 'other', label: '🔍 Other' },
+  { value: 'unit',      label: '⚔️ Unit' },
+  { value: 'event',     label: '📅 Event' },
+  { value: 'mechanic',  label: '⚙️ Mechanic' },
+  { value: 'pack',      label: '💰 Pack' },
+  { value: 'other',     label: '🔍 Other' },
 ]
 
 const SCREENSHOT_LIMITS: Record<string, number> = {
-  free: 2,
-  pro: 5,
-  elite: 5,
-  founding: 5,
-  alliance: 5
+  free: 5,
+  pro: 20,
+  elite: 20,
+  founding: 20,
+  alliance: 20,
 }
 
 export default function TeachBuddy({
   serverNumber,
-  tier = 'free'
+  tier = 'free',
 }: {
   serverNumber: number
   tier?: string
@@ -35,7 +34,7 @@ export default function TeachBuddy({
   const [screenshotCount, setScreenshotCount] = useState(0)
   const [countLoaded, setCountLoaded] = useState(false)
 
-  const screenshotLimit = SCREENSHOT_LIMITS[tier] ?? 2
+  const screenshotLimit = SCREENSHOT_LIMITS[tier] ?? 5
   const screenshotLimitReached = screenshotCount >= screenshotLimit
 
   useEffect(() => {
@@ -46,7 +45,6 @@ export default function TeachBuddy({
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
-
       const res = await fetch('/api/submissions', {
         headers: { 'Authorization': `Bearer ${session.access_token}` }
       })
@@ -80,7 +78,6 @@ export default function TeachBuddy({
       if (!session) throw new Error('Not authenticated')
 
       let screenshot_path = null
-
       if (screenshot) {
         const ext = screenshot.name.split('.').pop()
         const path = `${session.user.id}/${Date.now()}.${ext}`
@@ -97,13 +94,7 @@ export default function TeachBuddy({
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`
         },
-        body: JSON.stringify({
-          claim,
-          category,
-          scope,
-          server_number: serverNumber,
-          screenshot_path
-        })
+        body: JSON.stringify({ claim, category, scope, server_number: serverNumber, screenshot_path })
       })
 
       if (!res.ok) {
@@ -117,13 +108,11 @@ export default function TeachBuddy({
       }
 
       if (screenshot_path) setScreenshotCount(c => c + 1)
-
       setStatus('success')
       setClaim('')
       setScreenshot(null)
       setScreenshotPreview(null)
       setTimeout(() => setStatus('idle'), 3000)
-
     } catch (err) {
       console.error(err)
       setStatus('error')
@@ -276,8 +265,8 @@ export default function TeachBuddy({
             📸 {!countLoaded
               ? 'Loading...'
               : screenshotLimitReached
-              ? `Daily screenshot limit reached (${screenshotLimit}/day)`
-              : `Attach a screenshot (optional) · ${screenshotCount}/${screenshotLimit} today`}
+              ? `Monthly screenshot limit reached (${screenshotLimit}/month)`
+              : `Attach a screenshot (optional) · ${screenshotCount}/${screenshotLimit} this month`}
           </label>
         )}
       </div>
@@ -291,7 +280,10 @@ export default function TeachBuddy({
           padding: '12px',
           borderRadius: '8px',
           border: 'none',
-          background: status === 'success' ? '#22c55e' : status === 'error' ? '#ef4444' : '#f0c040',
+          background:
+            status === 'success' ? '#22c55e' :
+            status === 'error'   ? '#ef4444' :
+            '#f0c040',
           color: status === 'error' ? '#fff' : '#0d0d1a',
           fontWeight: 700,
           fontSize: '14px',
@@ -299,10 +291,13 @@ export default function TeachBuddy({
           opacity: !claim.trim() || status === 'submitting' ? 0.5 : 1
         }}
       >
-        {status === 'submitting' ? 'Submitting...' :
-         status === 'success' ? '✓ Submitted — Thanks Commander!' :
-         status === 'error' ? 'Something went wrong — try again' :
-         'Submit to Buddy'}
+        {status === 'submitting'
+          ? 'Submitting...'
+          : status === 'success'
+          ? '✓ Submitted — Thanks Commander!'
+          : status === 'error'
+          ? 'Something went wrong — try again'
+          : 'Submit to Buddy'}
       </button>
     </div>
   )

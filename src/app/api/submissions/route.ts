@@ -7,12 +7,17 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+// Monthly screenshot limits per tier for TeachBuddy submissions
 const SCREENSHOT_LIMITS: Record<string, number> = {
-  free:     2,
-  pro:      5,
-  elite:    5,
-  founding: 5,
-  alliance: 5,
+  free: 5,
+  pro: 20,
+  elite: 20,
+  founding: 20,
+  alliance: 20,
+}
+
+function getCurrentMonthKey(): string {
+  return new Date().toISOString().slice(0, 7) // YYYY-MM
 }
 
 export async function GET(req: NextRequest) {
@@ -24,17 +29,15 @@ export async function GET(req: NextRequest) {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token)
     if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const today = new Date().toISOString().split('T')[0]
-
+    const monthKey = getCurrentMonthKey()
     const { data } = await supabase
       .from('daily_usage')
       .select('submission_screenshot_count')
       .eq('user_id', user.id)
-      .eq('date', today)
+      .eq('date', monthKey)
       .single()
 
     return NextResponse.json({ count: data?.submission_screenshot_count ?? 0 })
-
   } catch (err) {
     console.error(err)
     return NextResponse.json({ error: 'Server error' }, { status: 500 })
@@ -62,7 +65,6 @@ export async function POST(req: NextRequest) {
       .select('user_id')
       .eq('user_id', user.id)
       .single()
-
     const isModerator = !!modRow
 
     // ─── Get tier ───
@@ -71,10 +73,10 @@ export async function POST(req: NextRequest) {
       .select('tier')
       .eq('user_id', user.id)
       .single()
-
     const tier = sub?.tier ?? 'free'
-    const limit = SCREENSHOT_LIMITS[tier] ?? 2
-    const today = new Date().toISOString().split('T')[0]
+    const limit = SCREENSHOT_LIMITS[tier] ?? 5
+
+    const monthKey = getCurrentMonthKey()
 
     // ─── Screenshot limit check ───
     if (screenshot_path && !isModerator) {
@@ -82,21 +84,25 @@ export async function POST(req: NextRequest) {
         .from('daily_usage')
         .select('submission_screenshot_count')
         .eq('user_id', user.id)
-        .eq('date', today)
+        .eq('date', monthKey)
         .single()
 
       const currentCount = usage?.submission_screenshot_count ?? 0
+
       if (currentCount >= limit) {
         return NextResponse.json({ error: 'Screenshot limit reached' }, { status: 429 })
       }
 
       await supabase
         .from('daily_usage')
-        .upsert({
-          user_id: user.id,
-          date: today,
-          submission_screenshot_count: currentCount + 1,
-        }, { onConflict: 'user_id,date' })
+        .upsert(
+          {
+            user_id: user.id,
+            date: monthKey,
+            submission_screenshot_count: currentCount + 1,
+          },
+          { onConflict: 'user_id,date' }
+        )
     }
 
     // ─── Insert submission ───
@@ -118,7 +124,6 @@ export async function POST(req: NextRequest) {
     await incrementStreak(supabase, user.id)
 
     return NextResponse.json({ success: true })
-
   } catch (err) {
     console.error('Submission error:', err)
     return NextResponse.json({ error: 'Server error' }, { status: 500 })
