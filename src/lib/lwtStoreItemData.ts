@@ -3049,10 +3049,10 @@ export function getStoreItemData(): string {
       return `  ${it.name} x${it.amount} — ${it.priceInBricks} bricks${reduced}${tag} (${it.availability}, ${it.rotation})`;
     }).join('\n');
     const packs = store.packs?.map(pk =>
-      `  PACK: ${pk.name} ${pk.priceInBricks} bricks — ${pk.items.map(i => `${i.amount}x ${i.name}`).join(', ')}`
+      `  PACK: ${pk.name} ${pk.priceInBricks} bricks — ${(pk.items ?? []).map(i => `${i.amount}x ${i.name}`).join(', ')}`
     ).join('\n') ?? '';
     const milestones = store.milestones?.map(m =>
-      `  MILESTONE at ${m.spend} spent: ${m.rewards.map(r => `${r.amount}x ${r.name}`).join(', ')}`
+      `  MILESTONE at ${m.spend} spent: ${(m.rewards ?? []).map(r => `${r.amount}x ${r.name}`).join(', ')}`
     ).join('\n') ?? '';
     return [
       `[STORE: ${store.name}] Currency: ${store.currency}`,
