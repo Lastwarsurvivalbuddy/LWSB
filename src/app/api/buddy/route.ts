@@ -459,40 +459,44 @@ You are Buddy — the personal AI commander coach for Last War: Survival. The pl
 
   const communityIntel = await getApprovedSubmissions(Number(profile.server_number));
 
-  const squadData = getSquadDataSummary();
-  const overlordData = getOverlordDataSummary();
-  const tricksData = getTricksDataSummary();
-  const radarMissionData = getRadarMissionDataSummary();
-  const storesData = getStoresDataSummary();
-  const allianceData = getAllianceDataSummary();
-  const desertStormData = getDesertStormDataSummary();
-  const zombieSiegeData = getZombieSiegeDataSummary();
-  const capitolData = getCapitolDataSummary();
-  const warzoneDuelData = getWarzoneDuelDataSummary();
-  const generalsTrial = getGeneralsTrialSummary();
-  const skyBattlefront = getSkyBattlefrontSummary();
-  const meteoriteData = getMeteoriteSummary();
-  const lwtVIPData = getLWTVIPSummary();
-  const t11Data = getT11DataSummary();
-  const decorationTierData = getDecorationTierSummary();
-  const heroTierData = getHeroTierSummary();
-  const professionData = getProfessionDataSummary();
-  const tacticCardData = getTacticCardSummary();
+  function safe(name: string, fn: () => string): string {
+    try { return fn(); } catch (e) { throw new Error(`Module crash: ${name} — ${e instanceof Error ? e.message : e}`); }
+  }
+
+  const squadData = safe('getSquadDataSummary', getSquadDataSummary);
+  const overlordData = safe('getOverlordDataSummary', getOverlordDataSummary);
+  const tricksData = safe('getTricksDataSummary', getTricksDataSummary);
+  const radarMissionData = safe('getRadarMissionDataSummary', getRadarMissionDataSummary);
+  const storesData = safe('getStoresDataSummary', getStoresDataSummary);
+  const allianceData = safe('getAllianceDataSummary', getAllianceDataSummary);
+  const desertStormData = safe('getDesertStormDataSummary', getDesertStormDataSummary);
+  const zombieSiegeData = safe('getZombieSiegeDataSummary', getZombieSiegeDataSummary);
+  const capitolData = safe('getCapitolDataSummary', getCapitolDataSummary);
+  const warzoneDuelData = safe('getWarzoneDuelDataSummary', getWarzoneDuelDataSummary);
+  const generalsTrial = safe('getGeneralsTrialSummary', getGeneralsTrialSummary);
+  const skyBattlefront = safe('getSkyBattlefrontSummary', getSkyBattlefrontSummary);
+  const meteoriteData = safe('getMeteoriteSummary', getMeteoriteSummary);
+  const lwtVIPData = safe('getLWTVIPSummary', getLWTVIPSummary);
+  const t11Data = safe('getT11DataSummary', getT11DataSummary);
+  const decorationTierData = safe('getDecorationTierSummary', getDecorationTierSummary);
+  const heroTierData = safe('getHeroTierSummary', getHeroTierSummary);
+  const professionData = safe('getProfessionDataSummary', getProfessionDataSummary);
+  const tacticCardData = safe('getTacticCardSummary', getTacticCardSummary);
   const survivorCardData = lwtSurvivorCardData;
-  const ghostOpsData = getGhostOpsDataSummary();
-  const marshalsGuardData = getMarshalsGuardSummary();
-  const skillChipData = getSkillChipDataSummary();
-  const combatFormulasData = getCombatFormulasDataSummary();
-  const diamondSpendingData = getDiamondSpendingDataSummary();
-  const progressionData = getProgressionDataSummary();
-  const heroSquadData = getHeroSquadDataSummary();
-  const hedgePackData = getPackDataSummary();
-  const hedgeStoreItemData = getStoreItemData();
-  const hedgeDroneData = getHedgeDroneDataSummary();
-  const hedgeT11ArmamentData = getT11ArmamentSummary();
-  const hedgeOverlordCostData = getOverlordCostSummary();
-  const hedgeBuildingCostData = getHedgeBuildingCostSummary();
-  const hedgeHeroCostData = getHeroCostDataSummary();
+  const ghostOpsData = safe('getGhostOpsDataSummary', getGhostOpsDataSummary);
+  const marshalsGuardData = safe('getMarshalsGuardSummary', getMarshalsGuardSummary);
+  const skillChipData = safe('getSkillChipDataSummary', getSkillChipDataSummary);
+  const combatFormulasData = safe('getCombatFormulasDataSummary', getCombatFormulasDataSummary);
+  const diamondSpendingData = safe('getDiamondSpendingDataSummary', getDiamondSpendingDataSummary);
+  const progressionData = safe('getProgressionDataSummary', getProgressionDataSummary);
+  const heroSquadData = safe('getHeroSquadDataSummary', getHeroSquadDataSummary);
+  const hedgePackData = safe('getPackDataSummary', getPackDataSummary);
+  const hedgeStoreItemData = safe('getStoreItemData', getStoreItemData);
+  const hedgeDroneData = safe('getHedgeDroneDataSummary', getHedgeDroneDataSummary);
+  const hedgeT11ArmamentData = safe('getT11ArmamentSummary', getT11ArmamentSummary);
+  const hedgeOverlordCostData = safe('getOverlordCostSummary', getOverlordCostSummary);
+  const hedgeBuildingCostData = safe('getHedgeBuildingCostSummary', getHedgeBuildingCostSummary);
+  const hedgeHeroCostData = safe('getHeroCostDataSummary', getHeroCostDataSummary);
 
   return `## About This App
 Last War: Survival Buddy (LastWarSurvivalBuddy.com) is a personalized AI coaching app for Last War: Survival players. It is a fan-built community tool — not affiliated with or endorsed by FUNFLY PTE. LTD.
