@@ -110,6 +110,15 @@ interface ContactSubmission {
   updated_at: string
 }
 
+interface BuddyFeedback {
+  id: string
+  user_id: string
+  message_id: string
+  rating: 'up' | 'down'
+  response_text: string | null
+  created_at: string
+}
+
 const BADGE_OPTIONS = ['KB UPDATE', 'NEW', 'FIXED', 'EVENT']
 
 const PAYOUT_METHOD_LABELS: Record<string, string> = {
@@ -151,7 +160,7 @@ export default function MissionControlPage() {
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<StatsData | null>(null)
   const [statsError, setStatsError] = useState('')
-  const [activeTab, setActiveTab] = useState<'overview' | 'submissions' | 'affiliates' | 'users' | 'news' | 'contact'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'submissions' | 'affiliates' | 'users' | 'news' | 'contact' | 'feedback'>('overview')
   const [token, setToken] = useState<string | null>(null)
 
   const [screenshotUrls, setScreenshotUrls] = useState<Record<string, string>>({})
@@ -208,6 +217,12 @@ export default function MissionControlPage() {
   const [contactNotifyActing, setContactNotifyActing] = useState<string | null>(null)
   const [contactNotifySent, setContactNotifySent] = useState<Record<string, boolean>>({})
 
+  // ── Feedback state ───────────────────────────────────────────────────────────
+  const [buddyFeedback, setBuddyFeedback] = useState<BuddyFeedback[]>([])
+  const [feedbackLoading, setFeedbackLoading] = useState(false)
+  const [feedbackFilter, setFeedbackFilter] = useState<'down' | 'up' | 'all'>('down')
+  const [feedbackExpandedId, setFeedbackExpandedId] = useState<string | null>(null)
+
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession()
@@ -216,7 +231,6 @@ export default function MissionControlPage() {
       setAuthorized(true)
       setLoading(false)
 
-      // ── Reset new-signups badge counter on Mission Control load ──
       try {
         await fetch('/api/admin/badge-counts', {
           method: 'POST',
@@ -353,7 +367,6 @@ export default function MissionControlPage() {
       const data = await res.json()
       const list: ContactSubmission[] = data.submissions ?? []
       setContactSubmissions(list)
-      // Seed local state for notes + status inputs
       const notes: Record<string, string> = {}
       const statuses: Record<string, ContactStatus> = {}
       for (const s of list) {
@@ -364,6 +377,20 @@ export default function MissionControlPage() {
       setContactStatusInputs(statuses)
     }
     setContactLoading(false)
+  }, [])
+
+  const fetchFeedback = useCallback(async (accessToken: string, rating: 'down' | 'up' | 'all' = 'down') => {
+    setFeedbackLoading(true)
+    const params = new URLSearchParams()
+    if (rating !== 'all') params.set('rating', rating)
+    const res = await fetch(`/api/admin/feedback?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (res.ok) {
+      const data = await res.json()
+      setBuddyFeedback(data.feedback ?? [])
+    }
+    setFeedbackLoading(false)
   }, [])
 
   async function handleContactUpdate(id: string) {
@@ -424,6 +451,10 @@ export default function MissionControlPage() {
 
   useEffect(() => {
     if (authorized && token && activeTab === 'contact') fetchContact(token, contactFilter)
+  }, [authorized, token, activeTab]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (authorized && token && activeTab === 'feedback') fetchFeedback(token, feedbackFilter)
   }, [authorized, token, activeTab]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleAction(id: string, action: 'approved' | 'rejected') {
@@ -636,6 +667,8 @@ export default function MissionControlPage() {
     ? contactSubmissions
     : contactSubmissions.filter(s => s.status === contactFilter)
 
+  const downvoteCount = buddyFeedback.filter(f => f.rating === 'down').length
+
   const ledgerRows = approvedAffiliates.map(a => {
     const pd = payoutData[a.id]
     return {
@@ -721,7 +754,7 @@ export default function MissionControlPage() {
 
       <div className="border-b border-zinc-800 bg-zinc-950">
         <div className="max-w-5xl mx-auto px-4 flex gap-0 overflow-x-auto">
-          {(['overview', 'submissions', 'affiliates', 'users', 'news', 'contact'] as const).map(tab => (
+          {(['overview', 'submissions', 'affiliates', 'users', 'news', 'contact', 'feedback'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -742,6 +775,16 @@ export default function MissionControlPage() {
                   {openContactCount > 0 && (
                     <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-500 text-black text-[10px] font-bold leading-none">
                       {openContactCount}
+                    </span>
+                  )}
+                </span>
+              )}
+              {tab === 'feedback' && (
+                <span className="flex items-center gap-1.5">
+                  👎 Feedback
+                  {activeTab !== 'feedback' && downvoteCount > 0 && (
+                    <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-red-500 text-black text-[10px] font-bold leading-none">
+                      {downvoteCount}
                     </span>
                   )}
                 </span>
@@ -1592,23 +1635,19 @@ export default function MissionControlPage() {
 
             <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-5 mb-6">
               <p className="text-xs font-bold text-zinc-300 mb-4">Post new item</p>
-
               <div className="flex gap-2 mb-4 flex-wrap">
                 {BADGE_OPTIONS.map(b => (
                   <button
                     key={b}
                     onClick={() => setNewsBadge(b)}
                     className={`text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded border transition-colors ${
-                      newsBadge === b
-                        ? newsBadgeStyle(b)
-                        : 'border-zinc-700 text-zinc-500 hover:text-zinc-300'
+                      newsBadge === b ? newsBadgeStyle(b) : 'border-zinc-700 text-zinc-500 hover:text-zinc-300'
                     }`}
                   >
                     {b}
                   </button>
                 ))}
               </div>
-
               <textarea
                 value={newsMessage}
                 onChange={e => setNewsMessage(e.target.value)}
@@ -1616,7 +1655,6 @@ export default function MissionControlPage() {
                 rows={3}
                 className="w-full bg-zinc-950 border border-zinc-700 rounded-xl text-white text-sm p-3 mb-3 resize-none focus:outline-none focus:border-amber-500/60 placeholder:text-zinc-600"
               />
-
               <input
                 type="text"
                 value={newsLink}
@@ -1624,7 +1662,6 @@ export default function MissionControlPage() {
                 placeholder="Link (optional) — e.g. /war-room or /upgrade"
                 className="w-full bg-zinc-950 border border-zinc-700 rounded-xl text-white text-sm px-3 py-2 mb-4 focus:outline-none focus:border-amber-500/60 placeholder:text-zinc-600"
               />
-
               <button
                 onClick={handleNewsPost}
                 disabled={newsActing || !newsMessage.trim()}
@@ -1639,13 +1676,11 @@ export default function MissionControlPage() {
                 <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
               </div>
             )}
-
             {!newsLoading && newsItems.length === 0 && (
               <div className="text-center py-16">
-                <p className="text-zinc-600 text-sm">No news items yet. Post the first one above.</p>
+                <p className="text-zinc-600 text-sm">No news items yet.</p>
               </div>
             )}
-
             {!newsLoading && newsItems.map(item => (
               <div
                 key={item.id}
@@ -1658,9 +1693,7 @@ export default function MissionControlPage() {
                 </span>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-zinc-300 leading-relaxed">{item.message}</p>
-                  {item.link && (
-                    <p className="text-[10px] text-zinc-600 font-mono mt-0.5">→ {item.link}</p>
-                  )}
+                  {item.link && <p className="text-[10px] text-zinc-600 font-mono mt-0.5">→ {item.link}</p>}
                   <p className="text-[10px] text-zinc-700 font-mono mt-1">
                     {new Date(item.created_at).toLocaleDateString()} · {item.active ? 'visible' : 'hidden'}
                   </p>
@@ -1669,7 +1702,6 @@ export default function MissionControlPage() {
                   <button
                     onClick={() => handleNewsToggle(item)}
                     disabled={newsToggleActing === item.id}
-                    title={item.active ? 'Hide from dashboard' : 'Show on dashboard'}
                     className={`text-xs px-2.5 py-1 rounded-lg border transition-colors disabled:opacity-40 ${
                       item.active
                         ? 'border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500'
@@ -1681,7 +1713,6 @@ export default function MissionControlPage() {
                   <button
                     onClick={() => handleNewsDelete(item.id)}
                     disabled={newsDeleteActing === item.id}
-                    title="Delete permanently"
                     className="text-xs px-2.5 py-1 rounded-lg border border-zinc-800 text-zinc-600 hover:text-red-400 hover:border-red-800/50 transition-colors disabled:opacity-40"
                   >
                     {newsDeleteActing === item.id ? '…' : '✕'}
@@ -1710,7 +1741,6 @@ export default function MissionControlPage() {
               </button>
             </div>
 
-            {/* Status filter pills */}
             <div className="flex gap-2 mb-5 flex-wrap">
               {(['all', 'open', 'in_progress', 'resolved', 'closed'] as const).map(f => {
                 const count = f === 'all'
@@ -1758,7 +1788,6 @@ export default function MissionControlPage() {
                     sub.status === 'open' ? 'border-amber-500/20' : 'border-zinc-800'
                   }`}
                 >
-                  {/* ── Row header — always visible ── */}
                   <button
                     onClick={() => setContactExpandedId(isExpanded ? null : sub.id)}
                     className="w-full px-5 py-4 flex items-center gap-3 text-left hover:bg-zinc-800/20 transition-colors"
@@ -1769,9 +1798,7 @@ export default function MissionControlPage() {
                     <span className={`flex-shrink-0 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${contactStatusStyle(sub.status)}`}>
                       {sub.status.replace('_', ' ')}
                     </span>
-                    <span className="flex-1 text-sm text-zinc-300 truncate min-w-0">
-                      {sub.message}
-                    </span>
+                    <span className="flex-1 text-sm text-zinc-300 truncate min-w-0">{sub.message}</span>
                     <div className="flex-shrink-0 text-right ml-2">
                       <p className="text-[11px] text-zinc-400 font-mono">{sub.email ?? '—'}</p>
                       <p className="text-[10px] text-zinc-600 font-mono">{new Date(sub.created_at).toLocaleDateString()}</p>
@@ -1779,16 +1806,12 @@ export default function MissionControlPage() {
                     <span className="text-zinc-600 text-xs ml-1">{isExpanded ? '▲' : '▼'}</span>
                   </button>
 
-                  {/* ── Expanded detail panel ── */}
                   {isExpanded && (
                     <div className="px-5 pb-5 border-t border-zinc-800/60">
-                      {/* Full message */}
                       <div className="bg-zinc-950/60 rounded-xl p-4 mt-4 mb-4">
                         <p className="text-[10px] text-zinc-600 font-mono uppercase tracking-wide mb-2">Message</p>
                         <p className="text-sm text-zinc-200 leading-relaxed whitespace-pre-wrap">{sub.message}</p>
                       </div>
-
-                      {/* Screenshot */}
                       {sub.screenshot_base64 && (
                         <div className="mb-4">
                           <p className="text-[10px] text-zinc-600 font-mono uppercase tracking-wide mb-2">
@@ -1801,13 +1824,9 @@ export default function MissionControlPage() {
                           />
                         </div>
                       )}
-
-                      {/* Status + notes controls */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                         <div>
-                          <label className="text-[10px] text-zinc-500 font-mono uppercase tracking-wide block mb-1.5">
-                            Status
-                          </label>
+                          <label className="text-[10px] text-zinc-500 font-mono uppercase tracking-wide block mb-1.5">Status</label>
                           <select
                             value={contactStatusInputs[sub.id] ?? sub.status}
                             onChange={e => setContactStatusInputs(prev => ({ ...prev, [sub.id]: e.target.value as ContactStatus }))}
@@ -1819,9 +1838,7 @@ export default function MissionControlPage() {
                           </select>
                         </div>
                         <div>
-                          <label className="text-[10px] text-zinc-500 font-mono uppercase tracking-wide block mb-1.5">
-                            Admin Notes
-                          </label>
+                          <label className="text-[10px] text-zinc-500 font-mono uppercase tracking-wide block mb-1.5">Admin Notes</label>
                           <input
                             type="text"
                             placeholder="Internal note..."
@@ -1831,7 +1848,6 @@ export default function MissionControlPage() {
                           />
                         </div>
                       </div>
-
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleContactUpdate(sub.id)}
@@ -1840,8 +1856,6 @@ export default function MissionControlPage() {
                         >
                           {contactActing === sub.id ? '…' : '💾 Save'}
                         </button>
-
-                        {/* Notify button — only if we have a user_id */}
                         {sub.user_id && (
                           <button
                             onClick={() => setContactNotifyPanelId(contactNotifyPanelId === sub.id ? null : sub.id)}
@@ -1857,8 +1871,6 @@ export default function MissionControlPage() {
                           </button>
                         )}
                       </div>
-
-                      {/* Notify panel */}
                       {contactNotifyPanelId === sub.id && sub.user_id && (
                         <div className="mt-3 flex gap-2 items-start">
                           <textarea
@@ -1890,6 +1902,121 @@ export default function MissionControlPage() {
                 </div>
               )
             })}
+          </>
+        )}
+
+        {/* ── Buddy Response Feedback ── */}
+        {activeTab === 'feedback' && (
+          <>
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+              <div>
+                <h2 className="text-base font-bold text-amber-400">👎 Response Feedback</h2>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Responses users rated · use to spot system prompt gaps
+                </p>
+              </div>
+              <button
+                onClick={() => token && fetchFeedback(token, feedbackFilter)}
+                className="text-xs font-bold px-3 py-1.5 rounded-lg border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-colors"
+              >
+                ↻ Refresh
+              </button>
+            </div>
+
+            {/* Filter pills */}
+            <div className="flex gap-2 mb-5 flex-wrap">
+              {(['down', 'up', 'all'] as const).map(f => (
+                <button
+                  key={f}
+                  onClick={() => {
+                    setFeedbackFilter(f)
+                    if (token) fetchFeedback(token, f)
+                  }}
+                  className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider border transition-colors ${
+                    feedbackFilter === f
+                      ? f === 'down'
+                        ? 'bg-red-500/15 border-red-500/40 text-red-400'
+                        : f === 'up'
+                          ? 'bg-green-500/15 border-green-500/40 text-green-400'
+                          : 'bg-amber-500/15 border-amber-500/40 text-amber-400'
+                      : 'border-zinc-700 text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
+                  {f === 'down' ? '👎 thumbs down' : f === 'up' ? '👍 thumbs up' : 'all'}
+                  {' '}({buddyFeedback.filter(fb => f === 'all' || fb.rating === f).length})
+                </button>
+              ))}
+            </div>
+
+            {feedbackLoading && (
+              <div className="flex items-center justify-center py-16">
+                <div className="w-6 h-6 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+
+            {!feedbackLoading && buddyFeedback.length === 0 && (
+              <div className="text-center py-16">
+                <p className="text-zinc-600 text-sm">No feedback yet.</p>
+              </div>
+            )}
+
+            {!feedbackLoading && buddyFeedback.length > 0 && (
+              <div className="space-y-2">
+                {buddyFeedback.map(fb => {
+                  const isExpanded = feedbackExpandedId === fb.id
+                  return (
+                    <div
+                      key={fb.id}
+                      className={`bg-zinc-900/60 border rounded-2xl overflow-hidden transition-colors ${
+                        fb.rating === 'down' ? 'border-red-900/30' : 'border-green-900/20'
+                      }`}
+                    >
+                      {/* Row header */}
+                      <button
+                        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-zinc-800/30 transition-colors"
+                        onClick={() => setFeedbackExpandedId(isExpanded ? null : fb.id)}
+                      >
+                        <span className="text-base flex-shrink-0">{fb.rating === 'up' ? '👍' : '👎'}</span>
+                        <span className="text-xs text-zinc-400 flex-1 truncate min-w-0">
+                          {fb.response_text
+                            ? fb.response_text.slice(0, 140) + (fb.response_text.length > 140 ? '…' : '')
+                            : <span className="text-zinc-600 italic">no response text stored</span>
+                          }
+                        </span>
+                        <div className="flex-shrink-0 text-right ml-2">
+                          <p className="text-[10px] text-zinc-600 font-mono whitespace-nowrap">
+                            {new Date(fb.created_at).toLocaleDateString('en-US', {
+                              month: 'short', day: 'numeric',
+                            })}
+                          </p>
+                          <p className="text-[10px] text-zinc-700 font-mono">
+                            {new Date(fb.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                        <span className={`text-zinc-600 text-xs transition-transform ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
+                      </button>
+
+                      {/* Expanded panel */}
+                      {isExpanded && (
+                        <div className="px-4 pb-4 pt-1 border-t border-zinc-800/60 space-y-3">
+                          <div>
+                            <p className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest mb-2">Full Response</p>
+                            <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-xs text-zinc-300 leading-relaxed whitespace-pre-wrap max-h-72 overflow-y-auto">
+                              {fb.response_text || <span className="text-zinc-600 italic">no response text stored</span>}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4 text-[11px] font-mono text-zinc-600 pt-1">
+                            <span>user: {fb.user_id.slice(0, 8)}…</span>
+                            <span>msg: {fb.message_id.slice(0, 8)}…</span>
+                            <span className="ml-auto">{new Date(fb.created_at).toLocaleString()}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </>
         )}
 

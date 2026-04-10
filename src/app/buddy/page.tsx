@@ -1,5 +1,4 @@
 'use client';
-
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -11,6 +10,9 @@ interface Message {
   imageUrl?: string;
   timestamp: Date;
 }
+
+// null = not voted, 'up' | 'down' = voted
+type FeedbackState = Record<string, 'up' | 'down' | null>;
 
 const SUGGESTED_PROMPTS = [
   "What should I focus on today?",
@@ -32,6 +34,10 @@ export default function BuddyPage() {
   } | null>(null);
   const [monthlyLimit, setMonthlyLimit] = useState<{ used: number; limit: number } | null>(null);
   const [tier, setTier] = useState<string>('free');
+  const [feedback, setFeedback] = useState<FeedbackState>({});
+  const [feedbackSending, setFeedbackSending] = useState<Record<string, boolean>>({});
+  const [accessToken, setAccessToken] = useState<string>('');
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -60,8 +66,7 @@ export default function BuddyPage() {
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height =
-        Math.min(textareaRef.current.scrollHeight, 120) + 'px';
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + 'px';
     }
   }, [input]);
 
@@ -74,6 +79,8 @@ export default function BuddyPage() {
       return;
     }
 
+    setAccessToken(session.access_token);
+
     const { data: sub } = await supabase
       .from('subscriptions')
       .select('tier')
@@ -81,7 +88,6 @@ export default function BuddyPage() {
       .single();
     if (sub) setTier(sub.tier);
 
-    // Monthly key: YYYY-MM
     const monthKey = new Date().toISOString().slice(0, 7);
     const { data: usage } = await supabase
       .from('daily_usage')
@@ -91,9 +97,9 @@ export default function BuddyPage() {
       .single();
 
     const limits: Record<string, number> = {
-      free:     20,
-      pro:      100,
-      elite:    250,
+      free: 20,
+      pro: 100,
+      elite: 250,
       founding: 300,
       alliance: 250,
     };
@@ -149,6 +155,7 @@ export default function BuddyPage() {
       imageUrl: pendingImage?.dataUrl,
       timestamp: new Date(),
     };
+
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     const imageToSend = pendingImage;
@@ -192,8 +199,7 @@ export default function BuddyPage() {
             {
               id: crypto.randomUUID(),
               role: 'assistant',
-              content:
-                err.upgradeMessage || "You've hit your monthly limit. Upgrade to keep going.",
+              content: err.upgradeMessage || "You've hit your monthly limit. Upgrade to keep going.",
               timestamp: new Date(),
             },
           ]);
@@ -204,15 +210,18 @@ export default function BuddyPage() {
       }
 
       const data = await res.json();
+      const assistantId = crypto.randomUUID();
       setMessages(prev => [
         ...prev,
         {
-          id: crypto.randomUUID(),
+          id: assistantId,
           role: 'assistant',
           content: data.reply,
           timestamp: new Date(),
         },
       ]);
+      // Pre-seed feedback state as null (not voted)
+      setFeedback(prev => ({ ...prev, [assistantId]: null }));
       setMonthlyLimit(prev => (prev ? { ...prev, used: prev.used + 1 } : prev));
     } catch {
       setIsTyping(false);
@@ -227,6 +236,29 @@ export default function BuddyPage() {
       ]);
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function submitFeedback(messageId: string, rating: 'up' | 'down', responseText: string) {
+    if (feedbackSending[messageId]) return;
+    if (feedback[messageId] !== null && feedback[messageId] !== undefined) return; // already voted
+
+    setFeedbackSending(prev => ({ ...prev, [messageId]: true }));
+    setFeedback(prev => ({ ...prev, [messageId]: rating }));
+
+    try {
+      await fetch('/api/buddy/feedback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ message_id: messageId, rating, response_text: responseText }),
+      });
+    } catch {
+      // Non-fatal — feedback is best-effort
+    } finally {
+      setFeedbackSending(prev => ({ ...prev, [messageId]: false }));
     }
   }
 
@@ -293,20 +325,55 @@ export default function BuddyPage() {
                 {msg.role === 'assistant' && (
                   <div className="avatar assistant-avatar">🎖️</div>
                 )}
-                <div className={`bubble ${msg.role}`}>
-                  {msg.imageUrl && (
-                    <div className="image-preview-in-bubble">
-                      <img src={msg.imageUrl} alt="Uploaded screenshot" />
-                    </div>
-                  )}
-                  {msg.content && (
-                    <div className="bubble-text">
-                      {msg.content.split('\n').map((line, i) => (
-                        <span key={i}>
-                          {line}
-                          {i < msg.content.split('\n').length - 1 && <br />}
-                        </span>
-                      ))}
+                <div className="bubble-wrapper">
+                  <div className={`bubble ${msg.role}`}>
+                    {msg.imageUrl && (
+                      <div className="image-preview-in-bubble">
+                        <img src={msg.imageUrl} alt="Uploaded screenshot" />
+                      </div>
+                    )}
+                    {msg.content && (
+                      <div className="bubble-text">
+                        {msg.content.split('\n').map((line, i) => (
+                          <span key={i}>
+                            {line}
+                            {i < msg.content.split('\n').length - 1 && <br />}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {/* Feedback buttons — assistant only, only if pre-seeded in feedback state */}
+                  {msg.role === 'assistant' && msg.id in feedback && (
+                    <div className="feedback-row">
+                      <button
+                        className={`feedback-btn ${feedback[msg.id] === 'up' ? 'voted-up' : ''}`}
+                        onClick={() => submitFeedback(msg.id, 'up', msg.content)}
+                        disabled={feedback[msg.id] !== null && feedback[msg.id] !== undefined || feedbackSending[msg.id]}
+                        title="Helpful"
+                        aria-label="Thumbs up"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                          <path d="M5 15H3a1 1 0 01-1-1V8a1 1 0 011-1h2m0 8V7m0 8h7.5a1 1 0 00.96-.72l1.5-5A1 1 0 0015 6H10V3a2 2 0 00-2-2L5 7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </button>
+                      <button
+                        className={`feedback-btn ${feedback[msg.id] === 'down' ? 'voted-down' : ''}`}
+                        onClick={() => submitFeedback(msg.id, 'down', msg.content)}
+                        disabled={feedback[msg.id] !== null && feedback[msg.id] !== undefined || feedbackSending[msg.id]}
+                        title="Not helpful"
+                        aria-label="Thumbs down"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                          <path d="M11 1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2m0-8V9m0-8H3.5a1 1 0 00-.96.72l-1.5 5A1 1 0 002 10h5v3a2 2 0 002 2l3-6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </button>
+                      {feedback[msg.id] === 'up' && (
+                        <span className="feedback-confirm up">Got it 👍</span>
+                      )}
+                      {feedback[msg.id] === 'down' && (
+                        <span className="feedback-confirm down">Noted — we&apos;ll look at it 👎</span>
+                      )}
                     </div>
                   )}
                 </div>
@@ -497,10 +564,7 @@ export default function BuddyPage() {
         }
         .messages-area::-webkit-scrollbar { width: 4px; }
         .messages-area::-webkit-scrollbar-track { background: transparent; }
-        .messages-area::-webkit-scrollbar-thumb {
-          background: #1e2535;
-          border-radius: 2px;
-        }
+        .messages-area::-webkit-scrollbar-thumb { background: #1e2535; border-radius: 2px; }
         .empty-state {
           display: flex;
           flex-direction: column;
@@ -547,13 +611,17 @@ export default function BuddyPage() {
           letter-spacing: 0.01em;
           white-space: nowrap;
         }
-        .prompt-chip:hover {
-          border-color: #c9b87a;
-          color: #c9b87a;
-          background: #0f1420;
+        .prompt-chip:hover { border-color: #c9b87a; color: #c9b87a; background: #0f1420; }
+        .messages-list {
+          display: flex;
+          flex-direction: column;
+          gap: 18px;
         }
-        .messages-list { display: flex; flex-direction: column; gap: 18px; }
-        .message-row { display: flex; gap: 10px; align-items: flex-start; }
+        .message-row {
+          display: flex;
+          gap: 10px;
+          align-items: flex-start;
+        }
         .message-row.user { flex-direction: row-reverse; }
         .avatar {
           width: 30px;
@@ -567,15 +635,29 @@ export default function BuddyPage() {
           margin-top: 2px;
         }
         .assistant-avatar { background: #12182a; border: 1px solid #1e2535; }
-        .bubble {
+        .bubble-wrapper {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
           max-width: 78%;
+        }
+        .message-row.user .bubble-wrapper { align-items: flex-end; }
+        .bubble {
           border-radius: 12px;
           padding: 12px 16px;
           font-size: 14px;
           line-height: 1.7;
         }
-        .bubble.user { background: #131d33; border: 1px solid #1e3060; color: #d4e0f5; }
-        .bubble.assistant { background: #0d1017; border: 1px solid #1e2535; color: #d0c9b5; }
+        .bubble.user {
+          background: #131d33;
+          border: 1px solid #1e3060;
+          color: #d4e0f5;
+        }
+        .bubble.assistant {
+          background: #0d1017;
+          border: 1px solid #1e2535;
+          color: #d0c9b5;
+        }
         .bubble-text { white-space: pre-wrap; word-break: break-word; }
         .image-preview-in-bubble {
           margin-bottom: 10px;
@@ -609,6 +691,51 @@ export default function BuddyPage() {
           0%, 80%, 100% { opacity: 0.2; transform: scale(0.9); }
           40% { opacity: 1; transform: scale(1.1); }
         }
+        /* ── Feedback row ── */
+        .feedback-row {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding-left: 4px;
+        }
+        .feedback-btn {
+          background: none;
+          border: 1px solid #1e2535;
+          border-radius: 5px;
+          color: #3a4a60;
+          width: 26px;
+          height: 26px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: border-color 0.15s, color 0.15s, background 0.15s;
+          flex-shrink: 0;
+          padding: 0;
+        }
+        .feedback-btn:hover:not(:disabled) {
+          border-color: #3a4a60;
+          color: #8a9ab5;
+        }
+        .feedback-btn:disabled { cursor: default; opacity: 0.5; }
+        .feedback-btn.voted-up {
+          border-color: #2a5c3a;
+          color: #4caf70;
+          background: #0d1f14;
+        }
+        .feedback-btn.voted-down {
+          border-color: #5c2a2a;
+          color: #c05050;
+          background: #1a0d0d;
+        }
+        .feedback-confirm {
+          font-size: 11px;
+          font-family: 'Courier New', monospace;
+          letter-spacing: 0.02em;
+        }
+        .feedback-confirm.up { color: #4caf70; }
+        .feedback-confirm.down { color: #c05050; }
+        /* ── Input area ── */
         .input-area {
           background: #0d1017;
           border-top: 1px solid #1e2535;
@@ -627,7 +754,11 @@ export default function BuddyPage() {
           flex-direction: column;
           gap: 8px;
         }
-        .limit-banner-top { display: flex; align-items: center; justify-content: space-between; }
+        .limit-banner-top {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
         .limit-text {
           font-size: 12px;
           color: #c0392b;
@@ -685,7 +816,12 @@ export default function BuddyPage() {
           justify-content: center;
           line-height: 1;
         }
-        .pending-label { font-size: 12px; color: #5a6880; line-height: 1.4; font-style: italic; }
+        .pending-label {
+          font-size: 12px;
+          color: #5a6880;
+          line-height: 1.4;
+          font-style: italic;
+        }
         .screenshot-row { display: flex; align-items: center; }
         .screenshot-btn {
           background: #0d1017;
@@ -763,7 +899,8 @@ export default function BuddyPage() {
         @media (max-width: 480px) {
           .messages-area { padding: 16px 12px 12px; }
           .input-area { padding: 10px 12px 14px; }
-          .bubble { max-width: 90%; font-size: 13px; }
+          .bubble { font-size: 13px; }
+          .bubble-wrapper { max-width: 90%; }
           .empty-heading { font-size: 18px; }
           .suggested-prompts { gap: 6px; }
           .prompt-chip { font-size: 12px; padding: 8px 14px; }
