@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 const CATEGORIES = [
@@ -9,14 +9,6 @@ const CATEGORIES = [
   { value: 'pack',      label: '💰 Pack' },
   { value: 'other',     label: '🔍 Other' },
 ]
-
-const SCREENSHOT_LIMITS: Record<string, number> = {
-  free: 5,
-  pro: 20,
-  elite: 20,
-  founding: 20,
-  alliance: 20,
-}
 
 export default function TeachBuddy({
   serverNumber,
@@ -30,32 +22,7 @@ export default function TeachBuddy({
   const [scope, setScope] = useState<'server_specific' | 'global'>('server_specific')
   const [screenshot, setScreenshot] = useState<File | null>(null)
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null)
-  const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle')
-  const [screenshotCount, setScreenshotCount] = useState(0)
-  const [countLoaded, setCountLoaded] = useState(false)
-
-  const screenshotLimit = SCREENSHOT_LIMITS[tier] ?? 5
-  const screenshotLimitReached = screenshotCount >= screenshotLimit
-
-  useEffect(() => {
-    loadScreenshotCount()
-  }, [])
-
-  async function loadScreenshotCount() {
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
-      const res = await fetch('/api/submissions', {
-        headers: { 'Authorization': `Bearer ${session.access_token}` }
-      })
-      const data = await res.json()
-      setScreenshotCount(data.count ?? 0)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setCountLoaded(true)
-    }
-  }
+  const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error' | 'limit'>('idle')
 
   function handleScreenshotChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -100,14 +67,13 @@ export default function TeachBuddy({
       if (!res.ok) {
         const err = await res.json()
         if (res.status === 429) {
-          setStatus('error')
-          setTimeout(() => setStatus('idle'), 3000)
+          setStatus('limit')
+          setTimeout(() => setStatus('idle'), 4000)
           return
         }
         throw new Error(err.error)
       }
 
-      if (screenshot_path) setScreenshotCount(c => c + 1)
       setStatus('success')
       setClaim('')
       setScreenshot(null)
@@ -208,68 +174,46 @@ export default function TeachBuddy({
         </button>
       </div>
 
-      <div style={{ marginTop: '12px' }}>
-        {screenshotPreview ? (
-          <div style={{ position: 'relative', display: 'inline-block' }}>
-            <img
-              src={screenshotPreview}
-              alt="Screenshot preview"
-              style={{
-                maxWidth: '100%',
-                maxHeight: '160px',
-                borderRadius: '8px',
-                border: '1px solid #2a2a4a'
-              }}
-            />
-            <button
-              onClick={removeScreenshot}
-              style={{
-                position: 'absolute',
-                top: '6px',
-                right: '6px',
-                background: '#0d0d1a',
-                border: '1px solid #2a2a4a',
-                borderRadius: '50%',
-                width: '24px',
-                height: '24px',
-                color: '#888',
-                cursor: 'pointer',
-                fontSize: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              ✕
-            </button>
-          </div>
-        ) : (
-          <label style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '10px',
-            borderRadius: '8px',
-            border: '1px dashed #2a2a4a',
-            color: screenshotLimitReached ? '#555' : '#888',
-            fontSize: '13px',
-            cursor: screenshotLimitReached ? 'not-allowed' : 'pointer'
-          }}>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleScreenshotChange}
-              disabled={screenshotLimitReached || !countLoaded}
-              style={{ display: 'none' }}
-            />
-            📸 {!countLoaded
-              ? 'Loading...'
-              : screenshotLimitReached
-              ? `Monthly screenshot limit reached (${screenshotLimit}/month)`
-              : `Attach a screenshot (optional) · ${screenshotCount}/${screenshotLimit} this month`}
-          </label>
-        )}
-      </div>
+      {tier !== 'free' && (
+        <div style={{ marginTop: '12px' }}>
+          {screenshotPreview ? (
+            <div style={{ position: 'relative', display: 'inline-block' }}>
+              <img
+                src={screenshotPreview}
+                alt="Screenshot preview"
+                style={{ maxWidth: '100%', maxHeight: '160px', borderRadius: '8px', border: '1px solid #2a2a4a' }}
+              />
+              <button
+                onClick={removeScreenshot}
+                style={{
+                  position: 'absolute', top: '6px', right: '6px',
+                  background: '#0d0d1a', border: '1px solid #2a2a4a',
+                  borderRadius: '50%', width: '24px', height: '24px',
+                  color: '#888', cursor: 'pointer', fontSize: '12px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          ) : (
+            <label style={{
+              display: 'flex', alignItems: 'center', gap: '8px', padding: '10px',
+              borderRadius: '8px', border: '1px dashed #2a2a4a',
+              color: status === 'limit' ? '#c05050' : '#888',
+              fontSize: '13px', cursor: 'pointer'
+            }}>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleScreenshotChange}
+                style={{ display: 'none' }}
+              />
+              📸 {status === 'limit' ? 'Monthly screenshot limit reached' : 'Attach a screenshot (optional)'}
+            </label>
+          )}
+        </div>
+      )}
 
       <button
         onClick={handleSubmit}
@@ -283,21 +227,20 @@ export default function TeachBuddy({
           background:
             status === 'success' ? '#22c55e' :
             status === 'error'   ? '#ef4444' :
+            status === 'limit'   ? '#ef4444' :
             '#f0c040',
-          color: status === 'error' ? '#fff' : '#0d0d1a',
+          color: (status === 'error' || status === 'limit') ? '#fff' : '#0d0d1a',
           fontWeight: 700,
           fontSize: '14px',
           cursor: claim.trim() ? 'pointer' : 'not-allowed',
           opacity: !claim.trim() || status === 'submitting' ? 0.5 : 1
         }}
       >
-        {status === 'submitting'
-          ? 'Submitting...'
-          : status === 'success'
-          ? '✓ Submitted — Thanks Commander!'
-          : status === 'error'
-          ? 'Something went wrong — try again'
-          : 'Submit to Buddy'}
+        {status === 'submitting' ? 'Submitting...' :
+         status === 'success'   ? '✓ Submitted — Thanks Commander!' :
+         status === 'limit'     ? 'Monthly screenshot limit reached' :
+         status === 'error'     ? 'Something went wrong — try again' :
+         'Submit to Buddy'}
       </button>
     </div>
   )

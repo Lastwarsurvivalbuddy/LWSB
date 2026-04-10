@@ -1,6 +1,5 @@
 'use client'
-
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 interface NewsItem {
   id: string
@@ -35,19 +34,43 @@ function timeAgo(iso: string): string {
 export default function SiteNews() {
   const [items, setItems] = useState<NewsItem[]>([])
   const [loaded, setLoaded] = useState(false)
+  const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
-    fetch('/api/site-news')
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data?.news) setItems(data.news.filter((n: NewsItem) => n.active))
-        setLoaded(true)
-      })
-      .catch(() => setLoaded(true))
-  }, [])
+  async function loadNews() {
+    if (loaded || loading) return
+    setLoading(true)
+    try {
+      const r = await fetch('/api/site-news')
+      const data = r.ok ? await r.json() : null
+      if (data?.news) setItems(data.news.filter((n: NewsItem) => n.active))
+    } catch {
+      // silent — news is non-critical
+    } finally {
+      setLoaded(true)
+      setLoading(false)
+    }
+  }
 
-  // Don't render anything until loaded — no flash, no skeleton
-  if (!loaded || items.length === 0) return null
+  // Show trigger button until loaded
+  if (!loaded) {
+    return (
+      <div className="mt-3">
+        <button
+          onClick={loadNews}
+          disabled={loading}
+          className="flex items-center gap-2 px-1 w-full text-left group"
+        >
+          <span className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest group-hover:text-zinc-500 transition-colors">
+            {loading ? 'Loading...' : '📡 Site News'}
+          </span>
+          <div className="flex-1 h-px bg-zinc-800" />
+        </button>
+      </div>
+    )
+  }
+
+  // Loaded but empty — render nothing
+  if (items.length === 0) return null
 
   return (
     <div className="mt-3">
@@ -55,7 +78,6 @@ export default function SiteNews() {
         <span className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest">Site News</span>
         <div className="flex-1 h-px bg-zinc-800" />
       </div>
-
       <div className="bg-zinc-900/40 border border-zinc-800 rounded-xl overflow-hidden">
         {items.map((item, i) => {
           const inner = (
@@ -79,13 +101,9 @@ export default function SiteNews() {
           )
 
           return item.link ? (
-            <a key={item.id} href={item.link} className="block">
-              {inner}
-            </a>
+            <a key={item.id} href={item.link} className="block">{inner}</a>
           ) : (
-            <div key={item.id}>
-              {inner}
-            </div>
+            <div key={item.id}>{inner}</div>
           )
         })}
       </div>
