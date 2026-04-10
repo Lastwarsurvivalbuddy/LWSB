@@ -1043,7 +1043,7 @@ export interface GearRarity {
   rarity: string; levels: GearLevel[]; starUpgrades: GearStarUpgrade[];
 }
 
-export const GEAR_BY_RARITY: GearRarity[] = undefined;
+export const GEAR_BY_RARITY: GearRarity[] = [];
 
 export const GEAR_META = {
   "note": "'levels' contains per-level upgrade costs (gold + ore) for each rarity tier. 'stars' contains star upgrade costs (gold, ore, dielectric ceramic, and gear blueprints).",
@@ -1064,7 +1064,7 @@ export interface SkillMedalRarity {
   rarity: string; levels: SkillMedalLevel[];
 }
 
-export const SKILL_MEDALS_BY_RARITY: SkillMedalRarity[] = undefined;
+export const SKILL_MEDALS_BY_RARITY: SkillMedalRarity[] = [];
 
 export const SKILL_MEDALS_META = {
   "note": "Each array contains the medal cost per skill level upgrade, indexed from level 1. UR has 39 upgrades (max level 40), SSR has 29 (max 30), SR has 30 (max 30).",
