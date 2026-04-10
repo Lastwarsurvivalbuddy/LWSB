@@ -1252,7 +1252,7 @@ export const BATTLE_PASSES: BattlePass[] = [
 
 // ─── BRICK-TO-FIAT CURRENCY TABLE ────────────────────────────────────────────
 
-export const BRICK_CURRENCIES: BrickCurrency[] = undefined;
+export const BRICK_CURRENCIES: BrickCurrency[] = [];
 
 // ─── SUMMARY FOR BUDDY SYSTEM PROMPT ─────────────────────────────────────────
 
