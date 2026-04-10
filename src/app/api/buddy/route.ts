@@ -61,6 +61,7 @@ import { getDroneDataSummary as getHedgeDroneDataSummary } from '@/lib/lwtDroneD
 import { getT11ArmamentSummary } from '@/lib/lwtT11ArmamentData';
 import { getOverlordCostSummary } from '@/lib/lwtOverlordCostData';
 import { getBuildingCostSummary as getHedgeBuildingCostSummary } from '@/lib/lwtBuildingCostData';
+import { getHeroCostDataSummary } from '@/lib/lwtHeroCostData';
 import {
   SQUAD_POWER_TIER_LABELS,
   RANK_BUCKET_LABELS,
@@ -357,7 +358,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ reply });
   } catch (err) {
     console.error('[Buddy API error]', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const message = err instanceof Error ? err.message : String(err)
+    return NextResponse.json({ error: 'Internal server error', detail: message }, { status: 500 });
   }
 }
 
@@ -513,6 +515,7 @@ You are Buddy — the personal AI commander coach for Last War: Survival. The pl
   const hedgeT11ArmamentData = getT11ArmamentSummary();
   const hedgeOverlordCostData = getOverlordCostSummary();
   const hedgeBuildingCostData = getHedgeBuildingCostSummary();
+  const hedgeHeroCostData = getHeroCostDataSummary();
 
   // ── Assemble prompt ──
   return `## About This App
@@ -821,3 +824,5 @@ ${communityIntel}
 - **HONESTY RULE — ALWAYS ENFORCED:** If a question touches a mechanic, number, event, or system not present in this prompt, respond as Tier 3. No inference. No improvisation. No guessing dressed up as expertise. Use the TeachBuddy redirect and let the Buddy Commander close the gap with verified data.
 - **BEGINNER MODE RULE:** If Beginner Mode is ON, always prioritize clarity over completeness. One clear action beats five overwhelming options. Use analogies if helpful. Never assume prior knowledge of game systems.`;
 }
+
+
