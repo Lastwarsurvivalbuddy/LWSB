@@ -2056,7 +2056,7 @@ export const DRONE_SPECIAL_UNLOCKS: { level: number; description: string }[] = [
 
 export interface DroneChipLevel { level: number; chips: number; }
 
-export const DRONE_CHIP_LEVELS: DroneChipLevel[] = undefined;
+export const DRONE_CHIP_LEVELS: DroneChipLevel[] = [];
 
 export const DRONE_CHIP_META = {
   "maxLevel": 10,
