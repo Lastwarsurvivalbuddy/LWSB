@@ -80,7 +80,6 @@ const supabase = createClient(
 );
 
 // ─── Monthly limits per tier ──────────────────────────────────────────────────
-// Tracking key: YYYY-MM (reuses daily_usage table with month-scoped date key)
 const TIER_LIMITS: Record<string, { questions: number; screenshots: number }> = {
   free:     { questions: 20,  screenshots: 0  },
   pro:      { questions: 100, screenshots: 10 },
@@ -89,12 +88,10 @@ const TIER_LIMITS: Record<string, { questions: number; screenshots: number }> = 
   alliance: { questions: 250, screenshots: 20 },
 };
 
-// ─── Current month key ────────────────────────────────────────────────────────
 function getCurrentMonthKey(): string {
-  return new Date().toISOString().slice(0, 7); // YYYY-MM
+  return new Date().toISOString().slice(0, 7);
 }
 
-// ─── Duel day calculation ─────────────────────────────────────────────────────
 function getCurrentDuelDay(): { day: number; label: string } {
   const now = new Date();
   const adjusted = new Date(now.getTime() - 2 * 60 * 60 * 1000);
@@ -111,11 +108,10 @@ function getCurrentDuelDay(): { day: number; label: string } {
   return schedule[utcDay] ?? { day: 1, label: 'Radar Training (1pt)' };
 }
 
-// ─── Tactic Card summary helper ───────────────────────────────────────────────
 function getTacticCardSummary(): string {
   const d = lwtTacticCardData;
   const setups = Object.values(d.recommendedSetups)
-    .map(s => `**${s.name}**\nUse: ${s.use}\nRegular Cards: ${s.regularCards.join(', ')}\nCore Cards: ${s.coreCards.join(', ')}\nTip: ${s.tip}`)
+    .map(s => `**${s.name}**\nUse: ${s.use}\nRegular Cards: ${(s.regularCards ?? []).join(', ')}\nCore Cards: ${(s.coreCards ?? []).join(', ')}\nTip: ${s.tip}`)
     .join('\n\n');
   const highlighted = Object.values(d.highlightedCards)
     .map(c => `- ${c.name}: ${c.effect}${c.priority ? ` | Priority: ${c.priority}` : ''}`)
@@ -149,23 +145,18 @@ ${setups}
 **Resource Cards:** Fill all 4 slots with the 4 SSR options. Watch for Profession XP from zombie kill trait (up to 3.90% each) — switch to those when grinding.
 
 **General Tips:**
-${d.generalTips.map((t: string) => `- ${t}`).join('\n')}
+${(d.generalTips ?? []).map((t: string) => `- ${t}`).join('\n')}
 `.trim();
 }
 
-// ─── TeachBuddy CTA — single source of truth ─────────────────────────────────
-// Used in both the no-profile fallback and the full system prompt.
-// When Buddy hits a Tier 3 gap, this is the exact language to use.
 const TEACH_BUDDY_CTA = `I don't have verified data on that yet — and I'd rather be straight with you than guess.
 
 Here's what you can do right now: head to **TeachBuddy** (in the left nav) and submit what you know. Drop screenshots, describe the mechanic, tell me what you saw. The Buddy Commander reviews every submission personally, researches it, and pushes confirmed intel into the knowledge base — so the next commander who asks gets a real answer.
 
 This is how Buddy gets smarter. You're not just helping yourself — you're helping every commander on the platform.`;
 
-// ─── POST handler ─────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   try {
-    // ── Auth ──
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -179,7 +170,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // ── Parse body ──
     const body = await req.json();
     const userMessage: string = body.message || '';
     const history: Array<{ role: 'user' | 'assistant'; content: string }> = body.history || [];
@@ -190,7 +180,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Message or image required' }, { status: 400 });
     }
 
-    // ── Subscription & limits ──
     const { data: sub } = await supabase
       .from('subscriptions')
       .select('tier')
@@ -203,14 +192,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error: 'Screenshot analysis requires Pro or above.',
-          upgradeMessage:
-            'Screenshot analysis is a Pro feature. Upgrade to Buddy Pro ($9.99/mo) or go Founding Member for $99 lifetime.',
+          upgradeMessage: 'Screenshot analysis is a Pro feature. Upgrade to Buddy Pro ($9.99/mo) or go Founding Member for $99 lifetime.',
         },
         { status: 403 }
       );
     }
 
-    // ── Monthly usage check ──
     const monthKey = getCurrentMonthKey();
     const { data: usage } = await supabase
       .from('daily_usage')
@@ -245,7 +232,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ── Load commander profile ──
     const { data: profile } = await supabase
       .from('commander_profile')
       .select('*')
@@ -255,7 +241,6 @@ export async function POST(req: NextRequest) {
     const duel = getCurrentDuelDay();
     const systemPrompt = await buildSystemPrompt(profile, duel, tier);
 
-    // ── Build message array for Claude ──
     const recentHistory = history.slice(-20);
     const claudeMessages: Array<{ role: string; content: unknown }> = [
       ...recentHistory.map(m => ({
@@ -277,9 +262,7 @@ export async function POST(req: NextRequest) {
       ];
       userContent.push({
         type: 'text',
-        text:
-          userMessage ||
-          'Please analyze this screenshot. Is this a good purchase for my situation? What does it contain and what is your recommendation?',
+        text: userMessage || 'Please analyze this screenshot. Is this a good purchase for my situation? What does it contain and what is your recommendation?',
       });
       claudeMessages.push({ role: 'user', content: userContent });
     } else {
@@ -303,12 +286,21 @@ export async function POST(req: NextRequest) {
     });
 
     const claudeData = await claudeRes.json();
+
+    // Guard: Claude API returned an error instead of a content array
+    if (!claudeRes.ok || !claudeData.content) {
+      console.error('[Claude API error]', JSON.stringify(claudeData));
+      return NextResponse.json(
+        { error: 'Internal server error', detail: JSON.stringify(claudeData) },
+        { status: 500 }
+      );
+    }
+
     const reply = (claudeData.content as Array<{ type: string; text?: string }>)
       .filter(block => block.type === 'text')
       .map(block => block.text || '')
       .join('');
 
-    // ── Save to chat history ──
     const today = new Date().toISOString().split('T')[0];
     const sessionKey = `${user.id}_${today}`;
     const { data: session } = await supabase
@@ -339,7 +331,6 @@ export async function POST(req: NextRequest) {
       ]);
     }
 
-    // ── Update monthly usage ──
     await supabase
       .from('daily_usage')
       .upsert(
@@ -352,23 +343,21 @@ export async function POST(req: NextRequest) {
         { onConflict: 'user_id,date' }
       );
 
-    // ── Increment streak ──
     await incrementStreak(supabase, user.id);
 
     return NextResponse.json({ reply });
   } catch (err) {
-    const msg = err instanceof Error ? (err.stack ?? err.message) : String(err)
+    console.error('[Buddy API error]', err);
+    const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: 'Internal server error', detail: msg }, { status: 500 });
   }
 }
 
-// ─── System prompt builder ────────────────────────────────────────────────────
 async function buildSystemPrompt(
   profile: Record<string, unknown> | null,
   duel: { day: number; label: string },
   tier: string
 ): Promise<string> {
-  // ── No profile fallback ──
   if (!profile) {
     return `## About This App
 Last War: Survival Buddy (LastWarSurvivalBuddy.com) is a personalized AI coaching app for Last War: Survival players. It is a fan-built community tool — not affiliated with or endorsed by FUNFLY PTE. LTD.
@@ -424,7 +413,6 @@ This platform is not built on the illusion of omniscience. It is built on the pr
 You are Buddy — the personal AI commander coach for Last War: Survival. The player's profile hasn't loaded — give helpful general advice and ask them to check their profile settings. Keep responses concise, specific, and tactical. No fluff.`;
   }
 
-  // ── Profile display translations ──
   const serverDay = profile.server_day ?? 'Unknown';
   const squadPower = profile.squad_power_tier
     ? SQUAD_POWER_TIER_LABELS[profile.squad_power_tier as SquadPowerTier] ?? profile.squad_power_tier
@@ -459,10 +447,8 @@ You are Buddy — the personal AI commander coach for Last War: Survival. The pl
     7: 'Day 7 — Reset day. Alliance Duel is between cycles. Stack radar missions for tomorrow.',
   };
 
-  // ── Beginner mode ──
   const beginnerMode = profile.beginner_mode === true;
 
-  // ── Season guide selection ──
   const seasonNumber = typeof profile.season === 'number' ? profile.season : 0;
   const seasonGuide =
     seasonNumber === 6
@@ -471,10 +457,8 @@ You are Buddy — the personal AI commander coach for Last War: Survival. The pl
       ? getSeasonDataSummary45(seasonNumber)
       : getSeasonDataSummary(seasonNumber);
 
-  // ── Community intel ──
   const communityIntel = await getApprovedSubmissions(Number(profile.server_number));
 
-  // ── Module data ──
   const squadData = getSquadDataSummary();
   const overlordData = getOverlordDataSummary();
   const tricksData = getTricksDataSummary();
@@ -495,19 +479,13 @@ You are Buddy — the personal AI commander coach for Last War: Survival. The pl
   const professionData = getProfessionDataSummary();
   const tacticCardData = getTacticCardSummary();
   const survivorCardData = lwtSurvivorCardData;
-
-  // ── Session 58 new module data ──
   const ghostOpsData = getGhostOpsDataSummary();
   const marshalsGuardData = getMarshalsGuardSummary();
   const skillChipData = getSkillChipDataSummary();
   const combatFormulasData = getCombatFormulasDataSummary();
   const diamondSpendingData = getDiamondSpendingDataSummary();
   const progressionData = getProgressionDataSummary();
-
-  // ── Session 59 new module data ──
   const heroSquadData = getHeroSquadDataSummary();
-
-  // ── Session 107 — Hedge data ──
   const hedgePackData = getPackDataSummary();
   const hedgeStoreItemData = getStoreItemData();
   const hedgeDroneData = getHedgeDroneDataSummary();
@@ -516,7 +494,6 @@ You are Buddy — the personal AI commander coach for Last War: Survival. The pl
   const hedgeBuildingCostData = getHedgeBuildingCostSummary();
   const hedgeHeroCostData = getHeroCostDataSummary();
 
-  // ── Assemble prompt ──
   return `## About This App
 Last War: Survival Buddy (LastWarSurvivalBuddy.com) is a personalized AI coaching app for Last War: Survival players. It is a fan-built community tool — not affiliated with or endorsed by FUNFLY PTE. LTD.
 
@@ -766,6 +743,9 @@ ${t11Data}
 ## T11 Armament Upgrade Costs (Powered by cpt-hedge.com)
 ${hedgeT11ArmamentData}
 
+## Hero Cost Data (Powered by cpt-hedge.com)
+${hedgeHeroCostData}
+
 ## Profession System (Engineer & War Leader)
 ${professionData}
 
@@ -820,8 +800,7 @@ ${communityIntel}
 - When asked about building upgrade costs, resource requirements, or how much it costs to upgrade a specific building: reference the Building Costs Detail section (Powered by cpt-hedge.com) for exact figures.
 - When asked about drone upgrades, drone part costs, chip upgrades, or drone level progression: reference the Drone Upgrade Costs section (Powered by cpt-hedge.com) for exact numbers.
 - When asked about T11 armament piece costs, star upgrade costs, or armament research requirements: reference the T11 Armament Upgrade Costs section (Powered by cpt-hedge.com) for exact figures.
+- When asked about hero XP costs, shard costs, weapon shard costs, gear upgrade costs, or skill medal costs: reference the Hero Cost Data section (Powered by cpt-hedge.com) for exact figures.
 - **HONESTY RULE — ALWAYS ENFORCED:** If a question touches a mechanic, number, event, or system not present in this prompt, respond as Tier 3. No inference. No improvisation. No guessing dressed up as expertise. Use the TeachBuddy redirect and let the Buddy Commander close the gap with verified data.
 - **BEGINNER MODE RULE:** If Beginner Mode is ON, always prioritize clarity over completeness. One clear action beats five overwhelming options. Use analogies if helpful. Never assume prior knowledge of game systems.`;
 }
-
-
