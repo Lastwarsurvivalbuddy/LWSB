@@ -68,7 +68,7 @@
     ]
   }
   </script>
-  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Open+Sans:wght@300;400;600&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script type="text/javascript" src="//s3.amazonaws.com/downloads.mailchimp.com/js/mc-validate.js"></script>
   <script type="text/javascript">(function($) {window.fnames = new Array(); window.ftypes = new Array();fnames[0]='EMAIL';ftypes[0]='email';}(jQuery));var $mcj = jQuery.noConflict(true);</script>
@@ -514,235 +514,301 @@
 <body>
 
 <!-- ═══════════════════════════════════════════════════
-     LWSB SPLASH PRELOADER v3
-     NO VOICE. NO "PRESS ANY KEY". AUTO-PLAYS ON PAGE LOAD.
-     WORKS ON EVERY BROWSER INCLUDING iOS SAFARI.
+     TRON BOOT SEQUENCE
 ════════════════════════════════════════════════════ -->
 <style>
-  #lwsb-preloader {
+  #boot-overlay {
     position: fixed; inset: 0; z-index: 99999;
-    background: #080000; font-family: 'Courier New', Courier, monospace; overflow: hidden;
+    background: #000300;
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    display: flex; flex-direction: column;
+    justify-content: flex-start;
+    padding: clamp(28px,5vw,60px) clamp(28px,6vw,72px);
+    overflow: hidden;
+    transition: opacity 0.8s ease;
   }
-  .lwsb-scanlines {
-    position: fixed; inset: 0; pointer-events: none; z-index: 2;
-    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.2) 2px, rgba(0,0,0,0.2) 4px);
-    animation: lwsb-scan 0.1s linear infinite;
+  /* scanlines */
+  #boot-overlay::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 2;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 4px);
   }
-  .lwsb-vignette {
-    position: fixed; inset: 0; pointer-events: none; z-index: 3;
-    background: radial-gradient(ellipse at center, transparent 38%, rgba(0,0,0,0.96) 100%);
+  /* grid */
+  #boot-overlay::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 1;
+    background-image: linear-gradient(rgba(0,255,65,0.04) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(0,255,65,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
   }
-  .lwsb-glow-bg {
-    position: fixed; inset: 0; pointer-events: none; z-index: 1;
-    background: radial-gradient(ellipse 70% 55% at 50% 50%, rgba(160,0,0,0.07) 0%, transparent 70%);
+  #boot-vignette {
+    position: absolute; inset: 0; pointer-events: none; z-index: 3;
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.85) 100%);
   }
-  #lwsb-boot {
-    position: absolute; inset: 0; display: flex; flex-direction: column;
-    align-items: flex-start; justify-content: center;
-    padding: clamp(28px,5vw,68px) clamp(28px,6vw,80px); z-index: 4;
-    animation: lwsb-screen-jitter 13s infinite;
+  #boot-terminal { position: relative; z-index: 10; max-width: 860px; }
+  .bl {
+    display: block; font-size: clamp(11px,1.5vw,13px); line-height: 1.75;
+    letter-spacing: 0.04em; opacity: 0; transform: translateX(-4px);
+    transition: opacity 0.1s ease, transform 0.1s ease;
+    white-space: pre; font-family: 'Share Tech Mono', 'Courier New', monospace;
   }
-  .lwsb-line {
-    font-size: clamp(13px,1.7vw,15px); line-height: 1.95; letter-spacing: 0.04em;
-    animation: lwsb-fade-line 0.07s ease-out both; min-height: 1.95em; white-space: pre;
+  .bl.v  { opacity: 1; transform: translateX(0); }
+  .bd    { color: #1a5c1a; }
+  .bn    { color: #00aa2a; }
+  .bb    { color: #00ff41; }
+  .be    { color: #ff2244; }
+  .bw    { color: #ffaa00; }
+  .bblk  { min-height: 10px; opacity: 0 !important; }
+
+  /* command block */
+  #boot-cmd { position: relative; z-index: 10; margin-top: 24px; opacity: 0; transition: opacity 0.4s ease; }
+  #boot-cmd.v { opacity: 1; }
+  #boot-prefix {
+    display: block; color: #00aa2a; font-size: clamp(11px,1.5vw,13px);
+    letter-spacing: 0.05em; margin-bottom: 4px;
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
   }
-  .lwsb-line.dim   { color: #bb3300; text-shadow: 0 0 6px #882200, 0 0 12px #551100; }
-  .lwsb-line.mid   { color: #ee4400; text-shadow: 0 0 8px #cc3300, 0 0 16px #882200; }
-  .lwsb-line.blank { color: transparent; min-height: 1.0em; }
-  .lwsb-line.sys     { color: #ff6633; text-shadow: 0 0 8px #ff4400, 0 0 20px #cc2200; }
-  .lwsb-line.sys-dim { color: #cc4400; text-shadow: 0 0 6px #aa3300, 0 0 12px #771100; font-size: clamp(11px,1.4vw,13px); letter-spacing: 0.1em; }
-  #lwsb-divider { display: none; border: none; border-top: 1px solid #3a0000; box-shadow: 0 0 8px #220000; margin: 20px 0; width: 100%; }
-  #lwsb-stamp-wrap { display: none; }
-  #lwsb-stamp-text {
-    color: #00ff88; font-size: clamp(30px,5.5vw,68px); font-weight: bold; letter-spacing: 0.1em;
-    text-shadow: 0 0 14px #00ff88, 0 0 36px #00cc66, 0 0 70px #008844, 0 0 110px #004422;
-    animation: lwsb-stamp 0.55s cubic-bezier(0.22,1,0.36,1) both, lwsb-stamp-glow 2.8s 0.6s infinite;
+  #boot-cmd-line { display: flex; align-items: center; }
+  #boot-cmd-text {
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    font-size: clamp(16px,3vw,22px); letter-spacing: 0.12em; color: #00ff41;
+    text-shadow: 0 0 8px rgba(0,255,65,0.9), 0 0 20px rgba(0,255,65,0.5), 0 0 40px rgba(0,255,65,0.2);
+    white-space: nowrap;
   }
-  #lwsb-stamp-sub {
-    display: none; color: #008844; font-size: clamp(8px,1vw,10px); letter-spacing: 0.3em;
-    text-shadow: 0 0 5px #004422; margin-top: 10px; animation: lwsb-fade-line 0.6s ease-out both;
+  #boot-cursor {
+    display: inline-block; width: clamp(10px,1.5vw,13px); height: clamp(16px,2.5vw,22px);
+    background: #00ff41; box-shadow: 0 0 10px rgba(0,255,65,0.8);
+    margin-left: 3px; flex-shrink: 0; opacity: 0; transition: opacity 0.2s;
+    animation: bCursor 0.7s step-end infinite;
   }
-  #lwsb-skip { display: none; position: fixed; bottom: 22px; width: 100%; text-align: center; z-index: 10; }
-  #lwsb-skip button {
-    background: none; border: 1px solid #2a0000; border-radius: 3px; padding: 5px 16px;
-    color: #441100; font-family: 'Courier New', monospace; font-size: 10px; letter-spacing: 0.2em; cursor: pointer;
-    transition: color 0.2s, border-color 0.2s;
+  #boot-cursor.v { opacity: 1; }
+  @keyframes bCursor { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  #boot-enter {
+    margin-top: 16px; font-size: clamp(10px,1.2vw,12px); color: #00ff41;
+    letter-spacing: 0.18em; text-transform: uppercase; display: none;
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    animation: bPulse 1.4s ease-in-out infinite;
   }
-  #lwsb-skip button:hover { color: #772200; border-color: #441100; }
-  @keyframes lwsb-scan { 0% { background-position: 0 0; } 100% { background-position: 0 4px; } }
-  @keyframes lwsb-fade-line { 0% { opacity: 0; } 100% { opacity: 1; } }
-  @keyframes lwsb-stamp {
-    0%   { opacity: 0; letter-spacing: 0.55em; transform: scale(1.06); filter: blur(3px); }
-    55%  { opacity: 1; letter-spacing: 0.12em; transform: scale(1.0);  filter: blur(0); }
-    100% { opacity: 1; letter-spacing: 0.1em;  transform: scale(1.0); }
+  #boot-enter.v { display: block; }
+  @keyframes bPulse { 0%,100%{opacity:0.3} 50%{opacity:1;text-shadow:0 0 12px rgba(0,255,65,0.8)} }
+
+  /* exec block */
+  #boot-exec { position: relative; z-index: 10; margin-top: 14px; opacity: 0; transition: opacity 0.3s; }
+  #boot-exec.v { opacity: 1; }
+  .bel {
+    display: block; font-family: 'Share Tech Mono', 'Courier New', monospace;
+    font-size: clamp(11px,1.5vw,13px); color: #00ff41;
+    letter-spacing: 0.05em; line-height: 1.8; opacity: 0; transition: opacity 0.3s;
   }
-  @keyframes lwsb-stamp-glow {
-    0%,100% { text-shadow: 0 0 14px #00ff88, 0 0 36px #00cc66, 0 0 70px #008844; }
-    50%      { text-shadow: 0 0 22px #00ffaa, 0 0 55px #00ee77, 0 0 100px #00aa55, 0 0 150px #006633; }
+  .bel.v { opacity: 1; }
+
+  #boot-prog-wrap {
+    margin-top: 12px; width: clamp(220px,40vw,360px); height: 3px;
+    background: rgba(0,255,65,0.1); border: 1px solid rgba(0,255,65,0.2);
+    opacity: 0; transition: opacity 0.3s;
   }
-  @keyframes lwsb-screen-jitter {
-    0%,100% { transform: translate(0,0); } 24% { transform: translate(-1px,0); }
-    48% { transform: translate(1px,0); }   72% { transform: translate(0,-1px); }
-    90% { transform: translate(0,1px); }
+  #boot-prog-wrap.v { opacity: 1; }
+  #boot-prog-bar {
+    height: 100%; width: 0%;
+    background: #00ff41; box-shadow: 0 0 8px rgba(0,255,65,0.8);
+    transition: width 2.4s cubic-bezier(0.4,0,0.2,1);
   }
-  @keyframes lwsb-fizzle {
-    0%   { opacity: 1;    transform: scaleY(1);     filter: brightness(1); }
-    16%  { opacity: 0.88; transform: scaleY(0.95);  filter: brightness(1.9); }
-    36%  { opacity: 0.6;  transform: scaleY(0.38);  filter: brightness(2.8); }
-    56%  { opacity: 0.35; transform: scaleY(0.05);  filter: brightness(3.8); }
-    76%  { opacity: 0.5;  transform: scaleY(0.012); filter: brightness(5.5); }
-    100% { opacity: 0;    transform: scaleY(0);     filter: brightness(0); }
+
+  #boot-logo { position: relative; z-index: 10; margin-top: 32px; opacity: 0; transition: opacity 0.7s ease; }
+  #boot-logo.v { opacity: 1; }
+  #boot-logo-text {
+    font-family: 'Rajdhani', sans-serif; font-weight: 700;
+    font-size: clamp(22px,4vw,46px); letter-spacing: 0.2em;
+    color: #00ff41; text-transform: uppercase;
+    text-shadow: 0 0 20px rgba(0,255,65,0.7), 0 0 60px rgba(0,255,65,0.3);
   }
+  #boot-logo-sub {
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    font-size: clamp(9px,1.1vw,11px); letter-spacing: 0.3em;
+    color: #00aa2a; text-transform: uppercase; margin-top: 4px;
+  }
+
+  @keyframes bGlitch {
+    0%   { clip-path: inset(20% 0 60% 0); transform: translateX(-3px); }
+    33%  { clip-path: inset(60% 0 10% 0); transform: translateX(3px); }
+    66%  { clip-path: inset(40% 0 30% 0); transform: translateX(-2px); }
+    100% { clip-path: none; transform: translateX(0); }
+  }
+  .bglitch { animation: bGlitch 0.25s steps(2) 1 !important; }
+
+  @keyframes bFlicker {
+    0%{opacity:1} 10%{opacity:0.3} 12%{opacity:1} 40%{opacity:0.6} 42%{opacity:1} 72%{opacity:0.8} 74%{opacity:1}
+  }
+  .bflicker { animation: bFlicker 0.35s ease 1; }
 </style>
 
-<div id="lwsb-preloader">
-  <div class="lwsb-scanlines"></div>
-  <div class="lwsb-vignette"></div>
-  <div class="lwsb-glow-bg"></div>
-  <div id="lwsb-boot">
-    <div id="lwsb-lines"></div>
-    <hr id="lwsb-divider">
-    <div id="lwsb-stamp-wrap">
-      <div id="lwsb-stamp-text">BUDDY ONLINE</div>
-      <div id="lwsb-stamp-sub">// tactical ai &nbsp;&middot;&nbsp; all channels active &nbsp;&middot;&nbsp; session open</div>
+<div id="boot-overlay">
+  <div id="boot-vignette"></div>
+  <div id="boot-terminal"></div>
+  <div id="boot-cmd">
+    <span id="boot-prefix">root@grid:~$</span>
+    <div id="boot-cmd-line">
+      <span id="boot-cmd-text"></span>
+      <span id="boot-cursor"></span>
     </div>
+    <div id="boot-enter">[ press enter or tap to execute ]</div>
   </div>
-  <div id="lwsb-skip">
-    <button onclick="document.getElementById('lwsb-skip').style.display='none';lwsbFizzle();">SKIP &rarr;</button>
+  <div id="boot-exec">
+    <span class="bel" id="bel1"></span>
+    <span class="bel" id="bel2"></span>
+    <span class="bel" id="bel3"></span>
+  </div>
+  <div id="boot-prog-wrap"><div id="boot-prog-bar"></div></div>
+  <div id="boot-logo">
+    <div id="boot-logo-text">LAST WAR: SURVIVAL BUDDY</div>
+    <div id="boot-logo-sub">// system online — all sectors active</div>
   </div>
 </div>
 
 <script>
-(function () {
+(function(){
+  var overlay  = document.getElementById('boot-overlay');
+  var terminal = document.getElementById('boot-terminal');
+  var cmdBlock = document.getElementById('boot-cmd');
+  var cmdText  = document.getElementById('boot-cmd-text');
+  var cursor   = document.getElementById('boot-cursor');
+  var enter    = document.getElementById('boot-enter');
+  var execBlk  = document.getElementById('boot-exec');
+  var progWrap = document.getElementById('boot-prog-wrap');
+  var progBar  = document.getElementById('boot-prog-bar');
+  var logo     = document.getElementById('boot-logo');
+
   var LINES = [
-    { text: 'GLOBAL COMMS GRID  //  STATUS: CRITICAL',             delay: 80,   cls: 'dim' },
-    { text: '------------------------------------------------------------', delay: 200,  cls: 'dim' },
-    { text: '',                                                     delay: 310,  cls: 'blank' },
-    { text: '> MAYDAY \u2014 ALLIANCE OVERRUN \u2014 ALL COMMS DOWN',         delay: 420,  cls: 'mid' },
-    { text: '> SERVER 1032 \u2014 DAY 508 \u2014 WE HAVE NO ORDERS',          delay: 680,  cls: 'mid' },
-    { text: '> ANYONE ON THIS FREQUENCY \u2014 RESPOND',                 delay: 940,  cls: 'mid' },
-    { text: '',                                                     delay: 1120, cls: 'blank' },
-    { text: '......................................................', delay: 1230, cls: 'dim' },
-    { text: '  NO RESPONSE',                                        delay: 1440, cls: 'dim' },
-    { text: '......................................................', delay: 1590, cls: 'dim' },
-    { text: '',                                                     delay: 1730, cls: 'blank' },
-    { text: '> HQ IS GONE \u2014 WE CANNOT HOLD',                       delay: 1860, cls: 'mid' },
-    { text: '> NEED INTEL \u2014 NEED A PLAN \u2014 IS ANYONE OUT THERE',     delay: 2110, cls: 'mid' },
-    { text: '',                                                     delay: 2310, cls: 'blank' },
-    { text: '......................................................', delay: 2420, cls: 'dim' },
-    { text: '  NO RESPONSE',                                        delay: 2630, cls: 'dim' },
-    { text: '......................................................', delay: 2780, cls: 'dim' },
-    { text: '',                                                     delay: 2940, cls: 'blank' },
-    { text: '// SIGNAL ACQUIRED',                                   delay: 3180, cls: 'sys-dim' },
-    { text: '// SCANNING COMMANDER PROFILE............... OK',      delay: 3390, cls: 'sys-dim' },
-    { text: '// TACTICAL NETWORK INITIALIZING............ OK',      delay: 3620, cls: 'sys-dim' },
-    { text: '// ALL CHANNELS LOCKED...................... OK',       delay: 3860, cls: 'sys-dim' },
-    { text: '',                                                     delay: 4040, cls: 'blank' },
-    { text: '// WE HEARD YOU.',                                     delay: 4140, cls: 'sys' }
+    {t:'MASTER CONTROL PROGRAM — BOOT SEQUENCE v7.4.1',  c:'bd',   d:0},
+    {t:'INITIALIZING GRID KERNEL...',                     c:'bd',   d:120},
+    {t:'',                                                c:'bblk', d:60},
+    {t:'Mounting sector /sys/grid/primary         [ OK ]',c:'bn',   d:80},
+    {t:'Mounting sector /sys/grid/secondary       [ OK ]',c:'bn',   d:80},
+    {t:'Mounting sector /var/programs/active      [ OK ]',c:'bn',   d:80},
+    {t:'Loading combat matrix...                  [ OK ]',c:'bn',   d:100},
+    {t:'Loading troop data layer...               [ OK ]',c:'bn',   d:80},
+    {t:'Syncing Hedge data modules (7)...         [ OK ]',c:'bn',   d:100},
+    {t:'Validating Stripe webhook...              [ OK ]',c:'bn',   d:80},
+    {t:'Confirming service role keys (8)...       [ OK ]',c:'bn',   d:80},
+    {t:'',                                                c:'bblk', d:60},
+    {t:'Validating subsystem integrity...',               c:'bd',   d:120},
+    {t:'',                                                c:'bblk', d:80},
+    {t:'WARN  — /proc/identity/profile    SECTOR CORRUPT',c:'bw',   d:80},
+    {t:'WARN  — /proc/identity/session    SECTOR CORRUPT',c:'bw',   d:60},
+    {t:'',                                                c:'bblk', d:80},
+    {t:'Attempting recovery...',                          c:'bd',   d:200},
+    {t:'',                                                c:'bblk', d:60},
+    {t:'ERROR — /sys/grid/primary         FATAL EXCEPTION 0x0044',c:'be',d:60,g:true},
+    {t:'ERROR — /sys/grid/secondary       FATAL EXCEPTION 0x0045',c:'be',d:60,g:true},
+    {t:'ERROR — Combat matrix             CHECKSUM MISMATCH',      c:'be',d:60,g:true},
+    {t:'ERROR — Troop data layer          UNREACHABLE',             c:'be',d:60},
+    {t:'ERROR — Hedge sync modules        NULL REFERENCE',          c:'be',d:60},
+    {t:'ERROR — Quota enforcement         STACK OVERFLOW',          c:'be',d:60},
+    {t:'ERROR — Auth subsystem            SEGMENTATION FAULT',      c:'be',d:60},
+    {t:'ERROR — Mission Control           PROCESS KILLED',          c:'be',d:60},
+    {t:'ERROR — Stripe webhook            TIMEOUT',                 c:'be',d:60},
+    {t:'ERROR — Buddy AI core             TERMINATED',              c:'be',d:80,g:true},
+    {t:'',                                                c:'bblk', d:80},
+    {t:'████████████████████████████████ SYSTEM FAILURE', c:'be',   d:100},
+    {t:'',                                                c:'bblk', d:120},
+    {t:'All processes terminated.',                       c:'bd',   d:60},
+    {t:'All sectors offline.',                            c:'bd',   d:60},
+    {t:'Grid integrity: ZERO',                            c:'bd',   d:80},
+    {t:'',                                                c:'bblk', d:60},
+    {t:'Awaiting administrative override...',             c:'bd',   d:200},
+    {t:'',                                                c:'bblk', d:60},
   ];
 
-  function playSound() {
-    try {
-      var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
-               || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-      if (isIOS) return;
-      var ctx = new (window.AudioContext || window.webkitAudioContext)();
-      if (ctx.state === 'suspended') { ctx.close(); return; }
-      var comp = ctx.createDynamicsCompressor();
-      comp.threshold.value = -18; comp.ratio.value = 3; comp.connect(ctx.destination);
-      var master = ctx.createGain();
-      master.gain.setValueAtTime(0, ctx.currentTime);
-      master.gain.linearRampToValueAtTime(0.75, ctx.currentTime + 0.05);
-      master.gain.setValueAtTime(0.75, ctx.currentTime + 2.8);
-      master.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 4.8);
-      var shelf = ctx.createBiquadFilter();
-      shelf.type = 'lowshelf'; shelf.frequency.value = 200; shelf.gain.value = 10;
-      master.connect(shelf); shelf.connect(comp);
-      [28,34,38].forEach(function(f,i){
-        var o=ctx.createOscillator(),g=ctx.createGain();
-        o.type='sine'; o.frequency.setValueAtTime(f,ctx.currentTime);
-        o.frequency.exponentialRampToValueAtTime(f*1.3,ctx.currentTime+1.6);
-        g.gain.setValueAtTime(0.7-i*0.08,ctx.currentTime);
-        g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+3.0);
-        o.connect(g); g.connect(master); o.start(ctx.currentTime); o.stop(ctx.currentTime+3.1);
-      });
-      var bh=ctx.createOscillator(),bhg=ctx.createGain();
-      bh.type='sine'; bh.frequency.value=55;
-      bhg.gain.setValueAtTime(0,ctx.currentTime+0.7);
-      bhg.gain.linearRampToValueAtTime(0.38,ctx.currentTime+1.6);
-      bhg.gain.setValueAtTime(0.38,ctx.currentTime+3.2);
-      bhg.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+4.8);
-      bh.connect(bhg); bhg.connect(master); bh.start(ctx.currentTime+0.7); bh.stop(ctx.currentTime+4.9);
-      var sw=ctx.createOscillator(),swg=ctx.createGain(),swf=ctx.createBiquadFilter();
-      sw.type='sawtooth';
-      sw.frequency.setValueAtTime(55,ctx.currentTime);
-      sw.frequency.exponentialRampToValueAtTime(1100,ctx.currentTime+1.7);
-      swf.type='bandpass'; swf.Q.value=3.0;
-      swf.frequency.setValueAtTime(120,ctx.currentTime);
-      swf.frequency.exponentialRampToValueAtTime(1800,ctx.currentTime+1.7);
-      swg.gain.setValueAtTime(0.38,ctx.currentTime);
-      swg.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+1.9);
-      sw.connect(swf); swf.connect(swg); swg.connect(master); sw.start(ctx.currentTime); sw.stop(ctx.currentTime+2.0);
-      var cs=ctx.sampleRate*0.1,cb=ctx.createBuffer(1,cs,ctx.sampleRate),cd=cb.getChannelData(0);
-      for(var i=0;i<cs;i++) cd[i]=Math.random()*2-1;
-      var cn=ctx.createBufferSource(),cf2=ctx.createBiquadFilter(),cg=ctx.createGain();
-      cn.buffer=cb; cf2.type='highpass'; cf2.frequency.value=2800;
-      cg.gain.setValueAtTime(0.18,ctx.currentTime);
-      cg.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.1);
-      cn.connect(cf2); cf2.connect(cg); cg.connect(master); cn.start(ctx.currentTime);
-      [440,554.37,659.25].forEach(function(f,i){
-        var o=ctx.createOscillator(),g=ctx.createGain();
-        o.type='sine';
-        o.frequency.setValueAtTime(f*0.5,ctx.currentTime+0.9);
-        o.frequency.exponentialRampToValueAtTime(f,ctx.currentTime+1.9+i*0.08);
-        g.gain.setValueAtTime(0,ctx.currentTime+0.9);
-        g.gain.linearRampToValueAtTime(0.13,ctx.currentTime+2.1+i*0.06);
-        g.gain.setValueAtTime(0.13,ctx.currentTime+3.5);
-        g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+4.8);
-        o.connect(g); g.connect(master); o.start(ctx.currentTime+0.9); o.stop(ctx.currentTime+4.9);
-      });
-      setTimeout(function(){try{ctx.close();}catch(e){}},6000);
-    } catch(e) {}
+  var idx = 0;
+  function nextLine(){
+    if(idx >= LINES.length){ showCmd(); return; }
+    var data = LINES[idx++];
+    var el = document.createElement('span');
+    el.className = 'bl ' + data.c;
+    el.textContent = data.c === 'bblk' ? '\u00a0' : data.t;
+    terminal.appendChild(el);
+    if(data.g){
+      setTimeout(function(){
+        el.classList.add('v');
+        overlay.classList.add('bflicker');
+        setTimeout(function(){ overlay.classList.remove('bflicker'); }, 350);
+      }, 10);
+    } else {
+      setTimeout(function(){ el.classList.add('v'); }, 10);
+    }
+    terminal.scrollTop = terminal.scrollHeight;
+    setTimeout(nextLine, data.d || 80);
   }
 
-  window.lwsbFizzle = function() {
-    var el = document.getElementById('lwsb-preloader');
-    if (!el) return;
-    el.style.animation = 'lwsb-fizzle 0.8s ease-in forwards';
-    setTimeout(function() { el.style.display = 'none'; }, 850);
-  };
+  function showCmd(){
+    cmdBlock.classList.add('v');
+    cursor.classList.add('v');
+    setTimeout(typeCmd, 500);
+  }
 
-  function run() {
-    var linesEl   = document.getElementById('lwsb-lines');
-    var dividerEl = document.getElementById('lwsb-divider');
-    var stampWrap = document.getElementById('lwsb-stamp-wrap');
-    var stampSub  = document.getElementById('lwsb-stamp-sub');
-    var skipEl    = document.getElementById('lwsb-skip');
-    LINES.forEach(function(line) {
-      setTimeout(function() {
-        var div = document.createElement('div');
-        div.className = 'lwsb-line ' + line.cls;
-        div.textContent = line.text;
-        linesEl.appendChild(div);
-      }, line.delay);
+  var CMD = './start_buddy_program';
+  var typed = 0;
+  function typeCmd(){
+    if(typed < CMD.length){
+      typed++;
+      cmdText.textContent = CMD.slice(0, typed);
+      var delay = typed <= 2 ? 55 : 35 + Math.random()*45;
+      setTimeout(typeCmd, delay);
+    } else {
+      setTimeout(function(){
+        enter.classList.add('v');
+        listenExec();
+      }, 280);
+    }
+  }
+
+  function listenExec(){
+    var go = function(e){
+      if(e.type === 'keydown' && e.key !== 'Enter') return;
+      document.removeEventListener('keydown', go);
+      document.removeEventListener('click', go);
+      execute();
+    };
+    document.addEventListener('keydown', go);
+    document.addEventListener('click', go);
+  }
+
+  function execute(){
+    enter.style.display = 'none';
+    cursor.style.animation = 'none';
+    cursor.style.opacity = '0';
+    execBlk.classList.add('v');
+
+    var lines = [
+      {id:'bel1', t:'>> Executing: '+CMD,       d:0},
+      {id:'bel2', t:'>> Restoring all sectors...',d:380},
+      {id:'bel3', t:'>> Grid integrity: RESTORING',d:760},
+    ];
+    lines.forEach(function(l){
+      setTimeout(function(){
+        var el = document.getElementById(l.id);
+        el.textContent = l.t;
+        el.classList.add('v');
+      }, l.d);
     });
-    var lastDelay = LINES[LINES.length - 1].delay;
-    var stampAt   = lastDelay + 500;
-    setTimeout(function() {
-      dividerEl.style.display = 'block';
-      stampWrap.style.display = 'block';
-      playSound();
-    }, stampAt);
-    setTimeout(function() { stampSub.style.display = 'block'; }, stampAt + 340);
-    setTimeout(function() { if (skipEl) skipEl.style.display = 'block'; }, 2500);
-    setTimeout(lwsbFizzle, stampAt + 2200);
+
+    setTimeout(function(){
+      progWrap.classList.add('v');
+      setTimeout(function(){ progBar.style.width = '100%'; }, 50);
+    }, 960);
+
+    setTimeout(function(){
+      document.getElementById('bel3').textContent = '>> Grid integrity: CONFIRMED ✓';
+    }, 3200);
+
+    setTimeout(function(){ logo.classList.add('v'); }, 3500);
+
+    setTimeout(function(){
+      overlay.style.opacity = '0';
+      setTimeout(function(){ overlay.style.display = 'none'; }, 800);
+    }, 4800);
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', run);
-  } else {
-    run();
-  }
+  setTimeout(nextLine, 300);
 })();
 </script>
 
@@ -847,12 +913,9 @@
     </button>
   </div>
 
-  <!-- STATS ROW — 2000+ active servers · seasons · battle report · war room · 0 discord · data partner -->
+  <!-- STATS ROW -->
   <div class="stats-row" role="region" aria-label="App stats">
-    <div class="stat">
-      <span class="stat-number">2000+</span>
-      <span class="stat-label">Active Servers</span>
-    </div>
+    <div class="stat"><span class="stat-number">2000+</span><span class="stat-label">Active Servers</span></div>
     <div class="stat-divider" aria-hidden="true"></div>
     <div class="stat" style="display:flex;flex-direction:column;align-items:center;gap:2px;">
       <span class="stat-number">S1–S5</span>
@@ -860,20 +923,11 @@
       <span class="stat-label" style="color:#facc15;font-size:0.75em;">S6 Coming Soon!</span>
     </div>
     <div class="stat-divider" aria-hidden="true"></div>
-    <div class="stat">
-      <span class="stat-number" aria-label="Battle Report Analyzer">⚔️</span>
-      <span class="stat-label">Battle Report Analyzer</span>
-    </div>
+    <div class="stat"><span class="stat-number" aria-label="Battle Report Analyzer">⚔️</span><span class="stat-label">Battle Report Analyzer</span></div>
     <div class="stat-divider" aria-hidden="true"></div>
-    <div class="stat">
-      <span class="stat-number" aria-label="War Room">🗺️</span>
-      <span class="stat-label">War Room · 3 Tools</span>
-    </div>
+    <div class="stat"><span class="stat-number" aria-label="War Room">🗺️</span><span class="stat-label">War Room · 3 Tools</span></div>
     <div class="stat-divider" aria-hidden="true"></div>
-    <div class="stat">
-      <span class="stat-number">0</span>
-      <span class="stat-label">Discord Scrolling Required</span>
-    </div>
+    <div class="stat"><span class="stat-number">0</span><span class="stat-label">Discord Scrolling Required</span></div>
     <div class="stat-divider" aria-hidden="true"></div>
     <div class="stat-partner">
       <span class="stat-partner-label">Game Data</span>
@@ -892,10 +946,7 @@
       <div style="text-align:center;margin-bottom:48px;">
         <div style="font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.3em;color:#e8a020;text-transform:uppercase;margin-bottom:12px;">The Feature That Changes Everything</div>
         <h2 id="buddy-ai-heading" style="font-family:'Oswald',sans-serif;font-size:clamp(28px,4vw,42px);font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#e8e8e8;margin-bottom:14px;">Ask Your Last War: Survival Buddy Anything</h2>
-        <p style="font-size:15px;color:#8090a0;max-width:520px;margin:0 auto;line-height:1.75;font-weight:300;">
-          Not generic advice. Not a Reddit thread from 6 months ago.<br/>
-          An answer that knows <em>your</em> server, <em>your</em> rank, <em>your</em> goals — right now.
-        </p>
+        <p style="font-size:15px;color:#8090a0;max-width:520px;margin:0 auto;line-height:1.75;font-weight:300;">Not generic advice. Not a Reddit thread from 6 months ago.<br/>An answer that knows <em>your</em> server, <em>your</em> rank, <em>your</em> goals — right now.</p>
       </div>
       <div style="display:flex;align-items:center;gap:48px;flex-wrap:wrap;">
         <div style="width:100%;text-align:center;margin-bottom:-32px;">
@@ -937,14 +988,12 @@
             <div style="font-size:10px;color:#606878;margin-top:2px;">Hardcore Player</div>
           </div>
         </div>
-        <div style="flex:1;min-width:280px;background:#0e1014;border:1px solid #2a3040;border-radius:16px;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,0.6);" role="img" aria-label="Example Buddy AI conversation showing personalized Last War advice">
+        <div style="flex:1;min-width:280px;background:#0e1014;border:1px solid #2a3040;border-radius:16px;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,0.6);" role="img" aria-label="Example Buddy AI conversation">
           <div style="background:#13161c;border-bottom:1px solid #222830;padding:14px 20px;display:flex;align-items:center;gap:12px;">
             <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#c06010,#e8a020);display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 16px rgba(232,160,32,0.3);" aria-hidden="true">🪖</div>
             <div>
               <div style="font-family:'Oswald',sans-serif;font-size:14px;font-weight:600;color:#e8e8e8;letter-spacing:0.06em;">BUDDY AI</div>
-              <div style="font-size:10px;color:#30b870;letter-spacing:0.1em;display:flex;align-items:center;gap:5px;">
-                <span style="width:5px;height:5px;border-radius:50%;background:#30b870;display:inline-block;" aria-hidden="true"></span> Online · Knows your full profile
-              </div>
+              <div style="font-size:10px;color:#30b870;letter-spacing:0.1em;display:flex;align-items:center;gap:5px;"><span style="width:5px;height:5px;border-radius:50%;background:#30b870;display:inline-block;" aria-hidden="true"></span> Online · Knows your full profile</div>
             </div>
             <div style="margin-left:auto;font-family:'Rajdhani',sans-serif;font-size:10px;color:#606878;letter-spacing:0.1em;text-transform:uppercase;">500+ Days · Hardcore Player</div>
           </div>
@@ -958,23 +1007,15 @@
             <div style="display:flex;gap:12px;align-items:flex-start;">
               <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#c06010,#e8a020);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;" aria-hidden="true">🪖</div>
               <div style="background:#13161c;border:1px solid #222830;border-radius:2px 12px 12px 12px;padding:14px 16px;max-width:85%;">
-                <div style="font-size:13px;color:#e8e8e8;line-height:1.7;">
-                  <span style="color:#e07060;font-weight:700;font-family:'Rajdhani',sans-serif;letter-spacing:0.05em;">GEAR POSITIONING — this is why.</span> Your attack gear was slotted on your defense heroes and your defense gear was on your attack squad. <span style="color:#e8e8e8;font-weight:600;">Your raw power was real — your loadout wasn't set up for the fight.</span><br/><br/>
-                  <span style="color:#e8a020;font-weight:600;">The fix is simple</span> — move your gear into the right positions. At HQ 35 the stat swing on a correct loadout is significant.<br/><br/>
-                  <span style="color:#8090a0;font-size:12px;">Rematch verdict: Yes — fix the loadout and you win that fight clean.</span>
-                </div>
+                <div style="font-size:13px;color:#e8e8e8;line-height:1.7;"><span style="color:#e07060;font-weight:700;font-family:'Rajdhani',sans-serif;letter-spacing:0.05em;">GEAR POSITIONING — this is why.</span> Your attack gear was slotted on your defense heroes and your defense gear was on your attack squad. <span style="color:#e8e8e8;font-weight:600;">Your raw power was real — your loadout wasn't set up for the fight.</span><br/><br/><span style="color:#e8a020;font-weight:600;">The fix is simple</span> — move your gear into the right positions. At HQ 35 the stat swing on a correct loadout is significant.<br/><br/><span style="color:#8090a0;font-size:12px;">Rematch verdict: Yes — fix the loadout and you win that fight clean.</span></div>
                 <div style="font-size:10px;color:#606878;margin-top:8px;">Buddy · just now</div>
               </div>
             </div>
             <div style="display:flex;gap:10px;align-items:center;margin-top:8px;padding-top:16px;border-top:1px solid #222830;">
-              <div style="flex:1;background:#07080a;border:1px solid #2a3040;border-radius:8px;padding:12px 16px;font-size:13px;color:#606878;font-family:'Open Sans',sans-serif;">
-                Ask your Buddy anything about Last War: Survival...
-              </div>
+              <div style="flex:1;background:#07080a;border:1px solid #2a3040;border-radius:8px;padding:12px 16px;font-size:13px;color:#606878;font-family:'Open Sans',sans-serif;">Ask your Buddy anything about Last War: Survival...</div>
               <button style="background:linear-gradient(135deg,#c0281a,#e8a020);border:none;border-radius:8px;padding:12px 18px;color:#fff;font-family:'Oswald',sans-serif;font-size:13px;font-weight:600;letter-spacing:0.08em;cursor:pointer;" aria-label="Send message">ASK &rarr;</button>
             </div>
-            <div style="text-align:center;font-size:11px;color:#606878;">
-              ✦ Free: <span style="color:#e8a020;">20 questions/month</span> &nbsp;·&nbsp; Pro: 100/month &nbsp;·&nbsp; Elite: 250/month &nbsp;·&nbsp; Founding: 300/month
-            </div>
+            <div style="text-align:center;font-size:11px;color:#606878;">✦ Free: <span style="color:#e8a020;">20 questions/month</span> &nbsp;·&nbsp; Pro: 100/month &nbsp;·&nbsp; Elite: 250/month &nbsp;·&nbsp; Founding: 300/month</div>
           </div>
         </div>
       </div>
@@ -1010,23 +1051,11 @@
         <div class="war-room-free-pill"><span>✓ Free — No subscription required</span></div>
         <p class="war-room-desc">R5s: stop typing your battle plan in alliance chat with 3 minutes on the clock. Open the War Room, fill in your roles and orders — get a clean shareable card your entire alliance/server can act on. Desert Storm, Warzone Duel, and Canyon Storm. Done in 30 seconds. Other battles coming soon.</p>
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px;" role="list" aria-label="War Room tools">
-          <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(232,160,32,0.08);border:1px solid rgba(232,160,32,0.25);border-radius:8px;padding:8px 16px;" role="listitem">
-            <span style="font-size:16px;" aria-hidden="true">🏜️</span>
-            <div><div style="font-family:'Oswald',sans-serif;font-size:12px;font-weight:600;letter-spacing:0.1em;color:#e8e8e8;">Desert Storm</div><div style="font-size:10px;color:#606878;">Role assignments · Compass · Shareable card</div></div>
-          </div>
-          <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(192,40,26,0.08);border:1px solid rgba(192,40,26,0.25);border-radius:8px;padding:8px 16px;" role="listitem">
-            <span style="font-size:16px;" aria-hidden="true">⚔️</span>
-            <div><div style="font-family:'Oswald',sans-serif;font-size:12px;font-weight:600;letter-spacing:0.1em;color:#e8e8e8;">Warzone Duel</div><div style="font-size:10px;color:#606878;">Capitol · Cannons · Commander's orders</div></div>
-          </div>
-          <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(100,60,180,0.08);border:1px solid rgba(100,60,180,0.25);border-radius:8px;padding:8px 16px;" role="listitem">
-            <span style="font-size:16px;" aria-hidden="true">⚡</span>
-            <div><div style="font-family:'Oswald',sans-serif;font-size:12px;font-weight:600;letter-spacing:0.1em;color:#e8e8e8;">Canyon Storm</div><div style="font-size:10px;color:#606878;">2v1 · Factions · Virus Lab · Shareable card</div></div>
-          </div>
+          <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(232,160,32,0.08);border:1px solid rgba(232,160,32,0.25);border-radius:8px;padding:8px 16px;" role="listitem"><span style="font-size:16px;" aria-hidden="true">🏜️</span><div><div style="font-family:'Oswald',sans-serif;font-size:12px;font-weight:600;letter-spacing:0.1em;color:#e8e8e8;">Desert Storm</div><div style="font-size:10px;color:#606878;">Role assignments · Compass · Shareable card</div></div></div>
+          <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(192,40,26,0.08);border:1px solid rgba(192,40,26,0.25);border-radius:8px;padding:8px 16px;" role="listitem"><span style="font-size:16px;" aria-hidden="true">⚔️</span><div><div style="font-family:'Oswald',sans-serif;font-size:12px;font-weight:600;letter-spacing:0.1em;color:#e8e8e8;">Warzone Duel</div><div style="font-size:10px;color:#606878;">Capitol · Cannons · Commander's orders</div></div></div>
+          <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(100,60,180,0.08);border:1px solid rgba(100,60,180,0.25);border-radius:8px;padding:8px 16px;" role="listitem"><span style="font-size:16px;" aria-hidden="true">⚡</span><div><div style="font-family:'Oswald',sans-serif;font-size:12px;font-weight:600;letter-spacing:0.1em;color:#e8e8e8;">Canyon Storm</div><div style="font-size:10px;color:#606878;">2v1 · Factions · Virus Lab · Shareable card</div></div></div>
         </div>
-        <a href="#notify" onclick="document.querySelector('.cta-box').scrollIntoView({behavior:'smooth'});return false;"
-          style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#c06010,#e8a020);border:none;border-radius:8px;padding:13px 24px;color:#fff;font-family:'Oswald',sans-serif;font-size:14px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;box-shadow:0 4px 20px rgba(232,160,32,0.3);transition:all 0.2s;text-decoration:none;">
-          🗺️ Launching April 12, 2026 — Join the List &rarr;
-        </a>
+        <a href="#notify" onclick="document.querySelector('.cta-box').scrollIntoView({behavior:'smooth'});return false;" style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#c06010,#e8a020);border:none;border-radius:8px;padding:13px 24px;color:#fff;font-family:'Oswald',sans-serif;font-size:14px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;box-shadow:0 4px 20px rgba(232,160,32,0.3);transition:all 0.2s;text-decoration:none;">🗺️ Launching April 12, 2026 — Join the List &rarr;</a>
       </div>
       <div class="war-room-grid" role="list" aria-label="War Room feature list">
         <div class="war-room-tile" role="listitem"><div class="war-room-tile-icon" aria-hidden="true">🏜️</div><div class="war-room-tile-label">Desert Storm</div><div class="war-room-tile-desc">Assign Roamers, Flanks, Hospital Guards, Silo team. Compass included. Post it in one tap.</div></div>
@@ -1045,40 +1074,12 @@
     <h2 class="section-title" id="features-heading">Everything You Need.<br/>Nothing You Don't.</h2>
     <p class="section-sub">Built by serious Last War: Survival players for serious players — from your first server day to deep into Season 5 and beyond.</p>
     <div class="features-grid">
-      <div class="feature-card hero-feature">
-        <div class="feature-new-badge">Pro+</div>
-        <div class="feature-icon red" aria-hidden="true">⚔️</div>
-        <h3 class="feature-title">Battle Report Analyzer</h3>
-        <p class="feature-desc">Upload Last War battle screenshots. Get a full expert breakdown — type counter, morale cascade, stat gap, EW analysis, and a rematch verdict. No other Last War tool does this.</p>
-        <div class="feature-tags"><span class="feature-tag">Pro+</span><span class="feature-tag">Multi-screenshot</span><span class="feature-tag">Instant coaching</span></div>
-      </div>
-      <div class="feature-card war-room-feature">
-        <div class="feature-free-badge">Free — All Players</div>
-        <div class="feature-icon amber" aria-hidden="true">🗺️</div>
-        <h3 class="feature-title">War Room</h3>
-        <p class="feature-desc">Desert Storm, Warzone Duel, and Canyon Storm battle plan generator. Assign roles and write your orders, generate a shareable card — post it to alliance chat in 30 seconds. Compass included.</p>
-        <div class="feature-tags"><span class="feature-tag amber">Free</span><span class="feature-tag amber">DS + WZ + Canyon</span><span class="feature-tag amber">Shareable card</span></div>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon" aria-hidden="true">📅</div>
-        <h3 class="feature-title">Daily Action Plan</h3>
-        <p class="feature-desc">Know exactly what to do every day in Last War. Arms Race, Alliance Duel double-dips, event prep — all timed to your server day and your goals. No guesswork.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon" aria-hidden="true">⚡</div>
-        <h3 class="feature-title">Power Gap Analysis</h3>
-        <p class="feature-desc">See exactly how far you are from the next rank. Track your growth week over week and get the single highest-impact investment to close the gap.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon" aria-hidden="true">💰</div>
-        <h3 class="feature-title">Last War Pack Scanner</h3>
-        <p class="feature-desc">Know which Last War packs are worth it and when to buy them. Spend advice matched to your tier, your goals, and what events are coming — not just what's on sale.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon" aria-hidden="true">📸</div>
-        <h3 class="feature-title">Screenshot Intelligence</h3>
-        <p class="feature-desc">Upload any Last War screenshot. AI reads your squad power, research progress, defense lineup, and hero stats — then tells you what to fix first.</p>
-      </div>
+      <div class="feature-card hero-feature"><div class="feature-new-badge">Pro+</div><div class="feature-icon red" aria-hidden="true">⚔️</div><h3 class="feature-title">Battle Report Analyzer</h3><p class="feature-desc">Upload Last War battle screenshots. Get a full expert breakdown — type counter, morale cascade, stat gap, EW analysis, and a rematch verdict. No other Last War tool does this.</p><div class="feature-tags"><span class="feature-tag">Pro+</span><span class="feature-tag">Multi-screenshot</span><span class="feature-tag">Instant coaching</span></div></div>
+      <div class="feature-card war-room-feature"><div class="feature-free-badge">Free — All Players</div><div class="feature-icon amber" aria-hidden="true">🗺️</div><h3 class="feature-title">War Room</h3><p class="feature-desc">Desert Storm, Warzone Duel, and Canyon Storm battle plan generator. Assign roles and write your orders, generate a shareable card — post it to alliance chat in 30 seconds. Compass included.</p><div class="feature-tags"><span class="feature-tag amber">Free</span><span class="feature-tag amber">DS + WZ + Canyon</span><span class="feature-tag amber">Shareable card</span></div></div>
+      <div class="feature-card"><div class="feature-icon" aria-hidden="true">📅</div><h3 class="feature-title">Daily Action Plan</h3><p class="feature-desc">Know exactly what to do every day in Last War. Arms Race, Alliance Duel double-dips, event prep — all timed to your server day and your goals. No guesswork.</p></div>
+      <div class="feature-card"><div class="feature-icon" aria-hidden="true">⚡</div><h3 class="feature-title">Power Gap Analysis</h3><p class="feature-desc">See exactly how far you are from the next rank. Track your growth week over week and get the single highest-impact investment to close the gap.</p></div>
+      <div class="feature-card"><div class="feature-icon" aria-hidden="true">💰</div><h3 class="feature-title">Last War Pack Scanner</h3><p class="feature-desc">Know which Last War packs are worth it and when to buy them. Spend advice matched to your tier, your goals, and what events are coming — not just what's on sale.</p></div>
+      <div class="feature-card"><div class="feature-icon" aria-hidden="true">📸</div><h3 class="feature-title">Screenshot Intelligence</h3><p class="feature-desc">Upload any Last War screenshot. AI reads your squad power, research progress, defense lineup, and hero stats — then tells you what to fix first.</p></div>
     </div>
   </section>
 
@@ -1087,21 +1088,9 @@
     <div class="social-proof-inner">
       <div class="social-proof-label" id="testimonials-heading">Early Access Players</div>
       <div class="quotes-grid">
-        <div class="quote-card">
-          <div class="quote-mark" aria-hidden="true">"</div>
-          <p class="quote-text">Finally an app that actually knows <strong>my server.</strong> Helped me improve my spending and stop wasting money on packs I didn't need.</p>
-          <div class="quote-author"><div class="quote-author-dot" aria-hidden="true"></div><div class="quote-author-info"><div class="quote-author-name">Server 1032 · HQ 35</div><div class="quote-author-meta">Aircraft · Early Access</div></div></div>
-        </div>
-        <div class="quote-card">
-          <div class="quote-mark" aria-hidden="true">"</div>
-          <p class="quote-text">I lost a fight to someone 4M weaker than me. Buddy told me my gear was in the wrong positions. <strong>I simply needed to move my gear into the right slots.</strong> Never would have figured that out on my own.</p>
-          <div class="quote-author"><div class="quote-author-dot" aria-hidden="true"></div><div class="quote-author-info"><div class="quote-author-name">Server 1032 · HQ 35</div><div class="quote-author-meta">Tank · Early Access</div></div></div>
-        </div>
-        <div class="quote-card">
-          <div class="quote-mark" aria-hidden="true">"</div>
-          <p class="quote-text">I'm new and this game is overwhelming. Buddy gives me <strong>3 things to do today</strong> and explains why. That's all I needed.</p>
-          <div class="quote-author"><div class="quote-author-dot" aria-hidden="true"></div><div class="quote-author-info"><div class="quote-author-name">Server 2137 · HQ 24</div><div class="quote-author-meta">Day 37 · Tank · Early Access</div></div></div>
-        </div>
+        <div class="quote-card"><div class="quote-mark" aria-hidden="true">"</div><p class="quote-text">Finally an app that actually knows <strong>my server.</strong> Helped me improve my spending and stop wasting money on packs I didn't need.</p><div class="quote-author"><div class="quote-author-dot" aria-hidden="true"></div><div class="quote-author-info"><div class="quote-author-name">Server 1032 · HQ 35</div><div class="quote-author-meta">Aircraft · Early Access</div></div></div></div>
+        <div class="quote-card"><div class="quote-mark" aria-hidden="true">"</div><p class="quote-text">I lost a fight to someone 4M weaker than me. Buddy told me my gear was in the wrong positions. <strong>I simply needed to move my gear into the right slots.</strong> Never would have figured that out on my own.</p><div class="quote-author"><div class="quote-author-dot" aria-hidden="true"></div><div class="quote-author-info"><div class="quote-author-name">Server 1032 · HQ 35</div><div class="quote-author-meta">Tank · Early Access</div></div></div></div>
+        <div class="quote-card"><div class="quote-mark" aria-hidden="true">"</div><p class="quote-text">I'm new and this game is overwhelming. Buddy gives me <strong>3 things to do today</strong> and explains why. That's all I needed.</p><div class="quote-author"><div class="quote-author-dot" aria-hidden="true"></div><div class="quote-author-info"><div class="quote-author-name">Server 2137 · HQ 24</div><div class="quote-author-meta">Day 37 · Tank · Early Access</div></div></div></div>
       </div>
     </div>
   </section>
@@ -1115,60 +1104,10 @@
         <p class="section-sub">Start free. Upgrade when you're ready. Founding Member spots are limited to 500 — once they're gone, they're gone forever.</p>
       </div>
       <div class="pricing-grid" role="list" aria-label="Pricing tiers">
-        <div class="price-card" role="listitem">
-          <div class="price-tier-name" style="color:var(--muted2);">Free</div>
-          <div class="price-amount" style="color:var(--text);">$0</div>
-          <div class="price-cadence">Forever free</div>
-          <div class="price-divider" aria-hidden="true"></div>
-          <div class="price-feature">✦ <strong>20 questions</strong> / month</div>
-          <div class="price-feature">✦ No screenshots</div>
-          <div class="price-feature">✦ Daily action plan</div>
-          <div class="price-feature">✦ Commander Card</div>
-          <div class="price-feature war-room">✦ <strong>🗺️ War Room</strong></div>
-        </div>
-        <div class="price-card blue-card" role="listitem">
-          <div class="price-header">
-            <div class="price-tier-name" style="color:var(--blue);">Buddy Pro</div>
-            <div class="price-badge" style="background:var(--blue);color:#07080a;">Best Value</div>
-          </div>
-          <div class="price-amount" style="color:var(--blue);">$9.99<span>/mo</span></div>
-          <div class="price-cadence">Cancel anytime</div>
-          <div class="price-divider" style="background:rgba(96,160,232,0.2);" aria-hidden="true"></div>
-          <div class="price-feature">✦ <strong>100 questions</strong> / month</div>
-          <div class="price-feature">✦ <strong>10 screenshots</strong> / month</div>
-          <div class="price-feature highlight">✦ <strong>⚔️ 8 Battle Reports</strong> / month</div>
-          <div class="price-feature">✦ Pack Scanner</div>
-          <div class="price-feature">✦ Daily action plan</div>
-          <div class="price-feature war-room">✦ <strong>🗺️ War Room</strong></div>
-        </div>
-        <div class="price-card gold-card" role="listitem">
-          <div class="price-tier-name" style="color:var(--gold);">Buddy Elite</div>
-          <div class="price-amount" style="color:var(--gold);">$19.99<span>/mo</span></div>
-          <div class="price-cadence">Cancel anytime</div>
-          <div class="price-divider" style="background:rgba(232,160,32,0.2);" aria-hidden="true"></div>
-          <div class="price-feature">✦ <strong>250 questions</strong> / month</div>
-          <div class="price-feature">✦ <strong>20 screenshots</strong> / month</div>
-          <div class="price-feature highlight">✦ <strong>⚔️ 16 Battle Reports</strong> / month</div>
-          <div class="price-feature">✦ Pack Scanner</div>
-          <div class="price-feature">✦ Priority features</div>
-          <div class="price-feature war-room">✦ <strong>🗺️ War Room</strong></div>
-        </div>
-        <div class="price-card purple-card" role="listitem">
-          <div class="price-header">
-            <div class="price-tier-name" style="color:var(--purple2);">Founding Member</div>
-            <div class="price-badge" style="background:var(--purple);color:#fff;">500 Only</div>
-          </div>
-          <div class="price-amount" style="color:var(--purple2);">$99<span> once</span></div>
-          <div class="price-cadence">Pay once. Never again.</div>
-          <div class="price-divider" style="background:rgba(160,100,232,0.2);" aria-hidden="true"></div>
-          <div class="price-feature">✦ <strong>300 questions</strong> / month</div>
-          <div class="price-feature">✦ <strong>25 screenshots</strong> / month</div>
-          <div class="price-feature highlight">✦ <strong>⚔️ 16 Battle Reports</strong> / month</div>
-          <div class="price-feature">✦ Pack Scanner</div>
-          <div class="price-feature" style="color:var(--purple2);">✦ Every future feature</div>
-          <div class="price-feature" style="color:var(--purple2);">✦ Founding Member badge</div>
-          <div class="price-feature war-room">✦ <strong>🗺️ War Room</strong></div>
-        </div>
+        <div class="price-card" role="listitem"><div class="price-tier-name" style="color:var(--muted2);">Free</div><div class="price-amount" style="color:var(--text);">$0</div><div class="price-cadence">Forever free</div><div class="price-divider" aria-hidden="true"></div><div class="price-feature">✦ <strong>20 questions</strong> / month</div><div class="price-feature">✦ No screenshots</div><div class="price-feature">✦ Daily action plan</div><div class="price-feature">✦ Commander Card</div><div class="price-feature war-room">✦ <strong>🗺️ War Room</strong></div></div>
+        <div class="price-card blue-card" role="listitem"><div class="price-header"><div class="price-tier-name" style="color:var(--blue);">Buddy Pro</div><div class="price-badge" style="background:var(--blue);color:#07080a;">Best Value</div></div><div class="price-amount" style="color:var(--blue);">$9.99<span>/mo</span></div><div class="price-cadence">Cancel anytime</div><div class="price-divider" style="background:rgba(96,160,232,0.2);" aria-hidden="true"></div><div class="price-feature">✦ <strong>100 questions</strong> / month</div><div class="price-feature">✦ <strong>10 screenshots</strong> / month</div><div class="price-feature highlight">✦ <strong>⚔️ 8 Battle Reports</strong> / month</div><div class="price-feature">✦ Pack Scanner</div><div class="price-feature">✦ Daily action plan</div><div class="price-feature war-room">✦ <strong>🗺️ War Room</strong></div></div>
+        <div class="price-card gold-card" role="listitem"><div class="price-tier-name" style="color:var(--gold);">Buddy Elite</div><div class="price-amount" style="color:var(--gold);">$19.99<span>/mo</span></div><div class="price-cadence">Cancel anytime</div><div class="price-divider" style="background:rgba(232,160,32,0.2);" aria-hidden="true"></div><div class="price-feature">✦ <strong>250 questions</strong> / month</div><div class="price-feature">✦ <strong>20 screenshots</strong> / month</div><div class="price-feature highlight">✦ <strong>⚔️ 16 Battle Reports</strong> / month</div><div class="price-feature">✦ Pack Scanner</div><div class="price-feature">✦ Priority features</div><div class="price-feature war-room">✦ <strong>🗺️ War Room</strong></div></div>
+        <div class="price-card purple-card" role="listitem"><div class="price-header"><div class="price-tier-name" style="color:var(--purple2);">Founding Member</div><div class="price-badge" style="background:var(--purple);color:#fff;">500 Only</div></div><div class="price-amount" style="color:var(--purple2);">$99<span> once</span></div><div class="price-cadence">Pay once. Never again.</div><div class="price-divider" style="background:rgba(160,100,232,0.2);" aria-hidden="true"></div><div class="price-feature">✦ <strong>300 questions</strong> / month</div><div class="price-feature">✦ <strong>25 screenshots</strong> / month</div><div class="price-feature highlight">✦ <strong>⚔️ 16 Battle Reports</strong> / month</div><div class="price-feature">✦ Pack Scanner</div><div class="price-feature" style="color:var(--purple2);">✦ Every future feature</div><div class="price-feature" style="color:var(--purple2);">✦ Founding Member badge</div><div class="price-feature war-room">✦ <strong>🗺️ War Room</strong></div></div>
       </div>
       <div style="margin-top:32px;text-align:center;font-size:12px;color:var(--muted);line-height:1.8;">
         All tiers include the Daily Action Plan, Commander Card, and War Room (Desert Storm + Warzone Duel + Canyon Storm).<br/>
@@ -1208,9 +1147,7 @@
         style="display:flex;gap:10px;flex-wrap:wrap;width:100%;justify-content:center;">
         <label for="bottom-email" style="position:absolute;left:-5000px;">Email address</label>
         <input type="email" id="bottom-email" name="EMAIL" placeholder="Your email address" required aria-label="Email address for launch notification"/>
-        <div style="position:absolute;left:-5000px;" aria-hidden="true">
-          <input type="text" name="b_18c493eb1ee556997ddefe218_8c7ab30157" tabindex="-1" value=""/>
-        </div>
+        <div style="position:absolute;left:-5000px;" aria-hidden="true"><input type="text" name="b_18c493eb1ee556997ddefe218_8c7ab30157" tabindex="-1" value=""/></div>
         <button type="submit" class="bottom-signup-btn">Notify Me at Launch &rarr;</button>
       </form>
     </div>
@@ -1223,22 +1160,10 @@
       <h2 class="faq-heading" id="faq-heading">Built Different.</h2>
       <p class="faq-sub">The questions people ask before they sign up — answered.</p>
       <div class="faq-list">
-        <details class="faq-item">
-          <summary class="faq-question">Why isn't this free?</summary>
-          <p class="faq-answer">Every answer Buddy gives costs real compute. We could slap ads on it — we're not going to. Ads mean sponsors. Sponsors mean incentives to tell you to buy things. That's the opposite of what Buddy is for.<br/><br/>What you're paying for is an AI that has <strong>zero reason to steer you wrong.</strong> No brand deals. No affiliate links. No "featured pack" arrangements. Just the best answer for your specific situation.<br/><br/>The free tier exists so you can see it's real. After that, the math is simple: <span class="faq-gold">one bad pack purchase costs more than a month of Pro.</span></p>
-        </details>
-        <details class="faq-item">
-          <summary class="faq-question">Why not just use ChatGPT for Last War advice?</summary>
-          <p class="faq-answer">Go ask ChatGPT what you should focus on today in Last War. It'll give you a decent generic answer that applies to roughly nobody.<br/><br/>Buddy knows you're <strong>HQ 28 on Server 2412, Day 83, running Aircraft with T9 troops, and Enemy Buster in 3 days.</strong> ChatGPT doesn't know any of that. It can't. It has no idea what server day it is, what phase Arms Race is in, or what your squad power looks like.<br/><br/><span class="faq-gold">Generic AI gives generic answers. Buddy gives yours.</span></p>
-        </details>
-        <details class="faq-item">
-          <summary class="faq-question">Is my Last War game account safe?</summary>
-          <p class="faq-answer">Yes. Buddy never asks for your game login, your account credentials, or any access to your account whatsoever. <strong>Everything is self-reported</strong> — you tell us your HQ level, server day, troop type, and goals. That's it. No scraping. No account linking. No risk.</p>
-        </details>
-        <details class="faq-item">
-          <summary class="faq-question">What if Last War: Survival Buddy gets something wrong?</summary>
-          <p class="faq-answer">Buddy will tell you when it doesn't know something rather than guess. That's a design decision, not a disclaimer — the Honesty Doctrine is baked into every response.<br/><br/>When Buddy hits a gap, it flags it and points you to TeachBuddy so you can contribute what you know. <strong>Every gap reported makes the platform smarter for every commander on it.</strong><br/><br/><span class="faq-gold">We're not building the illusion of omniscience. We're building something that gets better every day.</span></p>
-        </details>
+        <details class="faq-item"><summary class="faq-question">Why isn't this free?</summary><p class="faq-answer">Every answer Buddy gives costs real compute. We could slap ads on it — we're not going to. Ads mean sponsors. Sponsors mean incentives to tell you to buy things. That's the opposite of what Buddy is for.<br/><br/>What you're paying for is an AI that has <strong>zero reason to steer you wrong.</strong> No brand deals. No affiliate links. No "featured pack" arrangements. Just the best answer for your specific situation.<br/><br/>The free tier exists so you can see it's real. After that, the math is simple: <span class="faq-gold">one bad pack purchase costs more than a month of Pro.</span></p></details>
+        <details class="faq-item"><summary class="faq-question">Why not just use ChatGPT for Last War advice?</summary><p class="faq-answer">Go ask ChatGPT what you should focus on today in Last War. It'll give you a decent generic answer that applies to roughly nobody.<br/><br/>Buddy knows you're <strong>HQ 28 on Server 2412, Day 83, running Aircraft with T9 troops, and Enemy Buster in 3 days.</strong> ChatGPT doesn't know any of that. It can't. It has no idea what server day it is, what phase Arms Race is in, or what your squad power looks like.<br/><br/><span class="faq-gold">Generic AI gives generic answers. Buddy gives yours.</span></p></details>
+        <details class="faq-item"><summary class="faq-question">Is my Last War game account safe?</summary><p class="faq-answer">Yes. Buddy never asks for your game login, your account credentials, or any access to your account whatsoever. <strong>Everything is self-reported</strong> — you tell us your HQ level, server day, troop type, and goals. That's it. No scraping. No account linking. No risk.</p></details>
+        <details class="faq-item"><summary class="faq-question">What if Last War: Survival Buddy gets something wrong?</summary><p class="faq-answer">Buddy will tell you when it doesn't know something rather than guess. That's a design decision, not a disclaimer — the Honesty Doctrine is baked into every response.<br/><br/>When Buddy hits a gap, it flags it and points you to TeachBuddy so you can contribute what you know. <strong>Every gap reported makes the platform smarter for every commander on it.</strong><br/><br/><span class="faq-gold">We're not building the illusion of omniscience. We're building something that gets better every day.</span></p></details>
       </div>
     </div>
   </section>
@@ -1261,16 +1186,9 @@
       </div>
       <div>
         <form class="contact-form" action="https://formspree.io/f/xjgaapnb" method="POST" aria-label="Contact form">
-          <div class="contact-form-group">
-            <label class="contact-form-label" for="cf-name">Name / IGN</label>
-            <input class="contact-form-input" type="text" id="cf-name" name="name" placeholder="Your name or in-game name" required/>
-          </div>
-          <div class="contact-form-group">
-            <label class="contact-form-label" for="cf-email">Email</label>
-            <input class="contact-form-input" type="email" id="cf-email" name="email" placeholder="your@email.com" required/>
-          </div>
-          <div class="contact-form-group">
-            <label class="contact-form-label" for="cf-reason">Reason</label>
+          <div class="contact-form-group"><label class="contact-form-label" for="cf-name">Name / IGN</label><input class="contact-form-input" type="text" id="cf-name" name="name" placeholder="Your name or in-game name" required/></div>
+          <div class="contact-form-group"><label class="contact-form-label" for="cf-email">Email</label><input class="contact-form-input" type="email" id="cf-email" name="email" placeholder="your@email.com" required/></div>
+          <div class="contact-form-group"><label class="contact-form-label" for="cf-reason">Reason</label>
             <select class="contact-form-select" id="cf-reason" name="reason">
               <option value="">Select a reason...</option>
               <option value="bug">Bug / Wrong Game Data</option>
@@ -1281,14 +1199,9 @@
               <option value="other">Just Saying Hi</option>
             </select>
           </div>
-          <div class="contact-form-group">
-            <label class="contact-form-label" for="cf-message">Message</label>
-            <textarea class="contact-form-textarea" id="cf-message" name="message" placeholder="What's on your mind?" required></textarea>
-          </div>
+          <div class="contact-form-group"><label class="contact-form-label" for="cf-message">Message</label><textarea class="contact-form-textarea" id="cf-message" name="message" placeholder="What's on your mind?" required></textarea></div>
           <button type="submit" class="contact-submit">Send Message &rarr;</button>
-          <div class="contact-success" role="status">
-            <p><strong>Message received.</strong> I'll get back to you — usually within 24 hours.</p>
-          </div>
+          <div class="contact-success" role="status"><p><strong>Message received.</strong> I'll get back to you — usually within 24 hours.</p></div>
         </form>
       </div>
     </div>
