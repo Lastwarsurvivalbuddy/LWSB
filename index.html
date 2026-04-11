@@ -517,22 +517,22 @@
      TRON BOOT SEQUENCE
 ════════════════════════════════════════════════════ -->
 <style>
+  body.booting { overflow: hidden !important; }
+
   #boot-overlay {
     position: fixed; inset: 0; z-index: 99999;
     background: #000300;
     font-family: 'Share Tech Mono', 'Courier New', monospace;
     display: flex; flex-direction: column;
-    justify-content: flex-start;
+    justify-content: space-between;
     padding: clamp(28px,5vw,60px) clamp(28px,6vw,72px);
     overflow: hidden;
-    transition: opacity 0.8s ease;
+    transition: opacity 0.6s ease;
   }
-  /* scanlines */
   #boot-overlay::before {
     content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 2;
     background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 4px);
   }
-  /* grid */
   #boot-overlay::after {
     content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 1;
     background-image: linear-gradient(rgba(0,255,65,0.04) 1px, transparent 1px),
@@ -543,179 +543,160 @@
     position: absolute; inset: 0; pointer-events: none; z-index: 3;
     background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.85) 100%);
   }
-  #boot-terminal { position: relative; z-index: 10; max-width: 860px; }
+
+  /* top: scrolling terminal — capped so command always shows */
+  #boot-top {
+    position: relative; z-index: 10;
+    overflow: hidden;
+    flex: 1;
+    min-height: 0;
+  }
+  #boot-terminal { max-width: 860px; }
+
   .bl {
-    display: block; font-size: clamp(11px,1.5vw,13px); line-height: 1.75;
-    letter-spacing: 0.04em; opacity: 0; transform: translateX(-4px);
-    transition: opacity 0.1s ease, transform 0.1s ease;
+    display: block; font-size: clamp(11px,1.5vw,13px); line-height: 1.7;
+    letter-spacing: 0.04em; opacity: 0;
+    transition: opacity 0.08s ease;
     white-space: pre; font-family: 'Share Tech Mono', 'Courier New', monospace;
   }
-  .bl.v  { opacity: 1; transform: translateX(0); }
+  .bl.v  { opacity: 1; }
   .bd    { color: #1a5c1a; }
   .bn    { color: #00aa2a; }
-  .bb    { color: #00ff41; }
   .be    { color: #ff2244; }
   .bw    { color: #ffaa00; }
-  .bblk  { min-height: 10px; opacity: 0 !important; }
+  .bblk  { min-height: 8px; opacity: 0 !important; }
 
-  /* command block */
-  #boot-cmd { position: relative; z-index: 10; margin-top: 24px; opacity: 0; transition: opacity 0.4s ease; }
-  #boot-cmd.v { opacity: 1; }
+  /* bottom: command always pinned */
+  #boot-bottom {
+    position: relative; z-index: 10;
+    flex-shrink: 0;
+    padding-top: 20px;
+    border-top: 1px solid rgba(0,255,65,0.08);
+    margin-top: 16px;
+  }
+
   #boot-prefix {
     display: block; color: #00aa2a; font-size: clamp(11px,1.5vw,13px);
     letter-spacing: 0.05em; margin-bottom: 4px;
     font-family: 'Share Tech Mono', 'Courier New', monospace;
+    opacity: 0; transition: opacity 0.3s;
   }
+  #boot-prefix.v { opacity: 1; }
+
   #boot-cmd-line { display: flex; align-items: center; }
   #boot-cmd-text {
     font-family: 'Share Tech Mono', 'Courier New', monospace;
-    font-size: clamp(16px,3vw,22px); letter-spacing: 0.12em; color: #00ff41;
-    text-shadow: 0 0 8px rgba(0,255,65,0.9), 0 0 20px rgba(0,255,65,0.5), 0 0 40px rgba(0,255,65,0.2);
+    font-size: clamp(16px,2.5vw,22px); letter-spacing: 0.12em; color: #00ff41;
+    text-shadow: 0 0 8px rgba(0,255,65,0.9), 0 0 20px rgba(0,255,65,0.5);
     white-space: nowrap;
   }
   #boot-cursor {
-    display: inline-block; width: clamp(10px,1.5vw,13px); height: clamp(16px,2.5vw,22px);
+    display: inline-block; width: clamp(10px,1.5vw,13px); height: clamp(16px,2.2vw,20px);
     background: #00ff41; box-shadow: 0 0 10px rgba(0,255,65,0.8);
-    margin-left: 3px; flex-shrink: 0; opacity: 0; transition: opacity 0.2s;
+    margin-left: 3px; flex-shrink: 0;
+    opacity: 0; transition: opacity 0.2s;
     animation: bCursor 0.7s step-end infinite;
   }
   #boot-cursor.v { opacity: 1; }
   @keyframes bCursor { 0%,100%{opacity:1} 50%{opacity:0} }
 
-  #boot-enter {
-    margin-top: 16px; font-size: clamp(10px,1.2vw,12px); color: #00ff41;
-    letter-spacing: 0.18em; text-transform: uppercase; display: none;
-    font-family: 'Share Tech Mono', 'Courier New', monospace;
-    animation: bPulse 1.4s ease-in-out infinite;
-  }
-  #boot-enter.v { display: block; }
-  @keyframes bPulse { 0%,100%{opacity:0.3} 50%{opacity:1;text-shadow:0 0 12px rgba(0,255,65,0.8)} }
-
-  /* exec block */
-  #boot-exec { position: relative; z-index: 10; margin-top: 14px; opacity: 0; transition: opacity 0.3s; }
+  /* exec / progress / logo — all in bottom */
+  #boot-exec { margin-top: 10px; opacity: 0; transition: opacity 0.3s; }
   #boot-exec.v { opacity: 1; }
   .bel {
     display: block; font-family: 'Share Tech Mono', 'Courier New', monospace;
     font-size: clamp(11px,1.5vw,13px); color: #00ff41;
-    letter-spacing: 0.05em; line-height: 1.8; opacity: 0; transition: opacity 0.3s;
+    letter-spacing: 0.05em; line-height: 1.7; opacity: 0; transition: opacity 0.25s;
   }
   .bel.v { opacity: 1; }
 
   #boot-prog-wrap {
-    margin-top: 12px; width: clamp(220px,40vw,360px); height: 3px;
+    margin-top: 10px; width: clamp(200px,35vw,340px); height: 3px;
     background: rgba(0,255,65,0.1); border: 1px solid rgba(0,255,65,0.2);
     opacity: 0; transition: opacity 0.3s;
   }
   #boot-prog-wrap.v { opacity: 1; }
   #boot-prog-bar {
-    height: 100%; width: 0%;
-    background: #00ff41; box-shadow: 0 0 8px rgba(0,255,65,0.8);
-    transition: width 2.4s cubic-bezier(0.4,0,0.2,1);
+    height: 100%; width: 0%; background: #00ff41;
+    box-shadow: 0 0 8px rgba(0,255,65,0.8);
+    transition: width 1.4s cubic-bezier(0.4,0,0.2,1);
   }
 
-  #boot-logo { position: relative; z-index: 10; margin-top: 32px; opacity: 0; transition: opacity 0.7s ease; }
+  #boot-logo { margin-top: 18px; opacity: 0; transition: opacity 0.6s ease; }
   #boot-logo.v { opacity: 1; }
   #boot-logo-text {
     font-family: 'Rajdhani', sans-serif; font-weight: 700;
-    font-size: clamp(22px,4vw,46px); letter-spacing: 0.2em;
+    font-size: clamp(20px,3.5vw,42px); letter-spacing: 0.2em;
     color: #00ff41; text-transform: uppercase;
     text-shadow: 0 0 20px rgba(0,255,65,0.7), 0 0 60px rgba(0,255,65,0.3);
   }
   #boot-logo-sub {
     font-family: 'Share Tech Mono', 'Courier New', monospace;
-    font-size: clamp(9px,1.1vw,11px); letter-spacing: 0.3em;
+    font-size: clamp(9px,1vw,11px); letter-spacing: 0.3em;
     color: #00aa2a; text-transform: uppercase; margin-top: 4px;
   }
-
-  @keyframes bGlitch {
-    0%   { clip-path: inset(20% 0 60% 0); transform: translateX(-3px); }
-    33%  { clip-path: inset(60% 0 10% 0); transform: translateX(3px); }
-    66%  { clip-path: inset(40% 0 30% 0); transform: translateX(-2px); }
-    100% { clip-path: none; transform: translateX(0); }
-  }
-  .bglitch { animation: bGlitch 0.25s steps(2) 1 !important; }
 
   @keyframes bFlicker {
     0%{opacity:1} 10%{opacity:0.3} 12%{opacity:1} 40%{opacity:0.6} 42%{opacity:1} 72%{opacity:0.8} 74%{opacity:1}
   }
-  .bflicker { animation: bFlicker 0.35s ease 1; }
+  .bflicker { animation: bFlicker 0.3s ease 1; }
 </style>
 
 <div id="boot-overlay">
   <div id="boot-vignette"></div>
-  <div id="boot-terminal"></div>
-  <div id="boot-cmd">
+  <div id="boot-top">
+    <div id="boot-terminal"></div>
+  </div>
+  <div id="boot-bottom">
     <span id="boot-prefix">root@grid:~$</span>
     <div id="boot-cmd-line">
       <span id="boot-cmd-text"></span>
       <span id="boot-cursor"></span>
     </div>
-    <div id="boot-enter">[ press enter or tap to execute ]</div>
-  </div>
-  <div id="boot-exec">
-    <span class="bel" id="bel1"></span>
-    <span class="bel" id="bel2"></span>
-    <span class="bel" id="bel3"></span>
-  </div>
-  <div id="boot-prog-wrap"><div id="boot-prog-bar"></div></div>
-  <div id="boot-logo">
-    <div id="boot-logo-text">LAST WAR: SURVIVAL BUDDY</div>
-    <div id="boot-logo-sub">// system online — all sectors active</div>
+    <div id="boot-exec">
+      <span class="bel" id="bel1"></span>
+      <span class="bel" id="bel2"></span>
+    </div>
+    <div id="boot-prog-wrap"><div id="boot-prog-bar"></div></div>
+    <div id="boot-logo">
+      <div id="boot-logo-text">LAST WAR: SURVIVAL BUDDY</div>
+      <div id="boot-logo-sub">// system online — all sectors active</div>
+    </div>
   </div>
 </div>
 
 <script>
 (function(){
+  document.body.classList.add('booting');
+
   var overlay  = document.getElementById('boot-overlay');
   var terminal = document.getElementById('boot-terminal');
-  var cmdBlock = document.getElementById('boot-cmd');
+  var prefix   = document.getElementById('boot-prefix');
   var cmdText  = document.getElementById('boot-cmd-text');
   var cursor   = document.getElementById('boot-cursor');
-  var enter    = document.getElementById('boot-enter');
   var execBlk  = document.getElementById('boot-exec');
   var progWrap = document.getElementById('boot-prog-wrap');
   var progBar  = document.getElementById('boot-prog-bar');
   var logo     = document.getElementById('boot-logo');
 
+  // Tight line set — failures only, no filler. ~2s total print time.
   var LINES = [
-    {t:'MASTER CONTROL PROGRAM — BOOT SEQUENCE v7.4.1',  c:'bd',   d:0},
-    {t:'INITIALIZING GRID KERNEL...',                     c:'bd',   d:120},
-    {t:'',                                                c:'bblk', d:60},
-    {t:'Mounting sector /sys/grid/primary         [ OK ]',c:'bn',   d:80},
-    {t:'Mounting sector /sys/grid/secondary       [ OK ]',c:'bn',   d:80},
-    {t:'Mounting sector /var/programs/active      [ OK ]',c:'bn',   d:80},
-    {t:'Loading combat matrix...                  [ OK ]',c:'bn',   d:100},
-    {t:'Loading troop data layer...               [ OK ]',c:'bn',   d:80},
-    {t:'Syncing Hedge data modules (7)...         [ OK ]',c:'bn',   d:100},
-    {t:'Validating Stripe webhook...              [ OK ]',c:'bn',   d:80},
-    {t:'Confirming service role keys (8)...       [ OK ]',c:'bn',   d:80},
-    {t:'',                                                c:'bblk', d:60},
-    {t:'Validating subsystem integrity...',               c:'bd',   d:120},
-    {t:'',                                                c:'bblk', d:80},
-    {t:'WARN  — /proc/identity/profile    SECTOR CORRUPT',c:'bw',   d:80},
-    {t:'WARN  — /proc/identity/session    SECTOR CORRUPT',c:'bw',   d:60},
-    {t:'',                                                c:'bblk', d:80},
-    {t:'Attempting recovery...',                          c:'bd',   d:200},
-    {t:'',                                                c:'bblk', d:60},
-    {t:'ERROR — /sys/grid/primary         FATAL EXCEPTION 0x0044',c:'be',d:60,g:true},
-    {t:'ERROR — /sys/grid/secondary       FATAL EXCEPTION 0x0045',c:'be',d:60,g:true},
-    {t:'ERROR — Combat matrix             CHECKSUM MISMATCH',      c:'be',d:60,g:true},
-    {t:'ERROR — Troop data layer          UNREACHABLE',             c:'be',d:60},
-    {t:'ERROR — Hedge sync modules        NULL REFERENCE',          c:'be',d:60},
-    {t:'ERROR — Quota enforcement         STACK OVERFLOW',          c:'be',d:60},
-    {t:'ERROR — Auth subsystem            SEGMENTATION FAULT',      c:'be',d:60},
-    {t:'ERROR — Mission Control           PROCESS KILLED',          c:'be',d:60},
-    {t:'ERROR — Stripe webhook            TIMEOUT',                 c:'be',d:60},
-    {t:'ERROR — Buddy AI core             TERMINATED',              c:'be',d:80,g:true},
-    {t:'',                                                c:'bblk', d:80},
-    {t:'████████████████████████████████ SYSTEM FAILURE', c:'be',   d:100},
-    {t:'',                                                c:'bblk', d:120},
-    {t:'All processes terminated.',                       c:'bd',   d:60},
-    {t:'All sectors offline.',                            c:'bd',   d:60},
-    {t:'Grid integrity: ZERO',                            c:'bd',   d:80},
-    {t:'',                                                c:'bblk', d:60},
-    {t:'Awaiting administrative override...',             c:'bd',   d:200},
-    {t:'',                                                c:'bblk', d:60},
+    {t:'INITIALIZING GRID...',                            c:'bd', d:0},
+    {t:'Loading combat matrix...               [ OK ]',  c:'bn', d:80},
+    {t:'Syncing Hedge modules (7)...           [ OK ]',  c:'bn', d:80},
+    {t:'Validating auth subsystem...           [ OK ]',  c:'bn', d:80},
+    {t:'',                                               c:'bblk',d:50},
+    {t:'WARN  — identity/profile    SECTOR CORRUPT',     c:'bw', d:60},
+    {t:'',                                               c:'bblk',d:40},
+    {t:'ERROR — Combat matrix       CHECKSUM MISMATCH',  c:'be', d:50},
+    {t:'ERROR — Troop data layer    UNREACHABLE',         c:'be', d:50},
+    {t:'ERROR — Auth subsystem      SEGMENTATION FAULT', c:'be', d:50},
+    {t:'ERROR — Mission Control     PROCESS KILLED',     c:'be', d:50},
+    {t:'ERROR — Buddy AI core       TERMINATED',         c:'be', d:60},
+    {t:'',                                               c:'bblk',d:40},
+    {t:'████████████ SYSTEM FAILURE — ALL SECTORS OFFLINE',c:'be',d:80},
+    {t:'',                                               c:'bblk',d:40},
+    {t:'Awaiting administrative override...',            c:'bd', d:100},
   ];
 
   var idx = 0;
@@ -726,23 +707,14 @@
     el.className = 'bl ' + data.c;
     el.textContent = data.c === 'bblk' ? '\u00a0' : data.t;
     terminal.appendChild(el);
-    if(data.g){
-      setTimeout(function(){
-        el.classList.add('v');
-        overlay.classList.add('bflicker');
-        setTimeout(function(){ overlay.classList.remove('bflicker'); }, 350);
-      }, 10);
-    } else {
-      setTimeout(function(){ el.classList.add('v'); }, 10);
-    }
-    terminal.scrollTop = terminal.scrollHeight;
-    setTimeout(nextLine, data.d || 80);
+    setTimeout(function(){ el.classList.add('v'); }, 10);
+    setTimeout(nextLine, data.d || 60);
   }
 
   function showCmd(){
-    cmdBlock.classList.add('v');
+    prefix.classList.add('v');
     cursor.classList.add('v');
-    setTimeout(typeCmd, 500);
+    setTimeout(typeCmd, 200);
   }
 
   var CMD = './start_buddy_program';
@@ -751,64 +723,47 @@
     if(typed < CMD.length){
       typed++;
       cmdText.textContent = CMD.slice(0, typed);
-      var delay = typed <= 2 ? 55 : 35 + Math.random()*45;
-      setTimeout(typeCmd, delay);
+      setTimeout(typeCmd, 38 + Math.random()*30);
     } else {
-      setTimeout(function(){
-        enter.classList.add('v');
-        listenExec();
-      }, 280);
+      // auto-execute after short pause — no interaction needed
+      setTimeout(execute, 400);
     }
   }
 
-  function listenExec(){
-    var go = function(e){
-      if(e.type === 'keydown' && e.key !== 'Enter') return;
-      document.removeEventListener('keydown', go);
-      document.removeEventListener('click', go);
-      execute();
-    };
-    document.addEventListener('keydown', go);
-    document.addEventListener('click', go);
-  }
-
   function execute(){
-    enter.style.display = 'none';
     cursor.style.animation = 'none';
     cursor.style.opacity = '0';
     execBlk.classList.add('v');
 
-    var lines = [
-      {id:'bel1', t:'>> Executing: '+CMD,       d:0},
-      {id:'bel2', t:'>> Restoring all sectors...',d:380},
-      {id:'bel3', t:'>> Grid integrity: RESTORING',d:760},
-    ];
-    lines.forEach(function(l){
-      setTimeout(function(){
-        var el = document.getElementById(l.id);
-        el.textContent = l.t;
-        el.classList.add('v');
-      }, l.d);
-    });
+    setTimeout(function(){
+      document.getElementById('bel1').textContent = '>> Executing: ' + CMD;
+      document.getElementById('bel1').classList.add('v');
+    }, 0);
+    setTimeout(function(){
+      document.getElementById('bel2').textContent = '>> Restoring all sectors...';
+      document.getElementById('bel2').classList.add('v');
+    }, 300);
 
     setTimeout(function(){
       progWrap.classList.add('v');
-      setTimeout(function(){ progBar.style.width = '100%'; }, 50);
-    }, 960);
+      setTimeout(function(){ progBar.style.width = '100%'; }, 40);
+    }, 500);
 
     setTimeout(function(){
-      document.getElementById('bel3').textContent = '>> Grid integrity: CONFIRMED ✓';
-    }, 3200);
-
-    setTimeout(function(){ logo.classList.add('v'); }, 3500);
+      document.getElementById('bel2').textContent = '>> Grid integrity: CONFIRMED ✓';
+      logo.classList.add('v');
+    }, 1900);
 
     setTimeout(function(){
       overlay.style.opacity = '0';
-      setTimeout(function(){ overlay.style.display = 'none'; }, 800);
-    }, 4800);
+      setTimeout(function(){
+        overlay.style.display = 'none';
+        document.body.classList.remove('booting');
+      }, 600);
+    }, 2700);
   }
 
-  setTimeout(nextLine, 300);
+  setTimeout(nextLine, 200);
 })();
 </script>
 
