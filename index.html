@@ -544,7 +544,6 @@
     background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.85) 100%);
   }
 
-  /* top: scrolling terminal — capped so command always shows */
   #boot-top {
     position: relative; z-index: 10;
     overflow: hidden;
@@ -566,7 +565,6 @@
   .bw    { color: #ffaa00; }
   .bblk  { min-height: 8px; opacity: 0 !important; }
 
-  /* bottom: command always pinned */
   #boot-bottom {
     position: relative; z-index: 10;
     flex-shrink: 0;
@@ -600,7 +598,6 @@
   #boot-cursor.v { opacity: 1; }
   @keyframes bCursor { 0%,100%{opacity:1} 50%{opacity:0} }
 
-  /* exec / progress / logo — all in bottom */
   #boot-exec { margin-top: 10px; opacity: 0; transition: opacity 0.3s; }
   #boot-exec.v { opacity: 1; }
   .bel {
@@ -679,7 +676,6 @@
   var progBar  = document.getElementById('boot-prog-bar');
   var logo     = document.getElementById('boot-logo');
 
-  // Tight line set — failures only, no filler. ~2s total print time.
   var LINES = [
     {t:'INITIALIZING GRID...',                            c:'bd', d:0},
     {t:'Loading combat matrix...               [ OK ]',  c:'bn', d:80},
@@ -725,7 +721,6 @@
       cmdText.textContent = CMD.slice(0, typed);
       setTimeout(typeCmd, 38 + Math.random()*30);
     } else {
-      // auto-execute after short pause — no interaction needed
       setTimeout(execute, 400);
     }
   }
@@ -1167,11 +1162,19 @@
     <div class="footer-logo">Last War: Survival <span>Buddy</span></div>
     <div class="footer-note">Built specifically for <strong style="color:#8090a0;">Last War: Survival</strong> (FUNFLY PTE. LTD.) · Not affiliated with or endorsed by the developer · Fan-built community tool</div>
     <div style="width:100%;text-align:center;padding-top:12px;border-top:1px solid var(--border);margin-top:12px;">
-      <a href="https://lwsb.vercel.app/affiliate" style="font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='var(--gold)'" onmouseout="this.style.color='var(--muted)'">
+      <a href="https://lastwarsurvivalbuddy.com/affiliate" style="font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='var(--gold)'" onmouseout="this.style.color='var(--muted)'">
         Content creator or community builder? Join the Affiliate Program &rarr;
       </a>
     </div>
   </footer>
+
+  <!-- ── Referral capture — must be last ── -->
+  <script>
+    (function() {
+      var ref = new URLSearchParams(window.location.search).get('ref');
+      if (ref) localStorage.setItem('lwsb_ref', ref);
+    })();
+  </script>
 
 </body>
 </html>
