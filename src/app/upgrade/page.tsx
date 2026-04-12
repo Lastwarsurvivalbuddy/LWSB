@@ -137,12 +137,14 @@ const COLOR_MAP: Record<string, Record<string, string>> = {
   },
 }
 
-function getRefCookie(): string | null {
-  if (typeof document === 'undefined') return null
-  const match = document.cookie
-    .split('; ')
-    .find(row => row.startsWith('lwsb_ref='))
-  return match ? decodeURIComponent(match.split('=')[1]) : null
+// Read referral code from localStorage (set by index.html ?ref= capture)
+function getRefCode(): string | null {
+  if (typeof window === 'undefined') return null
+  try {
+    return localStorage.getItem('lwsb_ref') || null
+  } catch {
+    return null
+  }
 }
 
 export default function UpgradePage() {
@@ -166,7 +168,7 @@ export default function UpgradePage() {
     loadTier()
   }, [])
 
-  // ── Live Founding Member counter ──────────────────────────────────────────
+  // ── Live Founding Member counter ────────────────────────────────────────
   useEffect(() => {
     async function loadFoundingCount() {
       try {
@@ -189,7 +191,8 @@ export default function UpgradePage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/signin'); return }
 
-      const ref_code = getRefCookie()
+      const ref_code = getRefCode()
+
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: {
@@ -213,7 +216,6 @@ export default function UpgradePage() {
   // Founding banner copy — uses live data when available, static fallback
   const foundingBannerText = (() => {
     if (foundingRemaining === null) {
-      // Still loading or fetch failed — static copy
       return (
         <>
           <span className="font-bold">Founding Member offer:</span>{' '}
@@ -429,8 +431,8 @@ export default function UpgradePage() {
                     ${isCurrentTier
                       ? 'bg-zinc-800 text-zinc-500 cursor-default border border-zinc-700'
                       : foundingClosed
-                      ? 'bg-zinc-800 text-zinc-600 cursor-not-allowed border border-zinc-700'
-                      : `${c.btn} shadow-md`
+                        ? 'bg-zinc-800 text-zinc-600 cursor-not-allowed border border-zinc-700'
+                        : `${c.btn} shadow-md`
                     }
                     ${isLoadingTier ? 'opacity-70 cursor-wait' : ''}
                   `}
@@ -438,14 +440,14 @@ export default function UpgradePage() {
                   {isCurrentTier
                     ? '✓ Current Plan'
                     : foundingClosed
-                    ? 'Sold Out'
-                    : isLoadingTier
-                    ? 'Loading...'
-                    : tier.id === 'founding'
-                    ? 'Claim Lifetime Access'
-                    : tier.id === 'alliance'
-                    ? 'Upgrade to Alliance'
-                    : `Upgrade to ${tier.name}`}
+                      ? 'Sold Out'
+                      : isLoadingTier
+                        ? 'Loading...'
+                        : tier.id === 'founding'
+                          ? 'Claim Lifetime Access'
+                          : tier.id === 'alliance'
+                            ? 'Upgrade to Alliance'
+                            : `Upgrade to ${tier.name}`}
                 </button>
               </div>
             )
@@ -459,15 +461,15 @@ export default function UpgradePage() {
           </div>
           <div className="divide-y divide-zinc-800/60">
             {[
-              { feature: 'Buddy AI Chat',               free: '20/mo',  pro: '100/mo',  elite: '250/mo',  founding: '300/mo' },
-              { feature: 'Screenshot Analysis',          free: '—',      pro: '10/mo',   elite: '20/mo',   founding: '25/mo'  },
-              { feature: '⚔️ Battle Report Analyzer',   free: '—',      pro: '8/mo',    elite: '16/mo',   founding: '16/mo'  },
-              { feature: 'Pack Scanner',                 free: '—',      pro: '✓',       elite: '✓',       founding: '✓'      },
-              { feature: 'Daily Briefing',               free: '✓',      pro: '✓',       elite: '✓',       founding: '✓'      },
-              { feature: 'Daily Action Plan',            free: '✓',      pro: '✓',       elite: '✓',       founding: '✓'      },
-              { feature: '🏜️ DS War Room',              free: '✓',      pro: '✓',       elite: '✓',       founding: '✓'      },
-              { feature: 'Profile Context',              free: '✓',      pro: '✓',       elite: '✓',       founding: '✓'      },
-              { feature: 'New Features',                 free: 'Basic',  pro: 'Standard', elite: 'Priority', founding: 'All — forever' },
+              { feature: 'Buddy AI Chat',              free: '20/mo',  pro: '100/mo',  elite: '250/mo',  founding: '300/mo' },
+              { feature: 'Screenshot Analysis',         free: '—',      pro: '10/mo',   elite: '20/mo',   founding: '25/mo' },
+              { feature: '⚔️ Battle Report Analyzer',  free: '—',      pro: '8/mo',    elite: '16/mo',   founding: '16/mo' },
+              { feature: 'Pack Scanner',                free: '—',      pro: '✓',       elite: '✓',       founding: '✓' },
+              { feature: 'Daily Briefing',              free: '✓',      pro: '✓',       elite: '✓',       founding: '✓' },
+              { feature: 'Daily Action Plan',           free: '✓',      pro: '✓',       elite: '✓',       founding: '✓' },
+              { feature: '🏜️ DS War Room',             free: '✓',      pro: '✓',       elite: '✓',       founding: '✓' },
+              { feature: 'Profile Context',             free: '✓',      pro: '✓',       elite: '✓',       founding: '✓' },
+              { feature: 'New Features',                free: 'Basic',  pro: 'Standard', elite: 'Priority', founding: 'All — forever' },
             ].map(({ feature, free, pro, elite, founding }) => (
               <div key={feature} className="grid grid-cols-5 px-5 py-3 text-xs items-center">
                 <span className="text-zinc-300 font-medium col-span-1">{feature}</span>
