@@ -31,7 +31,7 @@ const RATE_LIMITS: Record<string, Record<string, number>> = {
 // ABUSE_THRESHOLD_PER_HOUR controls how many rate limit hits
 // in a single hour constitute one strike.
 // ─────────────────────────────────────────────────────────────
-const ABUSE_THRESHOLD_PER_HOUR = 20
+const ABUSE_THRESHOLD_PER_HOUR = parseInt(process.env.ABUSE_THRESHOLD_PER_HOUR ?? '50', 10)
 const WINDOW_SECONDS = 60
 const ABUSE_WINDOW_SECONDS = 3600
 
