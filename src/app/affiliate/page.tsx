@@ -1,7 +1,6 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
 
 type AppStatus = 'idle' | 'loading' | 'submitted' | 'already_applied' | 'error';
 
@@ -18,24 +17,6 @@ export default function AffiliatePage() {
     promo_method: '',
   });
 
-  useEffect(() => {
-    const checkExisting = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-      const res = await fetch('/api/affiliate/dashboard', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.status) {
-          setExistingStatus(data.status);
-          setStatus('already_applied');
-        }
-      }
-    };
-    checkExisting();
-  }, []);
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
@@ -44,18 +25,9 @@ export default function AffiliatePage() {
     setStatus('loading');
     setErrorMsg('');
 
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      router.push('/login');
-      return;
-    }
-
     const res = await fetch('/api/affiliate/apply', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.access_token}`,
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form),
     });
 

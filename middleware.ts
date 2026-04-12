@@ -77,6 +77,8 @@ export async function middleware(req: NextRequest) {
   if (pathname.startsWith('/api/submissions'))     return NextResponse.next()
   if (pathname.startsWith('/api/buddy/quota'))     return NextResponse.next()
   if (pathname.startsWith('/api/contact'))         return NextResponse.next()
+  if (pathname.startsWith('/api/site-news'))       return NextResponse.next()
+  if (pathname.startsWith('/api/affiliate'))       return NextResponse.next()
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
