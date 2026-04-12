@@ -137,7 +137,6 @@ const COLOR_MAP: Record<string, Record<string, string>> = {
   },
 }
 
-// Read referral code from localStorage (set by index.html ?ref= capture)
 function getRefCode(): string | null {
   if (typeof window === 'undefined') return null
   try {
@@ -153,11 +152,13 @@ export default function UpgradePage() {
   const [currentTier, setCurrentTier] = useState<string>('free')
   const [foundingRemaining, setFoundingRemaining] = useState<number | null>(null)
   const [foundingSold, setFoundingSold] = useState<number | null>(null)
+  const [isAuthed, setIsAuthed] = useState(false)
 
   useEffect(() => {
     async function loadTier() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
+      setIsAuthed(true)
       const { data } = await supabase
         .from('subscriptions')
         .select('tier')
@@ -168,7 +169,6 @@ export default function UpgradePage() {
     loadTier()
   }, [])
 
-  // ── Live Founding Member counter ────────────────────────────────────────
   useEffect(() => {
     async function loadFoundingCount() {
       try {
@@ -179,7 +179,7 @@ export default function UpgradePage() {
           setFoundingSold(data.sold ?? null)
         }
       } catch {
-        // Non-fatal — banner falls back to static copy
+        // Non-fatal
       }
     }
     loadFoundingCount()
@@ -187,12 +187,21 @@ export default function UpgradePage() {
 
   async function handleUpgrade(tierId: string) {
     setLoading(tierId)
+
+    const { data: { session } } = await supabase.auth.getSession()
+
+    if (!session) {
+      // Not authed — store tier intent and send to signup
+      try {
+        localStorage.setItem('lwsb_pending_tier', tierId)
+      } catch { /* Non-fatal */ }
+      router.push(`/signup?tier=${tierId}`)
+      return
+    }
+
+    // Authed — fire Stripe checkout directly
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { router.push('/signin'); return }
-
       const ref_code = getRefCode()
-
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: {
@@ -213,7 +222,6 @@ export default function UpgradePage() {
     }
   }
 
-  // Founding banner copy — uses live data when available, static fallback
   const foundingBannerText = (() => {
     if (foundingRemaining === null) {
       return (
@@ -246,13 +254,13 @@ export default function UpgradePage() {
       <header className="border-b border-zinc-800/80 bg-zinc-950/95 sticky top-0 z-20 backdrop-blur-sm">
         <div className="max-w-4xl mx-auto px-4 h-12 flex items-center justify-between">
           <button
-            onClick={() => router.push('/dashboard')}
+            onClick={() => isAuthed ? router.push('/dashboard') : window.location.assign('https://lastwarsurvivalbuddy.com')}
             className="flex items-center gap-1.5 text-zinc-400 hover:text-white transition-colors text-sm"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16">
               <path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            Dashboard
+            {isAuthed ? 'Dashboard' : 'Home'}
           </button>
           <span className="text-xs font-mono text-zinc-500 tracking-widest uppercase">Upgrade</span>
           <div className="w-16" />
@@ -335,7 +343,6 @@ export default function UpgradePage() {
             <p className="text-sm text-purple-200">
               {foundingBannerText}
             </p>
-            {/* Progress bar — only show when we have live data */}
             {foundingSold !== null && foundingRemaining !== null && foundingRemaining > 0 && (
               <div className="ml-auto flex-shrink-0 w-20">
                 <div className="h-1.5 bg-purple-900/60 rounded-full overflow-hidden">
@@ -494,7 +501,7 @@ export default function UpgradePage() {
           <p className="text-xs text-zinc-600">
             Free tier: 20 questions/month, no Battle Reports, no Pack Scanner.{' '}
             <button
-              onClick={() => router.push('/dashboard')}
+              onClick={() => router.push('/signup?tier=free')}
               className="text-zinc-500 hover:text-zinc-300 underline transition-colors"
             >
               Stay on free

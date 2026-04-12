@@ -172,6 +172,16 @@ export default function Dashboard() {
         if (!session) { router.push('/signin'); return }
         setAccessToken(session.access_token)
 
+        // ── Pending tier intent — redirect to upgrade to complete Stripe checkout ──
+        try {
+          const pendingTier = localStorage.getItem('lwsb_pending_tier')
+          if (pendingTier && pendingTier !== 'free') {
+            localStorage.removeItem('lwsb_pending_tier')
+            router.push('/upgrade')
+            return
+          }
+        } catch { /* Non-fatal */ }
+
         const adminUserId = process.env.NEXT_PUBLIC_ADMIN_USER_ID
         if (adminUserId && session.user.id === adminUserId) {
           setIsAdmin(true)
@@ -263,7 +273,6 @@ export default function Dashboard() {
 
   function handleOpenBattleReport() {
     if (!battleReportQuota.resets_on && accessToken) {
-      // Quota not yet loaded — fetch it now on first open
       loadBattleReportQuota(accessToken)
     }
     setBattleReportOpen(true)
@@ -585,7 +594,6 @@ export default function Dashboard() {
                       </svg>
                     </div>
                   </div>
-                  {/* Quota bar — only shown after first open */}
                   {battleReportQuota.resets_on && (
                     <div className="mt-4 pt-3 border-t border-zinc-800/40">
                       <div className="flex items-center justify-between mb-1.5">

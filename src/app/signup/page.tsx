@@ -1,14 +1,35 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
-export default function SignUp() {
+const TIER_LABELS: Record<string, string> = {
+  pro: 'Buddy Pro',
+  elite: 'Buddy Elite',
+  founding: 'Founding Member',
+  alliance: 'Alliance Premium',
+  free: 'Free',
+}
+
+function SignUpForm() {
+  const searchParams = useSearchParams()
+  const tier = searchParams.get('tier') || 'free'
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
   const [isSuccess, setIsSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
+
+  // Store tier intent in localStorage so dashboard can pick it up post-confirm
+  useEffect(() => {
+    if (tier && tier !== 'free') {
+      try {
+        localStorage.setItem('lwsb_pending_tier', tier)
+      } catch { /* Non-fatal */ }
+    }
+  }, [tier])
 
   const handleSignUp = async () => {
     if (!email || !password) {
@@ -26,10 +47,12 @@ export default function SignUp() {
       setMessage(error.message)
     } else {
       setIsSuccess(true)
-      setMessage('Check your email for a confirmation link.')
     }
     setLoading(false)
   }
+
+  const tierLabel = TIER_LABELS[tier] ?? 'Free'
+  const isPaid = tier && tier !== 'free'
 
   return (
     <main className="min-h-screen bg-[#07080a] flex items-center justify-center">
@@ -45,19 +68,29 @@ export default function SignUp() {
           <div className="text-center py-6">
             <div className="text-4xl mb-4">📬</div>
             <p className="text-white font-bold mb-2">Check your email</p>
-            <p className="text-[#606878] text-sm">
+            <p className="text-[#606878] text-sm mb-3">
               We sent a confirmation link to <span className="text-[#e8a020]">{email}</span>.
-              Click it to activate your account, then sign in.
+              Click it to activate your account.
             </p>
+            {isPaid && (
+              <p className="text-[#e8a020] text-sm font-semibold border border-[#e8a020]/30 bg-[#e8a020]/10 rounded-lg px-4 py-2 mb-4">
+                After confirming, you&apos;ll be taken to checkout for {tierLabel}.
+              </p>
+            )}
             <a
               href="/signin"
-              className="inline-block mt-6 text-[#e8a020] text-sm hover:underline"
+              className="inline-block mt-2 text-[#e8a020] text-sm hover:underline"
             >
               Back to Sign In
             </a>
           </div>
         ) : (
           <>
+            {isPaid && (
+              <div className="mb-5 text-center text-xs text-[#e8a020] border border-[#e8a020]/30 bg-[#e8a020]/10 rounded-lg px-4 py-2">
+                Selected plan: <span className="font-bold">{tierLabel}</span> — you&apos;ll complete payment after confirming your email.
+              </div>
+            )}
             <input
               type="email"
               placeholder="Email address"
@@ -92,5 +125,13 @@ export default function SignUp() {
         )}
       </div>
     </main>
+  )
+}
+
+export default function SignUp() {
+  return (
+    <Suspense>
+      <SignUpForm />
+    </Suspense>
   )
 }
