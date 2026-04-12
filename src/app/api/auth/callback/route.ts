@@ -15,14 +15,14 @@ export async function GET(request: NextRequest) {
   // Handle PKCE code exchange (newer Supabase flow)
   if (code) {
     await supabase.auth.exchangeCodeForSession(code);
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+    return NextResponse.redirect(new URL('/loading-redirect', request.url));
   }
 
   // Handle token hash (older flow)
   if (token_hash && type) {
     const { error } = await supabase.auth.verifyOtp({ token_hash, type: type as 'email' | 'signup' });
     if (!error) {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
+      return NextResponse.redirect(new URL('/loading-redirect', request.url));
     }
   }
 
