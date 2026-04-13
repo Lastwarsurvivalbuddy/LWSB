@@ -12,17 +12,15 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 })
 
 const PRICE_MAP: Record<string, string> = {
-  pro:      process.env.STRIPE_PRICE_PRO!,
-  elite:    process.env.STRIPE_PRICE_ELITE!,
+  pro: process.env.STRIPE_PRICE_PRO!,
+  elite: process.env.STRIPE_PRICE_ELITE!,
   founding: process.env.STRIPE_PRICE_FOUNDING!,
-  alliance: process.env.STRIPE_PRICE_ALLIANCE!,
 }
 
 const MODE_MAP: Record<string, 'subscription' | 'payment'> = {
-  pro:      'subscription',
-  elite:    'subscription',
+  pro: 'subscription',
+  elite: 'subscription',
   founding: 'payment',
-  alliance: 'subscription',
 }
 
 export async function POST(req: NextRequest) {
@@ -53,13 +51,17 @@ export async function POST(req: NextRequest) {
       metadata.ref_code = ref_code
     }
 
+    const mode = MODE_MAP[tier]
+
     const session = await stripe.checkout.sessions.create({
-      mode: MODE_MAP[tier],
+      mode,
       line_items: [{ price: PRICE_MAP[tier], quantity: 1 }],
       success_url: `${appUrl}/upgrade/success?tier=${tier}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/upgrade`,
       customer_email: user.email,
       metadata,
+      // Also attach metadata to the subscription so invoice webhooks can resolve user_id + tier
+      ...(mode === 'subscription' ? { subscription_data: { metadata } } : {}),
       allow_promotion_codes: true,
     })
 
