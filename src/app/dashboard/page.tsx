@@ -163,6 +163,8 @@ export default function Dashboard() {
   const [adminBadge, setAdminBadge] = useState(0)
   const [affiliateStatus, setAffiliateStatus] = useState<'approved' | 'pending' | 'none'>('none')
   const [notifications, setNotifications] = useState<Notification[]>([])
+  const [manageSubLoading, setManageSubLoading] = useState(false)
+  const [manageSubError, setManageSubError] = useState<string | null>(null)
   const redirecting = useRef(false)
   const router = useRouter()
   const duel = getDuelDay()
@@ -297,6 +299,31 @@ export default function Dashboard() {
     setBattleReportOpen(true)
   }
 
+  async function handleManageSub() {
+  setManageSubLoading(true)
+  setManageSubError(null)
+  try {
+    const res = await fetch('/api/stripe/portal', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (res.status === 404) {
+      setManageSubError('No billing record found. Contact support if this seems wrong.')
+      return
+    }
+    if (!res.ok) {
+      setManageSubError('Could not open billing portal. Try again.')
+      return
+    }
+    const data = await res.json()
+    window.location.href = data.url
+  } catch {
+    setManageSubError('Something went wrong. Try again.')
+  } finally {
+    setManageSubLoading(false)
+  }
+}
+
   async function dismissNotification(id: string) {
     setNotifications(prev => prev.filter(n => n.id !== id))
     try {
@@ -361,6 +388,7 @@ export default function Dashboard() {
   const subscriptionTier = profile.subscription_tier ?? 'free'
   const isFree = subscriptionTier === 'free'
   const isFounding = subscriptionTier === 'founding'
+  const isPaidMonthly = subscriptionTier === 'pro' || subscriptionTier === 'elite'
   const showRookieCard = (profile.server_day ?? 0) <= 60
 
   const statsGrid = [
@@ -733,10 +761,47 @@ export default function Dashboard() {
                 `}>
                   {subscriptionTier.toUpperCase()}
                 </span>
+                {!isFree && (
+                  <button
+                    onClick={handleManageSub}
+                    disabled={manageSubLoading}
+                    className="text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors font-mono flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {manageSubLoading ? (
+                      <>
+                        <span className="w-2.5 h-2.5 border border-zinc-500 border-t-transparent rounded-full animate-spin" />
+                        Opening...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 12 12">
+                          <path d="M1 3.5h10M1 6.5h6M1 9.5h4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                        </svg>
+                        Manage billing
+                      </>
+                    )}
+                  </button>
+                )}
+                {isPaidMonthly && (
+                  <button
+                    onClick={() => router.push('/upgrade')}
+                    className="text-[10px] text-purple-500 hover:text-purple-300 transition-colors font-mono flex items-center gap-1"
+                  >
+                    <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 12 12">
+                      <path d="M6 1l1.2 3.6L11 5.5 8.5 8l.7 3.5L6 9.8l-3.2 1.7.7-3.5L1 5.5l3.8-.9z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/>
+                    </svg>
+                    Upgrade to Founding
+                  </button>
+                )}
                 {isFree && (
                   <button onClick={() => router.push('/upgrade')} className="text-[10px] text-amber-600 hover:text-amber-400 transition-colors font-mono underline underline-offset-2">
                     Upgrade
                   </button>
+                )}
+                {manageSubError && (
+                  <p className="text-[11px] text-red-400 bg-red-950/30 border border-red-900/40 rounded-lg px-3 py-2 max-w-[180px] text-right">
+                    {manageSubError}
+                  </p>
                 )}
               </div>
             </div>
