@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Last War: Survival Buddy — AI Coach for Last War Survival Players</title>
-  <meta name="description" content="Personalized AI coaching for Last War: Survival. Daily action plans, Battle Report analysis, pack advice, Desert Storm &amp; Warzone Duel war plans — built around your exact HQ, server day, troop type, and goals. Launching April 12, 2026." />
+  <meta name="description" content="Personalized AI coaching for Last War: Survival. Daily action plans, Battle Report analysis, pack advice, Desert Storm &amp; Warzone Duel war plans — built around your exact HQ, server day, troop type, and goals." />
   <meta name="keywords" content="last war survival guide, last war survival tips, last war survival ai, last war survival buddy, last war hq upgrade guide, last war arms race guide, last war alliance duel guide, last war desert storm strategy, last war warzone duel, last war canyon storm, last war battle report, last war pack buying guide, last war beginner guide, last war troop types, last war hero guide" />
   <meta name="author" content="Last War: Survival Buddy" />
   <meta name="robots" content="index, follow" />
@@ -13,12 +13,12 @@
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://lastwarsurvivalbuddy.com/" />
   <meta property="og:title" content="Last War: Survival Buddy — AI Coach for Last War Players" />
-  <meta property="og:description" content="Stop scrolling Discord. Get personalized daily action plans, battle report analysis, and war room tools built around your exact HQ level, server, and goals. Launching April 12, 2026." />
+  <meta property="og:description" content="Stop scrolling Discord. Get personalized daily action plans, battle report analysis, and war room tools built around your exact HQ level, server, and goals." />
   <meta property="og:site_name" content="Last War: Survival Buddy" />
   <meta property="og:locale" content="en_US" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Last War: Survival Buddy — AI Coach for Last War Players" />
-  <meta name="twitter:description" content="Personalized AI coaching for Last War: Survival. Daily briefings, battle reports, pack scanner, war room tools. Launching April 12, 2026." />
+  <meta name="twitter:description" content="Personalized AI coaching for Last War: Survival. Daily briefings, battle reports, pack scanner, war room tools." />
   <meta name="twitter:site" content="@LastWarBuddy" />
   <script type="application/ld+json">
   {
@@ -69,9 +69,6 @@
   }
   </script>
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Open+Sans:wght@300;400;600&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
-  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-  <script type="text/javascript" src="//s3.amazonaws.com/downloads.mailchimp.com/js/mc-validate.js"></script>
-  <script type="text/javascript">(function($) {window.fnames = new Array(); window.ftypes = new Array();fnames[0]='EMAIL';ftypes[0]='email';}(jQuery));var $mcj = jQuery.noConflict(true);</script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -113,7 +110,8 @@
       border: none; border-radius: 6px; padding: 9px 20px; color: #fff;
       font-family: 'Oswald', sans-serif; font-size: 13px; font-weight: 600;
       letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer;
-      box-shadow: 0 2px 12px rgba(192,96,16,0.35); transition: all 0.2s; white-space: nowrap; }
+      box-shadow: 0 2px 12px rgba(192,96,16,0.35); transition: all 0.2s; white-space: nowrap;
+      text-decoration: none; display: inline-flex; align-items: center; }
     .nav-cta-btn:hover { box-shadow: 0 4px 20px rgba(232,160,32,0.45); transform: translateY(-1px); }
     .nav-signin-link { font-family: 'Rajdhani', sans-serif; font-size: 12px; font-weight: 600;
       letter-spacing: 0.1em; color: var(--muted); text-transform: uppercase;
@@ -151,7 +149,7 @@
       font-family: 'Oswald', sans-serif; font-size: 16px; font-weight: 600;
       letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer;
       box-shadow: 0 4px 24px rgba(192,96,16,0.45); transition: transform 0.15s, box-shadow 0.15s;
-      margin-bottom: 20px; animation: fadeUp 0.8s 0.35s ease both; }
+      margin-bottom: 20px; animation: fadeUp 0.8s 0.35s ease both; text-decoration: none; }
     .hero-inline-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(232,160,32,0.55); }
     .hero-inline-cta:active { transform: translateY(0); }
     .hero-battle-callout { display: inline-flex; align-items: center; gap: 12px;
@@ -178,24 +176,23 @@
       margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
     .cta-box-label::after { content: ''; flex: 1; height: 1px;
       background: linear-gradient(90deg, var(--border2), transparent); }
-    .cta-input { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid var(--border);
-      border-radius: 8px; padding: 13px 16px; color: var(--text); font-size: 14px;
-      font-family: 'Open Sans', sans-serif; outline: none; margin-bottom: 10px;
-      transition: border-color 0.2s, box-shadow 0.2s; }
-    .cta-input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(232,160,32,0.1); }
-    .cta-input::placeholder { color: var(--muted); }
-    .cta-btn { width: 100%; background: linear-gradient(135deg, var(--red), var(--gold2), var(--gold));
+    .cta-btn-primary { display: block; width: 100%; background: linear-gradient(135deg, var(--red), var(--gold2), var(--gold));
       border: none; border-radius: 8px; padding: 15px; color: #fff;
       font-family: 'Oswald', sans-serif; font-size: 16px; font-weight: 600;
       letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer;
       position: relative; overflow: hidden; transition: transform 0.15s, box-shadow 0.15s;
-      box-shadow: 0 4px 24px rgba(192,96,16,0.4); margin-top: 4px; }
-    .cta-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 32px rgba(232,160,32,0.5); }
-    .cta-btn:active { transform: translateY(0); }
-    .cta-btn::after { content: ''; position: absolute; inset: 0;
+      box-shadow: 0 4px 24px rgba(192,96,16,0.4); margin-bottom: 10px;
+      text-decoration: none; text-align: center; }
+    .cta-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 32px rgba(232,160,32,0.5); }
+    .cta-btn-primary::after { content: ''; position: absolute; inset: 0;
       background: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, transparent 100%); }
+    .cta-btn-secondary { display: block; width: 100%; background: transparent;
+      border: 1px solid var(--border2); border-radius: 8px; padding: 13px; color: var(--muted2);
+      font-family: 'Oswald', sans-serif; font-size: 14px; font-weight: 600;
+      letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer;
+      transition: border-color 0.2s, color 0.2s; text-decoration: none; text-align: center; }
+    .cta-btn-secondary:hover { border-color: var(--gold); color: var(--gold); }
     .cta-terms { font-size: 11px; color: var(--muted); text-align: center; margin-top: 12px; line-height: 1.6; }
-    .cta-terms a { color: var(--muted2); text-decoration: underline; cursor: pointer; }
     .stats-row { display: flex; gap: 32px; justify-content: center; align-items: center;
       flex-wrap: wrap; padding: 24px 5%;
       border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
@@ -401,18 +398,19 @@
       font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text); margin-bottom: 16px; }
     .bottom-cta-title span { color: var(--gold); }
     .bottom-cta-sub { font-size: 15px; color: var(--muted2); margin-bottom: 40px; font-weight: 300; }
-    .bottom-signup { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; max-width: 480px; margin: 0 auto; }
-    .bottom-signup input { flex: 1; min-width: 200px; background: var(--card);
-      border: 1px solid var(--border2); border-radius: 8px; padding: 14px 18px;
-      color: var(--text); font-size: 14px; font-family: 'Open Sans', sans-serif; outline: none; transition: border-color 0.2s; }
-    .bottom-signup input:focus { border-color: var(--gold); }
-    .bottom-signup input::placeholder { color: var(--muted); }
-    .bottom-signup-btn { background: linear-gradient(135deg, var(--red), var(--gold));
-      border: none; border-radius: 8px; padding: 14px 28px; color: #fff;
-      font-family: 'Oswald', sans-serif; font-size: 15px; font-weight: 600;
-      letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer;
-      box-shadow: 0 4px 20px rgba(232,160,32,0.3); transition: all 0.2s; }
-    .bottom-signup-btn:hover { box-shadow: 0 8px 32px rgba(232,160,32,0.5); transform: translateY(-1px); }
+    .bottom-cta-btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; max-width: 480px; margin: 0 auto; }
+    .bottom-btn-primary { background: linear-gradient(135deg, var(--red), var(--gold));
+      border: none; border-radius: 8px; padding: 16px 36px; color: #fff;
+      font-family: 'Oswald', sans-serif; font-size: 16px; font-weight: 600;
+      letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer;
+      box-shadow: 0 4px 20px rgba(232,160,32,0.3); transition: all 0.2s; text-decoration: none; }
+    .bottom-btn-primary:hover { box-shadow: 0 8px 32px rgba(232,160,32,0.5); transform: translateY(-1px); }
+    .bottom-btn-secondary { background: transparent; border: 1px solid var(--border2);
+      border-radius: 8px; padding: 16px 36px; color: var(--muted2);
+      font-family: 'Oswald', sans-serif; font-size: 16px; font-weight: 600;
+      letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer;
+      transition: all 0.2s; text-decoration: none; }
+    .bottom-btn-secondary:hover { border-color: var(--gold); color: var(--gold); }
     .faq-section { position: relative; z-index: 1; padding: 80px 5%;
       border-top: 1px solid var(--border);
       background: linear-gradient(180deg, transparent, rgba(232,160,32,0.02), transparent); }
@@ -491,16 +489,14 @@
       .learning-inner { grid-template-columns: 1fr; gap: 40px; }
       .battle-report-inner { grid-template-columns: 1fr; gap: 32px; }
       .war-room-inner { grid-template-columns: 1fr; gap: 32px; }
-      .bottom-signup { flex-direction: column; }
-      .bottom-signup input { width: 100%; }
-      .bottom-signup-btn { width: 100%; }
+      .bottom-cta-btns { flex-direction: column; }
+      .bottom-btn-primary, .bottom-btn-secondary { width: 100%; text-align: center; }
       .contact-inner { grid-template-columns: 1fr; gap: 40px; }
       footer { justify-content: center; text-align: center; }
       .pricing-grid { grid-template-columns: 1fr 1fr; }
       .hero-battle-callout { flex-direction: column; text-align: center; }
       .hero-battle-callout-text { text-align: center; }
       .quotes-grid { grid-template-columns: 1fr; }
-      .nav-signin-link { display: none; }
     }
     @media (max-width: 480px) {
       .nav-login { gap: 8px; }
@@ -518,7 +514,6 @@
 ════════════════════════════════════════════════════ -->
 <style>
   body.booting { overflow: hidden !important; }
-
   #boot-overlay {
     position: fixed; inset: 0; z-index: 99999;
     background: #000300;
@@ -543,129 +538,53 @@
     position: absolute; inset: 0; pointer-events: none; z-index: 3;
     background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.85) 100%);
   }
-
-  #boot-top {
-    position: relative; z-index: 10;
-    overflow: hidden;
-    flex: 1;
-    min-height: 0;
-  }
+  #boot-top { position: relative; z-index: 10; overflow: hidden; flex: 1; min-height: 0; }
   #boot-terminal { max-width: 860px; }
-
-  .bl {
-    display: block; font-size: clamp(11px,1.5vw,13px); line-height: 1.7;
-    letter-spacing: 0.04em; opacity: 0;
-    transition: opacity 0.08s ease;
-    white-space: pre; font-family: 'Share Tech Mono', 'Courier New', monospace;
-  }
+  .bl { display: block; font-size: clamp(11px,1.5vw,13px); line-height: 1.7; letter-spacing: 0.04em; opacity: 0; transition: opacity 0.08s ease; white-space: pre; font-family: 'Share Tech Mono', 'Courier New', monospace; }
   .bl.v  { opacity: 1; }
   .bd    { color: #1a5c1a; }
   .bn    { color: #00aa2a; }
   .be    { color: #ff2244; }
   .bw    { color: #ffaa00; }
   .bblk  { min-height: 8px; opacity: 0 !important; }
-
-  #boot-bottom {
-    position: relative; z-index: 10;
-    flex-shrink: 0;
-    padding-top: 20px;
-    border-top: 1px solid rgba(0,255,65,0.08);
-    margin-top: 16px;
-  }
-
-  #boot-prefix {
-    display: block; color: #00aa2a; font-size: clamp(11px,1.5vw,13px);
-    letter-spacing: 0.05em; margin-bottom: 4px;
-    font-family: 'Share Tech Mono', 'Courier New', monospace;
-    opacity: 0; transition: opacity 0.3s;
-  }
+  #boot-bottom { position: relative; z-index: 10; flex-shrink: 0; padding-top: 20px; border-top: 1px solid rgba(0,255,65,0.08); margin-top: 16px; }
+  #boot-prefix { display: block; color: #00aa2a; font-size: clamp(11px,1.5vw,13px); letter-spacing: 0.05em; margin-bottom: 4px; font-family: 'Share Tech Mono', 'Courier New', monospace; opacity: 0; transition: opacity 0.3s; }
   #boot-prefix.v { opacity: 1; }
-
   #boot-cmd-line { display: flex; align-items: center; }
-  #boot-cmd-text {
-    font-family: 'Share Tech Mono', 'Courier New', monospace;
-    font-size: clamp(16px,2.5vw,22px); letter-spacing: 0.12em; color: #00ff41;
-    text-shadow: 0 0 8px rgba(0,255,65,0.9), 0 0 20px rgba(0,255,65,0.5);
-    white-space: nowrap;
-  }
-  #boot-cursor {
-    display: inline-block; width: clamp(10px,1.5vw,13px); height: clamp(16px,2.2vw,20px);
-    background: #00ff41; box-shadow: 0 0 10px rgba(0,255,65,0.8);
-    margin-left: 3px; flex-shrink: 0;
-    opacity: 0; transition: opacity 0.2s;
-    animation: bCursor 0.7s step-end infinite;
-  }
+  #boot-cmd-text { font-family: 'Share Tech Mono', 'Courier New', monospace; font-size: clamp(16px,2.5vw,22px); letter-spacing: 0.12em; color: #00ff41; text-shadow: 0 0 8px rgba(0,255,65,0.9), 0 0 20px rgba(0,255,65,0.5); white-space: nowrap; }
+  #boot-cursor { display: inline-block; width: clamp(10px,1.5vw,13px); height: clamp(16px,2.2vw,20px); background: #00ff41; box-shadow: 0 0 10px rgba(0,255,65,0.8); margin-left: 3px; flex-shrink: 0; opacity: 0; transition: opacity 0.2s; animation: bCursor 0.7s step-end infinite; }
   #boot-cursor.v { opacity: 1; }
   @keyframes bCursor { 0%,100%{opacity:1} 50%{opacity:0} }
-
   #boot-exec { margin-top: 10px; opacity: 0; transition: opacity 0.3s; }
   #boot-exec.v { opacity: 1; }
-  .bel {
-    display: block; font-family: 'Share Tech Mono', 'Courier New', monospace;
-    font-size: clamp(11px,1.5vw,13px); color: #00ff41;
-    letter-spacing: 0.05em; line-height: 1.7; opacity: 0; transition: opacity 0.25s;
-  }
+  .bel { display: block; font-family: 'Share Tech Mono', 'Courier New', monospace; font-size: clamp(11px,1.5vw,13px); color: #00ff41; letter-spacing: 0.05em; line-height: 1.7; opacity: 0; transition: opacity 0.25s; }
   .bel.v { opacity: 1; }
-
-  #boot-prog-wrap {
-    margin-top: 10px; width: clamp(200px,35vw,340px); height: 3px;
-    background: rgba(0,255,65,0.1); border: 1px solid rgba(0,255,65,0.2);
-    opacity: 0; transition: opacity 0.3s;
-  }
+  #boot-prog-wrap { margin-top: 10px; width: clamp(200px,35vw,340px); height: 3px; background: rgba(0,255,65,0.1); border: 1px solid rgba(0,255,65,0.2); opacity: 0; transition: opacity 0.3s; }
   #boot-prog-wrap.v { opacity: 1; }
-  #boot-prog-bar {
-    height: 100%; width: 0%; background: #00ff41;
-    box-shadow: 0 0 8px rgba(0,255,65,0.8);
-    transition: width 1.4s cubic-bezier(0.4,0,0.2,1);
-  }
-
+  #boot-prog-bar { height: 100%; width: 0%; background: #00ff41; box-shadow: 0 0 8px rgba(0,255,65,0.8); transition: width 1.4s cubic-bezier(0.4,0,0.2,1); }
   #boot-logo { margin-top: 18px; opacity: 0; transition: opacity 0.6s ease; }
   #boot-logo.v { opacity: 1; }
-  #boot-logo-text {
-    font-family: 'Rajdhani', sans-serif; font-weight: 700;
-    font-size: clamp(20px,3.5vw,42px); letter-spacing: 0.2em;
-    color: #00ff41; text-transform: uppercase;
-    text-shadow: 0 0 20px rgba(0,255,65,0.7), 0 0 60px rgba(0,255,65,0.3);
-  }
-  #boot-logo-sub {
-    font-family: 'Share Tech Mono', 'Courier New', monospace;
-    font-size: clamp(9px,1vw,11px); letter-spacing: 0.3em;
-    color: #00aa2a; text-transform: uppercase; margin-top: 4px;
-  }
-
-  @keyframes bFlicker {
-    0%{opacity:1} 10%{opacity:0.3} 12%{opacity:1} 40%{opacity:0.6} 42%{opacity:1} 72%{opacity:0.8} 74%{opacity:1}
-  }
+  #boot-logo-text { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: clamp(20px,3.5vw,42px); letter-spacing: 0.2em; color: #00ff41; text-transform: uppercase; text-shadow: 0 0 20px rgba(0,255,65,0.7), 0 0 60px rgba(0,255,65,0.3); }
+  #boot-logo-sub { font-family: 'Share Tech Mono', 'Courier New', monospace; font-size: clamp(9px,1vw,11px); letter-spacing: 0.3em; color: #00aa2a; text-transform: uppercase; margin-top: 4px; }
+  @keyframes bFlicker { 0%{opacity:1} 10%{opacity:0.3} 12%{opacity:1} 40%{opacity:0.6} 42%{opacity:1} 72%{opacity:0.8} 74%{opacity:1} }
   .bflicker { animation: bFlicker 0.3s ease 1; }
 </style>
 
 <div id="boot-overlay">
   <div id="boot-vignette"></div>
-  <div id="boot-top">
-    <div id="boot-terminal"></div>
-  </div>
+  <div id="boot-top"><div id="boot-terminal"></div></div>
   <div id="boot-bottom">
     <span id="boot-prefix">root@grid:~$</span>
-    <div id="boot-cmd-line">
-      <span id="boot-cmd-text"></span>
-      <span id="boot-cursor"></span>
-    </div>
-    <div id="boot-exec">
-      <span class="bel" id="bel1"></span>
-      <span class="bel" id="bel2"></span>
-    </div>
+    <div id="boot-cmd-line"><span id="boot-cmd-text"></span><span id="boot-cursor"></span></div>
+    <div id="boot-exec"><span class="bel" id="bel1"></span><span class="bel" id="bel2"></span></div>
     <div id="boot-prog-wrap"><div id="boot-prog-bar"></div></div>
-    <div id="boot-logo">
-      <div id="boot-logo-text">LAST WAR: SURVIVAL BUDDY</div>
-      <div id="boot-logo-sub">// system online — all sectors active</div>
-    </div>
+    <div id="boot-logo"><div id="boot-logo-text">LAST WAR: SURVIVAL BUDDY</div><div id="boot-logo-sub">// system online — all sectors active</div></div>
   </div>
 </div>
 
 <script>
 (function(){
   document.body.classList.add('booting');
-
   var overlay  = document.getElementById('boot-overlay');
   var terminal = document.getElementById('boot-terminal');
   var prefix   = document.getElementById('boot-prefix');
@@ -675,7 +594,6 @@
   var progWrap = document.getElementById('boot-prog-wrap');
   var progBar  = document.getElementById('boot-prog-bar');
   var logo     = document.getElementById('boot-logo');
-
   var LINES = [
     {t:'INITIALIZING GRID...',                            c:'bd', d:0},
     {t:'Loading combat matrix...               [ OK ]',  c:'bn', d:80},
@@ -694,7 +612,6 @@
     {t:'',                                               c:'bblk',d:40},
     {t:'Awaiting administrative override...',            c:'bd', d:100},
   ];
-
   var idx = 0;
   function nextLine(){
     if(idx >= LINES.length){ showCmd(); return; }
@@ -706,13 +623,11 @@
     setTimeout(function(){ el.classList.add('v'); }, 10);
     setTimeout(nextLine, data.d || 60);
   }
-
   function showCmd(){
     prefix.classList.add('v');
     cursor.classList.add('v');
     setTimeout(typeCmd, 200);
   }
-
   var CMD = './start_buddy_program';
   var typed = 0;
   function typeCmd(){
@@ -724,40 +639,16 @@
       setTimeout(execute, 400);
     }
   }
-
   function execute(){
     cursor.style.animation = 'none';
     cursor.style.opacity = '0';
     execBlk.classList.add('v');
-
-    setTimeout(function(){
-      document.getElementById('bel1').textContent = '>> Executing: ' + CMD;
-      document.getElementById('bel1').classList.add('v');
-    }, 0);
-    setTimeout(function(){
-      document.getElementById('bel2').textContent = '>> Restoring all sectors...';
-      document.getElementById('bel2').classList.add('v');
-    }, 300);
-
-    setTimeout(function(){
-      progWrap.classList.add('v');
-      setTimeout(function(){ progBar.style.width = '100%'; }, 40);
-    }, 500);
-
-    setTimeout(function(){
-      document.getElementById('bel2').textContent = '>> Grid integrity: CONFIRMED ✓';
-      logo.classList.add('v');
-    }, 1900);
-
-    setTimeout(function(){
-      overlay.style.opacity = '0';
-      setTimeout(function(){
-        overlay.style.display = 'none';
-        document.body.classList.remove('booting');
-      }, 600);
-    }, 2700);
+    setTimeout(function(){ document.getElementById('bel1').textContent = '>> Executing: ' + CMD; document.getElementById('bel1').classList.add('v'); }, 0);
+    setTimeout(function(){ document.getElementById('bel2').textContent = '>> Restoring all sectors...'; document.getElementById('bel2').classList.add('v'); }, 300);
+    setTimeout(function(){ progWrap.classList.add('v'); setTimeout(function(){ progBar.style.width = '100%'; }, 40); }, 500);
+    setTimeout(function(){ document.getElementById('bel2').textContent = '>> Grid integrity: CONFIRMED ✓'; logo.classList.add('v'); }, 1900);
+    setTimeout(function(){ overlay.style.opacity = '0'; setTimeout(function(){ overlay.style.display = 'none'; document.body.classList.remove('booting'); }, 600); }, 2700);
   }
-
   setTimeout(nextLine, 200);
 })();
 </script>
@@ -773,14 +664,14 @@
       <div class="nav-logo-text">Last War: Survival <span>Buddy</span></div>
     </div>
     <div class="nav-login">
-      <button class="nav-signin-link" onclick="document.querySelector('.hero').scrollIntoView({behavior:'smooth'})">Sign In</button>
-      <button class="nav-cta-btn" onclick="document.querySelector('.cta-box').scrollIntoView({behavior:'smooth'})">Join the List &rarr;</button>
+      <a href="https://lwsb.vercel.app/signin" class="nav-signin-link">Sign In</a>
+      <a href="https://lwsb.vercel.app/signup" class="nav-cta-btn">Join for Free &rarr;</a>
     </div>
   </nav>
 
   <!-- HERO -->
   <section class="hero" aria-labelledby="hero-title">
-    <div class="hero-eyebrow">Built exclusively for Last War: Survival</div>
+    <div class="hero-eyebrow">Now Live — Built exclusively for Last War: Survival</div>
     <h1 class="hero-title" id="hero-title">
       <span class="block">Your Personal</span>
       Last War: Survival <span class="gold">Buddy</span>
@@ -791,9 +682,7 @@
       Tell us your server, your level, your goals —<br/>
       we'll tell you <strong>exactly what to do today.</strong>
     </p>
-    <button class="hero-inline-cta" onclick="document.querySelector('.cta-box').scrollIntoView({behavior:'smooth'})">
-      Join the List — It's Free &rarr;
-    </button>
+    <a href="https://lwsb.vercel.app/signup" class="hero-inline-cta">Join for Free &rarr;</a>
     <div class="hero-battle-callout" role="note">
       <div class="hero-battle-callout-icon" aria-hidden="true">⚔️</div>
       <div class="hero-battle-callout-text">
@@ -803,29 +692,17 @@
     </div>
     <div class="hero-tagline">The smarter you play — the smarter it gets</div>
     <div class="cta-group">
-      <div class="cta-box" id="notify">
-        <div class="cta-box-label">⚡ Launching April 12, 2026</div>
+      <div class="cta-box" id="signup-box">
+        <div class="cta-box-label">⚡ Now Live</div>
         <p style="font-size:13px;color:var(--muted2);line-height:1.7;margin-bottom:18px;font-weight:300;">
-          Get notified the moment we go live. Founding Member spots ($99 · lifetime · 300 questions/month) are limited to 500 and go to the list first.
+          Free tier gets you 20 questions/month. Founding Member spots ($99 · lifetime · 300 questions/month) are limited to 500 — first come, first served.
         </p>
-        <form action="https://lastwarsurvivalbuddy.us5.list-manage.com/subscribe/post?u=18c493eb1ee556997ddefe218&amp;id=8c7ab30157&amp;f_id=003021ebf0"
-          method="post" id="mc-embedded-subscribe-form" name="mc-embedded-subscribe-form" target="_blank" novalidate>
-          <label for="mce-EMAIL" style="position:absolute;left:-5000px;" aria-hidden="true">Email address</label>
-          <input class="cta-input" type="email" name="EMAIL" id="mce-EMAIL" placeholder="Your email address" required style="font-size:15px;padding:15px 16px;" aria-label="Email address for launch notification"/>
-          <div style="position:absolute;left:-5000px;" aria-hidden="true">
-            <input type="text" name="b_18c493eb1ee556997ddefe218_8c7ab30157" tabindex="-1" value=""/>
-          </div>
-          <div id="mce-responses" aria-live="polite">
-            <div id="mce-error-response" style="display:none;color:#ff6b6b;font-size:13px;margin-bottom:8px;" role="alert"></div>
-            <div id="mce-success-response" style="display:none;color:#30b870;font-size:13px;margin-bottom:8px;" role="status"></div>
-          </div>
-          <button type="submit" class="cta-btn" style="font-size:17px;padding:17px;">Notify Me at Launch — It's Free &rarr;</button>
-          <div class="cta-terms">
-            No credit card. No spam — ever.<br/>
-            Founding Member spots go to the list first.<br/>
-            By signing up you agree to our <a>Terms</a> and <a>Privacy Policy</a>.
-          </div>
-        </form>
+        <a href="https://lwsb.vercel.app/signup" class="cta-btn-primary">Join for Free &rarr;</a>
+        <a href="https://lwsb.vercel.app/signin" class="cta-btn-secondary">Already have an account? Sign In</a>
+        <div class="cta-terms">
+          No credit card required for free tier.<br/>
+          Founding Member spots are limited to 500 total.
+        </div>
       </div>
     </div>
   </section>
@@ -854,13 +731,13 @@
       <div style="width:1px;height:40px;background:#222830;" aria-hidden="true"></div>
       <div style="text-align:center;">
         <div style="font-family:'Oswald',sans-serif;font-size:13px;font-weight:600;color:#e8a020;line-height:1.3;max-width:140px;">Limited to 500 spots</div>
-        <div style="font-size:10px;color:#606878;letter-spacing:0.08em;text-transform:uppercase;margin-top:4px;">List gets first offer</div>
+        <div style="font-size:10px;color:#606878;letter-spacing:0.08em;text-transform:uppercase;margin-top:4px;">First come, first served</div>
       </div>
     </div>
-    <button onclick="document.querySelector('.cta-box').scrollIntoView({behavior:'smooth'})"
-      style="background:linear-gradient(135deg,#c0281a,#e8a020);border:none;border-radius:8px;padding:12px 24px;color:#fff;font-family:'Oswald',sans-serif;font-size:14px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;box-shadow:0 4px 20px rgba(232,160,32,0.3);white-space:nowrap;transition:all 0.2s;">
+    <a href="https://lwsb.vercel.app/signup"
+      style="background:linear-gradient(135deg,#c0281a,#e8a020);border:none;border-radius:8px;padding:12px 24px;color:#fff;font-family:'Oswald',sans-serif;font-size:14px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;box-shadow:0 4px 20px rgba(232,160,32,0.3);white-space:nowrap;transition:all 0.2s;text-decoration:none;display:inline-flex;align-items:center;">
       Claim Your Spot &rarr;
-    </button>
+    </a>
   </div>
 
   <!-- STATS ROW -->
@@ -883,9 +760,7 @@
       <span class="stat-partner-label">Game Data</span>
       <a href="https://cpt-hedge.com" target="_blank" rel="noopener noreferrer" class="stat-partner-link">
         ⬡ cpt-hedge.com
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M2 8L8 2M8 2H4M8 2V6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 8L8 2M8 2H4M8 2V6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </a>
     </div>
   </div>
@@ -979,7 +854,7 @@
         <div class="battle-report-label">Pro Feature</div>
         <h2 class="battle-report-title" id="battle-report-heading">Last War Battle Report<br/><span>Analyzer</span></h2>
         <p class="battle-report-desc">Upload your Last War battle report screenshots after any fight. Buddy reads every screen — troop type breakdown, stat comparison, hero skill damage, gear — and delivers a full expert breakdown: why you won or lost, what the root cause was, and exactly what to fix before the rematch. Use it on the fights you genuinely don't understand.<br/><br/>No other Last War tool does this.</p>
-        <a href="#notify" onclick="document.querySelector('.cta-box').scrollIntoView({behavior:'smooth'});return false;" class="battle-report-cta">⚔️ Launching April 12, 2026 — Join the List &rarr;</a>
+        <a href="https://lwsb.vercel.app/signup" class="battle-report-cta">⚔️ Join for Free — Analyze Your Battles &rarr;</a>
       </div>
       <div class="battle-report-grid" role="list" aria-label="Battle Report Analyzer features">
         <div class="battle-report-tile" role="listitem"><div class="battle-report-tile-icon" aria-hidden="true">🔺</div><div class="battle-report-tile-label">Troop Type Counter</div><div class="battle-report-tile-desc">Diagnoses aircraft vs missile vs tank matchup with exact damage % from your screenshots</div></div>
@@ -999,13 +874,13 @@
         <div class="war-room-label">Free for All Players</div>
         <h2 class="war-room-title" id="war-room-heading">Last War<br/><span>War Room</span></h2>
         <div class="war-room-free-pill"><span>✓ Free — No subscription required</span></div>
-        <p class="war-room-desc">R5s: stop typing your battle plan in alliance chat with 3 minutes on the clock. Open the War Room, fill in your roles and orders — get a clean shareable card your entire alliance/server can act on. Desert Storm, Warzone Duel, and Canyon Storm. Done in 30 seconds. Other battles coming soon.</p>
+        <p class="war-room-desc">R5s: stop typing your battle plan in alliance chat with 3 minutes on the clock. Open the War Room, fill in your roles and orders — get a clean shareable card your entire alliance/server can act on. Desert Storm, Warzone Duel, and Canyon Storm. Done in 30 seconds.</p>
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px;" role="list" aria-label="War Room tools">
           <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(232,160,32,0.08);border:1px solid rgba(232,160,32,0.25);border-radius:8px;padding:8px 16px;" role="listitem"><span style="font-size:16px;" aria-hidden="true">🏜️</span><div><div style="font-family:'Oswald',sans-serif;font-size:12px;font-weight:600;letter-spacing:0.1em;color:#e8e8e8;">Desert Storm</div><div style="font-size:10px;color:#606878;">Role assignments · Compass · Shareable card</div></div></div>
           <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(192,40,26,0.08);border:1px solid rgba(192,40,26,0.25);border-radius:8px;padding:8px 16px;" role="listitem"><span style="font-size:16px;" aria-hidden="true">⚔️</span><div><div style="font-family:'Oswald',sans-serif;font-size:12px;font-weight:600;letter-spacing:0.1em;color:#e8e8e8;">Warzone Duel</div><div style="font-size:10px;color:#606878;">Capitol · Cannons · Commander's orders</div></div></div>
           <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(100,60,180,0.08);border:1px solid rgba(100,60,180,0.25);border-radius:8px;padding:8px 16px;" role="listitem"><span style="font-size:16px;" aria-hidden="true">⚡</span><div><div style="font-family:'Oswald',sans-serif;font-size:12px;font-weight:600;letter-spacing:0.1em;color:#e8e8e8;">Canyon Storm</div><div style="font-size:10px;color:#606878;">2v1 · Factions · Virus Lab · Shareable card</div></div></div>
         </div>
-        <a href="#notify" onclick="document.querySelector('.cta-box').scrollIntoView({behavior:'smooth'});return false;" style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#c06010,#e8a020);border:none;border-radius:8px;padding:13px 24px;color:#fff;font-family:'Oswald',sans-serif;font-size:14px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;box-shadow:0 4px 20px rgba(232,160,32,0.3);transition:all 0.2s;text-decoration:none;">🗺️ Launching April 12, 2026 — Join the List &rarr;</a>
+        <a href="https://lwsb.vercel.app/signup" style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#c06010,#e8a020);border:none;border-radius:8px;padding:13px 24px;color:#fff;font-family:'Oswald',sans-serif;font-size:14px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;box-shadow:0 4px 20px rgba(232,160,32,0.3);transition:all 0.2s;text-decoration:none;">🗺️ Join for Free — Open the War Room &rarr;</a>
       </div>
       <div class="war-room-grid" role="list" aria-label="War Room feature list">
         <div class="war-room-tile" role="listitem"><div class="war-room-tile-icon" aria-hidden="true">🏜️</div><div class="war-room-tile-label">Desert Storm</div><div class="war-room-tile-desc">Assign Roamers, Flanks, Hospital Guards, Silo team. Compass included. Post it in one tap.</div></div>
@@ -1036,11 +911,11 @@
   <!-- SOCIAL PROOF -->
   <section class="social-proof" aria-labelledby="testimonials-heading">
     <div class="social-proof-inner">
-      <div class="social-proof-label" id="testimonials-heading">Early Access Players</div>
+      <div class="social-proof-label" id="testimonials-heading">What Commanders Are Saying</div>
       <div class="quotes-grid">
-        <div class="quote-card"><div class="quote-mark" aria-hidden="true">"</div><p class="quote-text">Finally an app that actually knows <strong>my server.</strong> Helped me improve my spending and stop wasting money on packs I didn't need.</p><div class="quote-author"><div class="quote-author-dot" aria-hidden="true"></div><div class="quote-author-info"><div class="quote-author-name">Server 1032 · HQ 35</div><div class="quote-author-meta">Aircraft · Early Access</div></div></div></div>
-        <div class="quote-card"><div class="quote-mark" aria-hidden="true">"</div><p class="quote-text">I lost a fight to someone 4M weaker than me. Buddy told me my gear was in the wrong positions. <strong>I simply needed to move my gear into the right slots.</strong> Never would have figured that out on my own.</p><div class="quote-author"><div class="quote-author-dot" aria-hidden="true"></div><div class="quote-author-info"><div class="quote-author-name">Server 1032 · HQ 35</div><div class="quote-author-meta">Tank · Early Access</div></div></div></div>
-        <div class="quote-card"><div class="quote-mark" aria-hidden="true">"</div><p class="quote-text">I'm new and this game is overwhelming. Buddy gives me <strong>3 things to do today</strong> and explains why. That's all I needed.</p><div class="quote-author"><div class="quote-author-dot" aria-hidden="true"></div><div class="quote-author-info"><div class="quote-author-name">Server 2137 · HQ 24</div><div class="quote-author-meta">Day 37 · Tank · Early Access</div></div></div></div>
+        <div class="quote-card"><div class="quote-mark" aria-hidden="true">"</div><p class="quote-text">Finally an app that actually knows <strong>my server.</strong> Helped me improve my spending and stop wasting money on packs I didn't need.</p><div class="quote-author"><div class="quote-author-dot" aria-hidden="true"></div><div class="quote-author-info"><div class="quote-author-name">Server 1032 · HQ 35</div><div class="quote-author-meta">Aircraft · Founding Member</div></div></div></div>
+        <div class="quote-card"><div class="quote-mark" aria-hidden="true">"</div><p class="quote-text">I lost a fight to someone 4M weaker than me. Buddy told me my gear was in the wrong positions. <strong>I simply needed to move my gear into the right slots.</strong> Never would have figured that out on my own.</p><div class="quote-author"><div class="quote-author-dot" aria-hidden="true"></div><div class="quote-author-info"><div class="quote-author-name">Server 1032 · HQ 35</div><div class="quote-author-meta">Tank · Founding Member</div></div></div></div>
+        <div class="quote-card"><div class="quote-mark" aria-hidden="true">"</div><p class="quote-text">I'm new and this game is overwhelming. Buddy gives me <strong>3 things to do today</strong> and explains why. That's all I needed.</p><div class="quote-author"><div class="quote-author-dot" aria-hidden="true"></div><div class="quote-author-info"><div class="quote-author-name">Server 2137 · HQ 24</div><div class="quote-author-meta">Day 37 · Tank · Free Tier</div></div></div></div>
       </div>
     </div>
   </section>
@@ -1061,7 +936,7 @@
       </div>
       <div style="margin-top:32px;text-align:center;font-size:12px;color:var(--muted);line-height:1.8;">
         All tiers include the Daily Action Plan, Commander Card, and War Room (Desert Storm + Warzone Duel + Canyon Storm).<br/>
-        Battle Report Analyzer requires Pro or higher. Reports reset on your billing date — 8/mo Pro · 16/mo Elite · 16/mo Founding.<br/>
+        Battle Reports reset on your billing date — 8/mo Pro · 16/mo Elite · 16/mo Founding.<br/>
         Founding Member is a limited lifetime tier — 500 spots total.
       </div>
     </div>
@@ -1088,18 +963,12 @@
 
   <!-- BOTTOM CTA -->
   <section class="bottom-cta" aria-labelledby="bottom-cta-heading">
-    <div class="section-label">Be First In Line</div>
-    <h2 class="bottom-cta-title" id="bottom-cta-heading">Launching<br/><span>April 12, 2026.</span></h2>
-    <p class="bottom-cta-sub">Join the list free. Founding Member spots go to the list first — 500 total, $99 lifetime, 300 questions/month.</p>
-    <div class="bottom-signup">
-      <form action="https://lastwarsurvivalbuddy.us5.list-manage.com/subscribe/post?u=18c493eb1ee556997ddefe218&amp;id=8c7ab30157&amp;f_id=003021ebf0"
-        method="post" id="mc-embedded-subscribe-form-2" name="mc-embedded-subscribe-form-2" target="_blank" novalidate
-        style="display:flex;gap:10px;flex-wrap:wrap;width:100%;justify-content:center;">
-        <label for="bottom-email" style="position:absolute;left:-5000px;">Email address</label>
-        <input type="email" id="bottom-email" name="EMAIL" placeholder="Your email address" required aria-label="Email address for launch notification"/>
-        <div style="position:absolute;left:-5000px;" aria-hidden="true"><input type="text" name="b_18c493eb1ee556997ddefe218_8c7ab30157" tabindex="-1" value=""/></div>
-        <button type="submit" class="bottom-signup-btn">Notify Me at Launch &rarr;</button>
-      </form>
+    <div class="section-label">Your Buddy Is Ready</div>
+    <h2 class="bottom-cta-title" id="bottom-cta-heading">Stop Guessing.<br/><span>Start Winning.</span></h2>
+    <p class="bottom-cta-sub">Free tier gets you started in 60 seconds. No credit card required.</p>
+    <div class="bottom-cta-btns">
+      <a href="https://lwsb.vercel.app/signup" class="bottom-btn-primary">Join for Free &rarr;</a>
+      <a href="https://lwsb.vercel.app/signin" class="bottom-btn-secondary">Sign In</a>
     </div>
   </section>
 
