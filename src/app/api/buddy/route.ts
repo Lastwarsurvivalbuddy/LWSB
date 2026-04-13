@@ -190,11 +190,16 @@ export async function POST(req: NextRequest) {
 
     const { data: sub } = await supabase
       .from('subscriptions')
-      .select('tier')
+      .select('tier, bonus_questions')
       .eq('user_id', user.id)
       .single();
     const tier = sub?.tier || 'free';
-    const limits = TIER_LIMITS[tier] || TIER_LIMITS.free;
+    const bonusQuestions = sub?.bonus_questions ?? 0;
+    const baseLimits = TIER_LIMITS[tier] || TIER_LIMITS.free;
+    const limits = {
+      questions: baseLimits.questions + bonusQuestions,
+      screenshots: baseLimits.screenshots,
+    };
 
     if (isScreenshot && limits.screenshots === 0) {
       return NextResponse.json(
@@ -218,13 +223,17 @@ export async function POST(req: NextRequest) {
     const screenshotCount = usage?.screenshot_count || 0;
 
     if (questionCount >= limits.questions) {
+      const founderBonusNote =
+        tier === 'founding' && bonusQuestions > 0
+          ? ` (includes your +${bonusQuestions} Founder upgrade bonus)`
+          : '';
       return NextResponse.json(
         {
           error: 'Monthly question limit reached.',
           upgradeMessage:
             tier === 'free'
               ? `You've hit your monthly limit (${limits.questions} questions). Upgrade to keep going: Pro — $9.99/mo · Elite — $19.99/mo · Founding Member — $99 lifetime`
-              : `You've used all ${limits.questions} questions for this month. Resets on the 1st.`,
+              : `You've used all ${limits.questions} questions for this month${founderBonusNote}. Resets on the 1st.`,
         },
         { status: 429 }
       );

@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
     if (!auth?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
     const token = auth.replace('Bearer ', '')
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
     if (authError || !user) {
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://lwsb.vercel.app'
 
-    // Build metadata — include ref_code if present and valid
+    // Build metadata
     const metadata: Record<string, string> = {
       user_id: user.id,
       tier,
@@ -53,17 +54,34 @@ export async function POST(req: NextRequest) {
 
     const mode = MODE_MAP[tier]
 
-    const session = await stripe.checkout.sessions.create({
+    // Look up existing Stripe customer if any — prevents duplicate customer records
+    // when a Pro/Elite user buys Founding (or any cross-tier upgrade).
+    const { data: existingSub } = await supabaseAdmin
+      .from('subscriptions')
+      .select('stripe_customer_id')
+      .eq('user_id', user.id)
+      .single()
+
+    const existingCustomerId = existingSub?.stripe_customer_id ?? null
+
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode,
       line_items: [{ price: PRICE_MAP[tier], quantity: 1 }],
       success_url: `${appUrl}/upgrade/success?tier=${tier}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/upgrade`,
-      customer_email: user.email,
       metadata,
-      // Also attach metadata to the subscription so invoice webhooks can resolve user_id + tier
-      ...(mode === 'subscription' ? { subscription_data: { metadata } } : {}),
       allow_promotion_codes: true,
-    })
+      ...(mode === 'subscription' ? { subscription_data: { metadata } } : {}),
+    }
+
+    // Attach existing customer if present, otherwise pass email so Stripe creates one
+    if (existingCustomerId) {
+      sessionParams.customer = existingCustomerId
+    } else {
+      sessionParams.customer_email = user.email
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams)
 
     return NextResponse.json({ url: session.url })
   } catch (err: any) {

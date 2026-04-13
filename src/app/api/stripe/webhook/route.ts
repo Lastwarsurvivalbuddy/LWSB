@@ -11,6 +11,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2026-02-25.clover',
 })
 
+const FOUNDER_BONUS_QUESTIONS = 50
+
 export async function POST(req: NextRequest) {
   const body = await req.text()
   const sig = req.headers.get('stripe-signature')
@@ -51,6 +53,41 @@ export async function POST(req: NextRequest) {
             ? session.subscription
             : (session.subscription as Stripe.Subscription | null)?.id ?? null
 
+        // ── Pro/Elite → Founding upgrade handling ─────────────────────────────
+        // If buying Founding AND user has an existing active subscription,
+        // cancel the existing sub at period end + apply +50 bonus questions
+        // as the upgrade thank-you.
+        let bonusQuestions: number | undefined = undefined
+
+        if (tier === 'founding' && customerId) {
+          try {
+            const activeSubs = await stripe.subscriptions.list({
+              customer: customerId,
+              status: 'active',
+              limit: 10,
+            })
+
+            if (activeSubs.data.length > 0) {
+              // User had an active sub — this is an upgrade, apply the bonus
+              bonusQuestions = FOUNDER_BONUS_QUESTIONS
+
+              for (const oldSub of activeSubs.data) {
+                if (!oldSub.cancel_at_period_end) {
+                  await stripe.subscriptions.update(oldSub.id, {
+                    cancel_at_period_end: true,
+                  })
+                  console.log(
+                    `Founding upgrade: scheduled cancel-at-period-end for sub ${oldSub.id} (user ${userId})`
+                  )
+                }
+              }
+            }
+          } catch (err) {
+            // Non-fatal — log and continue with the upsert
+            console.error('Founding upgrade cancel-existing-subs error:', err)
+          }
+        }
+
         // Upsert for ALL modes (subscription AND payment).
         // Founding = payment mode (no subscriptionId). Pro/Elite = subscription mode.
         await upsertSubscription({
@@ -58,6 +95,7 @@ export async function POST(req: NextRequest) {
           tier,
           stripeCustomerId: customerId,
           stripeSubscriptionId: subscriptionId,
+          bonusQuestions,
         })
 
         // Record affiliate conversion if ref_code present
@@ -205,22 +243,42 @@ export async function POST(req: NextRequest) {
 
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription
+
+        // Look up the existing row to check current tier — if the user is
+        // already on Founding (lifetime), do NOT downgrade them when their
+        // old Pro/Elite sub winds down at period end.
         const { data: sub } = await supabaseAdmin
           .from('subscriptions')
-          .select('user_id')
+          .select('user_id, tier')
           .eq('stripe_subscription_id', subscription.id)
           .single()
 
         if (sub) {
-          await supabaseAdmin
-            .from('subscriptions')
-            .update({
-              tier: 'free',
-              period_start: null,
-              period_end: null,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('user_id', sub.user_id)
+          if (sub.tier === 'founding') {
+            // Founding is lifetime — clear out the dead sub_id but keep the tier
+            await supabaseAdmin
+              .from('subscriptions')
+              .update({
+                stripe_subscription_id: null,
+                period_start: null,
+                period_end: null,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('user_id', sub.user_id)
+            console.log(`Subscription ${subscription.id} cancelled — user ${sub.user_id} stays on Founding`)
+          } else {
+            // Standard cancellation — drop to free
+            await supabaseAdmin
+              .from('subscriptions')
+              .update({
+                tier: 'free',
+                stripe_subscription_id: null,
+                period_start: null,
+                period_end: null,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('user_id', sub.user_id)
+          }
         }
         break
       }
@@ -237,11 +295,14 @@ export async function POST(req: NextRequest) {
 
         const { data: sub } = await supabaseAdmin
           .from('subscriptions')
-          .select('user_id')
+          .select('user_id, tier')
           .eq('stripe_subscription_id', subscription.id)
           .single()
 
         if (sub) {
+          // Don't overwrite tier here — Stripe Customer Portal plan swaps
+          // (Pro ↔ Elite) come through with new price IDs, but tier is
+          // resolved via metadata on invoice.paid. Just sync billing fields.
           await supabaseAdmin
             .from('subscriptions')
             .update({
@@ -272,8 +333,17 @@ async function upsertSubscription(args: {
   stripeSubscriptionId?: string | null
   periodStart?: string | null
   periodEnd?: string | null
+  bonusQuestions?: number
 }) {
-  const { userId, tier, stripeCustomerId, stripeSubscriptionId, periodStart, periodEnd } = args
+  const {
+    userId,
+    tier,
+    stripeCustomerId,
+    stripeSubscriptionId,
+    periodStart,
+    periodEnd,
+    bonusQuestions,
+  } = args
 
   const payload: Record<string, unknown> = {
     user_id: userId,
@@ -285,6 +355,7 @@ async function upsertSubscription(args: {
   if (stripeSubscriptionId) payload.stripe_subscription_id = stripeSubscriptionId
   if (periodStart !== undefined) payload.period_start = periodStart
   if (periodEnd !== undefined) payload.period_end = periodEnd
+  if (bonusQuestions !== undefined) payload.bonus_questions = bonusQuestions
 
   const { error } = await supabaseAdmin
     .from('subscriptions')
