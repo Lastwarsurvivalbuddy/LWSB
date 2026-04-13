@@ -292,9 +292,9 @@ export default function Dashboard() {
     } catch { /* Non-fatal */ }
   }
 
-  function handleOpenBattleReport() {
+  async function handleOpenBattleReport() {
     if (!battleReportQuota.resets_on && accessToken) {
-      loadBattleReportQuota(accessToken)
+      await loadBattleReportQuota(accessToken)
     }
     setBattleReportOpen(true)
   }
