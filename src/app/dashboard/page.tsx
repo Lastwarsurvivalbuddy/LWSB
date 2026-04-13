@@ -549,6 +549,26 @@ export default function Dashboard() {
           </button>
         )}
 
+        {/* ── Founding upgrade nudge — Pro/Elite only ── */}
+        {isPaidMonthly && (
+          <button onClick={() => router.push('/upgrade')} className="mt-4 w-full flex items-center justify-between gap-3 bg-gradient-to-r from-purple-950/60 to-zinc-900/60 border border-purple-700/50 hover:border-purple-600 rounded-xl px-4 py-3 transition-colors group">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="text-lg flex-shrink-0">⭐</span>
+              <div className="text-left min-w-0">
+                <p className="text-xs font-bold text-purple-400 group-hover:text-purple-300 transition-colors">
+                  Upgrade to Founding Member — $99 lifetime, never pay again
+                </p>
+                <p className="text-[11px] text-zinc-500 mt-0.5">
+                  300 questions/month · 16 Battle Reports · 25 screenshots · locked in forever
+                </p>
+              </div>
+            </div>
+            <span className="flex-shrink-0 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-purple-600 group-hover:bg-purple-500 text-white transition-colors whitespace-nowrap">
+              Go Founding →
+            </span>
+          </button>
+        )}
+
         {/* ── Rookie Commander Card — sub-Day-60 only ── */}
         {showRookieCard && (
           <RookieCommanderCard onNavigate={() => router.push('/guide')} />
