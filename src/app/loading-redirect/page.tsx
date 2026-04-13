@@ -27,7 +27,18 @@ export default function LoadingRedirect() {
     }
 
     async function doRedirect(userId: string) {
-      // Check if user has an active subscription
+      // Check if upgrade prompt has already been shown (localStorage flag)
+      let upgradeShown = false
+      try {
+        upgradeShown = localStorage.getItem('lwsb_upgrade_shown') === 'true'
+      } catch { /* Non-fatal */ }
+
+      if (upgradeShown) {
+        router.push('/dashboard')
+        return
+      }
+
+      // Check if user has an active paid subscription
       const { data } = await supabase
         .from('subscriptions')
         .select('tier')
@@ -37,10 +48,10 @@ export default function LoadingRedirect() {
       const hasPaidTier = data?.tier && data.tier !== 'free'
 
       if (hasPaidTier) {
-        // Existing paid subscriber — go straight to dashboard
+        // Paid subscriber — go straight to dashboard
         router.push('/dashboard')
       } else {
-        // New signup or free user — show upgrade page first
+        // First time through — show upgrade page
         router.push('/upgrade')
       }
     }

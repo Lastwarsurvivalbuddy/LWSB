@@ -138,6 +138,13 @@ export default function UpgradePage() {
     loadTier()
   }, [])
 
+  // Mark upgrade prompt as shown — loading-redirect won't force it again
+  useEffect(() => {
+    try {
+      localStorage.setItem('lwsb_upgrade_shown', 'true')
+    } catch { /* Non-fatal */ }
+  }, [])
+
   useEffect(() => {
     async function loadFoundingCount() {
       try {

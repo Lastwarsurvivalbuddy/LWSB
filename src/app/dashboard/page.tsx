@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import DailyActionPlan from '@/components/DailyActionPlan'
@@ -163,6 +163,7 @@ export default function Dashboard() {
   const [adminBadge, setAdminBadge] = useState(0)
   const [affiliateStatus, setAffiliateStatus] = useState<'approved' | 'pending' | 'none'>('none')
   const [notifications, setNotifications] = useState<Notification[]>([])
+  const redirecting = useRef(false)
   const router = useRouter()
   const duel = getDuelDay()
 
@@ -170,7 +171,11 @@ export default function Dashboard() {
     async function loadProfile() {
       try {
         const { data: { session } } = await supabase.auth.getSession()
-        if (!session) { router.push('/signin'); return }
+        if (!session) {
+          redirecting.current = true
+          router.push('/signin')
+          return
+        }
         setAccessToken(session.access_token)
 
         // ── Pending tier intent — redirect to upgrade to complete Stripe checkout ──
@@ -178,6 +183,7 @@ export default function Dashboard() {
           const pendingTier = localStorage.getItem('lwsb_pending_tier')
           if (pendingTier && pendingTier !== 'free') {
             localStorage.removeItem('lwsb_pending_tier')
+            redirecting.current = true
             router.push('/upgrade')
             return
           }
@@ -206,12 +212,16 @@ export default function Dashboard() {
         // PGRST116 = no rows — new user has no profile yet, send to onboarding
         if (error) {
           if (error.code === 'PGRST116') {
-            router.push('/onboarding'); return
+            redirecting.current = true
+            router.push('/onboarding')
+            return
           }
           throw error
         }
         if (!data?.onboarding_complete) {
-          router.push('/onboarding'); return
+          redirecting.current = true
+          router.push('/onboarding')
+          return
         }
 
         const { data: streakData } = await supabase
@@ -252,7 +262,8 @@ export default function Dashboard() {
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'Failed to load profile')
       } finally {
-        setLoading(false)
+        // Only stop the loading spinner if we're not mid-redirect
+        if (!redirecting.current) setLoading(false)
       }
     }
     loadProfile()
