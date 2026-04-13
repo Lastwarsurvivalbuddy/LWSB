@@ -825,7 +825,7 @@ export default function OnboardingFlow() {
 
   async function complete() {
     await saveProgress(TOTAL_STEPS + 1, true);
-    window.location.href = '/dashboard';
+    window.location.href = '/upgrade';
   }
 
   const stepProps: StepProps = { data, setData, onNext: advance, onBack: back, step };

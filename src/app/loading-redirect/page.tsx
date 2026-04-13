@@ -9,22 +9,42 @@ export default function LoadingRedirect() {
 
   useEffect(() => {
     async function redirect() {
-      // Wait for session to be established
       const { data: { session } } = await supabase.auth.getSession()
+
       if (session) {
-        router.push('/dashboard')
+        await doRedirect(session.user.id)
       } else {
-        // Retry once after a short delay — session may still be propagating
+        // Retry once — session may still be propagating
         setTimeout(async () => {
           const { data: { session: retrySession } } = await supabase.auth.getSession()
           if (retrySession) {
-            router.push('/dashboard')
+            await doRedirect(retrySession.user.id)
           } else {
             router.push('/signin?message=confirmed')
           }
         }, 1500)
       }
     }
+
+    async function doRedirect(userId: string) {
+      // Check if user has an active subscription
+      const { data } = await supabase
+        .from('subscriptions')
+        .select('tier')
+        .eq('user_id', userId)
+        .single()
+
+      const hasPaidTier = data?.tier && data.tier !== 'free'
+
+      if (hasPaidTier) {
+        // Existing paid subscriber — go straight to dashboard
+        router.push('/dashboard')
+      } else {
+        // New signup or free user — show upgrade page first
+        router.push('/upgrade')
+      }
+    }
+
     redirect()
   }, [router])
 

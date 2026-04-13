@@ -1,4 +1,5 @@
 'use client'
+
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -202,8 +203,16 @@ export default function Dashboard() {
           .eq('id', session.user.id)
           .single()
 
-        if (error) throw error
-        if (!data?.onboarding_complete) { router.push('/onboarding'); return }
+        // PGRST116 = no rows — new user has no profile yet, send to onboarding
+        if (error) {
+          if (error.code === 'PGRST116') {
+            router.push('/onboarding'); return
+          }
+          throw error
+        }
+        if (!data?.onboarding_complete) {
+          router.push('/onboarding'); return
+        }
 
         const { data: streakData } = await supabase
           .from('profiles')
@@ -235,7 +244,6 @@ export default function Dashboard() {
             .select('status')
             .eq('user_id', session.user.id)
             .single()
-
           if (affData?.status === 'approved') setAffiliateStatus('approved')
           else if (affData?.status === 'pending') setAffiliateStatus('pending')
           else setAffiliateStatus('none')
@@ -375,9 +383,11 @@ export default function Dashboard() {
             {/* Duel day badge */}
             <div className={`
               flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold tracking-wider
-              ${duel.day === 6 ? 'bg-red-900/60 text-red-300 border border-red-800'
-                : duel.day === 7 ? 'bg-zinc-800 text-zinc-400 border border-zinc-700'
-                : 'bg-amber-900/40 text-amber-300 border border-amber-800/60'}
+              ${duel.day === 6
+                ? 'bg-red-900/60 text-red-300 border border-red-800'
+                : duel.day === 7
+                  ? 'bg-zinc-800 text-zinc-400 border border-zinc-700'
+                  : 'bg-amber-900/40 text-amber-300 border border-amber-800/60'}
             `}>
               <div className={`w-1.5 h-1.5 rounded-full ${duel.day === 6 ? 'bg-red-400 animate-pulse' : duel.day === 7 ? 'bg-zinc-500' : 'bg-amber-400'}`} />
               DAY {duel.day} · {duel.name.toUpperCase()}
@@ -385,9 +395,7 @@ export default function Dashboard() {
 
             {/* Streak counter */}
             <div
-              title={hasActiveStreak
-                ? `${streak}-day streak — ask Buddy or submit intel daily to keep it alive`
-                : 'No active streak — ask Buddy or submit intel to start one'}
+              title={hasActiveStreak ? `${streak}-day streak — ask Buddy or submit intel daily to keep it alive` : 'No active streak — ask Buddy or submit intel to start one'}
               className={`
                 flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-bold font-mono transition-colors
                 ${hasActiveStreak
@@ -408,7 +416,7 @@ export default function Dashboard() {
               </svg>
             </button>
 
-            {/* Mission Control — Boyd only */}
+            {/* Mission Control — admin only */}
             {isAdmin && (
               <button onClick={() => router.push('/admin')} className="relative text-zinc-500 hover:text-amber-500 transition-colors" title="Mission Control">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16">
@@ -476,8 +484,7 @@ export default function Dashboard() {
                   : `Your profile is ${staleDays} day${staleDays === 1 ? '' : 's'} old — update your stats so Buddy stays accurate.`}
               </p>
             </div>
-            <button onClick={() => router.push('/profile/edit')}
-              className="flex-shrink-0 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black transition-colors active:scale-95">
+            <button onClick={() => router.push('/profile/edit')} className="flex-shrink-0 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black transition-colors active:scale-95">
               Update
             </button>
           </div>
@@ -485,8 +492,7 @@ export default function Dashboard() {
 
         {/* ── Free tier upgrade nudge ── */}
         {isFree && (
-          <button onClick={() => router.push('/upgrade')}
-            className="mt-4 w-full flex items-center justify-between gap-3 bg-gradient-to-r from-amber-950/60 to-zinc-900/60 border border-amber-700/50 hover:border-amber-600 rounded-xl px-4 py-3 transition-colors group">
+          <button onClick={() => router.push('/upgrade')} className="mt-4 w-full flex items-center justify-between gap-3 bg-gradient-to-r from-amber-950/60 to-zinc-900/60 border border-amber-700/50 hover:border-amber-600 rounded-xl px-4 py-3 transition-colors group">
             <div className="flex items-center gap-3 min-w-0">
               <span className="text-lg flex-shrink-0">⚡</span>
               <div className="text-left min-w-0">
@@ -605,7 +611,9 @@ export default function Dashboard() {
                         <span className={`text-[11px] font-bold ${battleReportQuota.can_analyze ? 'text-red-400' : 'text-zinc-600'}`}>
                           {battleReportQuota.can_analyze
                             ? `${battleReportQuota.remaining} left →`
-                            : battleReportQuota.resets_on ? `Resets ${battleReportQuota.resets_on}` : 'Limit reached'}
+                            : battleReportQuota.resets_on
+                              ? `Resets ${battleReportQuota.resets_on}`
+                              : 'Limit reached'}
                         </span>
                       </div>
                       <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
@@ -715,8 +723,7 @@ export default function Dashboard() {
                   {subscriptionTier.toUpperCase()}
                 </span>
                 {isFree && (
-                  <button onClick={() => router.push('/upgrade')}
-                    className="text-[10px] text-amber-600 hover:text-amber-400 transition-colors font-mono underline underline-offset-2">
+                  <button onClick={() => router.push('/upgrade')} className="text-[10px] text-amber-600 hover:text-amber-400 transition-colors font-mono underline underline-offset-2">
                     Upgrade
                   </button>
                 )}
@@ -733,8 +740,7 @@ export default function Dashboard() {
             </div>
 
             <div className="pt-1 border-t border-zinc-800 flex items-center">
-              <button onClick={() => router.push('/card')}
-                className="text-xs text-amber-700 hover:text-amber-500 transition-colors flex items-center gap-1">
+              <button onClick={() => router.push('/card')} className="text-xs text-amber-700 hover:text-amber-500 transition-colors flex items-center gap-1">
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
                   <path d="M1 3a1 1 0 011-1h8a1 1 0 011 1v6a1 1 0 01-1 1H2a1 1 0 01-1-1V3z" stroke="currentColor" strokeWidth="1.2"/>
                   <path d="M3 5h2M3 7h4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
@@ -746,15 +752,13 @@ export default function Dashboard() {
 
           {/* ── Quick links below card ── */}
           <div className="mt-3 flex items-center gap-5 flex-wrap px-1">
-            <button onClick={() => router.push('/profile/edit')}
-              className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1">
+            <button onClick={() => router.push('/profile/edit')} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1">
               <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
                 <path d="M8.5 1.5l2 2-7 7H1.5v-2l7-7z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
               Edit profile
             </button>
-            <button onClick={() => router.push('/how-to')}
-              className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1">
+            <button onClick={() => router.push('/how-to')} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1">
               <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
                 <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.2"/>
                 <path d="M5 5c0-.55.45-1 1-1s1 .45 1 1c0 .42-.27.78-.67.92V8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
@@ -762,8 +766,7 @@ export default function Dashboard() {
               </svg>
               How to use
             </button>
-            <button onClick={() => router.push('/contact')}
-              className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1">
+            <button onClick={() => router.push('/contact')} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1">
               <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
                 <path d="M1 2.5h10a.5.5 0 01.5.5v6a.5.5 0 01-.5.5H1a.5.5 0 01-.5-.5V3a.5.5 0 01.5-.5z" stroke="currentColor" strokeWidth="1.2"/>
                 <path d="M1 3l5 4 5-4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
@@ -771,8 +774,7 @@ export default function Dashboard() {
               Contact
             </button>
             {affiliateStatus === 'approved' && (
-              <button onClick={() => router.push('/affiliate/dashboard')}
-                className="text-xs text-green-700 hover:text-green-500 transition-colors flex items-center gap-1">
+              <button onClick={() => router.push('/affiliate/dashboard')} className="text-xs text-green-700 hover:text-green-500 transition-colors flex items-center gap-1">
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
                   <path d="M6 1l1.5 3 3.5.5-2.5 2.5.5 3.5L6 9l-3 1.5.5-3.5L1 4.5 4.5 4z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
                 </svg>
@@ -780,8 +782,7 @@ export default function Dashboard() {
               </button>
             )}
             {affiliateStatus === 'none' && (
-              <button onClick={() => router.push('/affiliate')}
-                className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors flex items-center gap-1">
+              <button onClick={() => router.push('/affiliate')} className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors flex items-center gap-1">
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
                   <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.2"/>
                   <path d="M6 4v4M4 6h4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
@@ -803,7 +804,8 @@ export default function Dashboard() {
       </main>
 
       {/* ── Battle Report Analyzer Modal ── */}
-      <ErrorBoundary label="Battle Report Modal"
+      <ErrorBoundary
+        label="Battle Report Modal"
         fallback={
           battleReportOpen ? (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
@@ -817,12 +819,13 @@ export default function Dashboard() {
                   Try again with clearer, cropped screenshots. If this keeps happening, contact support.
                 </p>
                 <div className="flex gap-3 pt-2">
-                  <button onClick={() => setBattleReportOpen(false)}
-                    className="flex-1 py-3 rounded-xl border border-gray-700 text-gray-300 text-sm font-medium hover:border-gray-600 transition-colors">
+                  <button onClick={() => setBattleReportOpen(false)} className="flex-1 py-3 rounded-xl border border-gray-700 text-gray-300 text-sm font-medium hover:border-gray-600 transition-colors">
                     Close
                   </button>
-                  <button onClick={() => { setBattleReportOpen(false); setTimeout(() => setBattleReportOpen(true), 50) }}
-                    className="flex-1 bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 rounded-xl transition-colors text-sm">
+                  <button
+                    onClick={() => { setBattleReportOpen(false); setTimeout(() => setBattleReportOpen(true), 50) }}
+                    className="flex-1 bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 rounded-xl transition-colors text-sm"
+                  >
                     Try Again →
                   </button>
                 </div>
@@ -845,8 +848,10 @@ export default function Dashboard() {
 
       {/* ── Floating Buddy button ── */}
       <div className="fixed bottom-6 right-4 z-30">
-        <button onClick={() => router.push('/buddy')}
-          className="flex items-center gap-2.5 bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm px-5 py-3 rounded-full shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 transition-all duration-200 active:scale-95">
+        <button
+          onClick={() => router.push('/buddy')}
+          className="flex items-center gap-2.5 bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm px-5 py-3 rounded-full shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 transition-all duration-200 active:scale-95"
+        >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16">
             <path d="M14 8c0 3.314-2.686 6-6 6a5.97 5.97 0 01-3.2-.928L2 14l.928-2.8A5.97 5.97 0 012 8c0-3.314 2.686-6 6-6s6 2.686 6 6z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
