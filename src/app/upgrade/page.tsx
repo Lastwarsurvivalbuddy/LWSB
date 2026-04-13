@@ -1,4 +1,5 @@
 'use client'
+
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -76,30 +77,6 @@ const TIERS = [
       'Every future feature, included',
     ],
   },
-  {
-    id: 'alliance',
-    name: 'Alliance Premium',
-    price: '$19.99',
-    period: '/mo',
-    questions: 250,
-    screenshots: 20,
-    battle_reports: 16,
-    battle_reports_label: '16/mo',
-    color: 'green',
-    badge: 'FOR ALLIANCE LEADERS',
-    description: 'Give your whole alliance daily AI guidance.',
-    features: [
-      '250 questions per month',
-      '20 screenshot analyses per month',
-      '16 Battle Report analyses per month',
-      'Full Buddy AI with profile context',
-      'Pack Scanner',
-      'Daily Briefing + Action Plan',
-      'Desert Storm War Room',
-      'Built for team play and alliance coordination',
-      'Cancel anytime',
-    ],
-  },
 ]
 
 const COLOR_MAP: Record<string, Record<string, string>> = {
@@ -126,14 +103,6 @@ const COLOR_MAP: Record<string, Record<string, string>> = {
     glow: 'shadow-purple-900/20',
     accent: 'text-purple-400',
     statBg: 'bg-purple-900/20 border-purple-800/40',
-  },
-  green: {
-    border: 'border-green-800/60',
-    badge: 'bg-green-900/60 text-green-300 border-green-800',
-    btn: 'bg-green-600 hover:bg-green-500 text-white',
-    glow: 'shadow-green-900/20',
-    accent: 'text-green-400',
-    statBg: 'bg-green-900/20 border-green-800/40',
   },
 }
 
@@ -187,7 +156,6 @@ export default function UpgradePage() {
 
   async function handleUpgrade(tierId: string) {
     setLoading(tierId)
-
     const { data: { session } } = await supabase.auth.getSession()
 
     if (!session) {
@@ -360,7 +328,7 @@ export default function UpgradePage() {
         )}
 
         {/* ── Tier cards ── */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-3">
           {TIERS.map(tier => {
             const c = COLOR_MAP[tier.color]
             const isCurrentTier = currentTier === tier.id
@@ -452,9 +420,7 @@ export default function UpgradePage() {
                         ? 'Loading...'
                         : tier.id === 'founding'
                           ? 'Claim Lifetime Access'
-                          : tier.id === 'alliance'
-                            ? 'Upgrade to Alliance'
-                            : `Upgrade to ${tier.name}`}
+                          : `Upgrade to ${tier.name}`}
                 </button>
               </div>
             )
@@ -468,15 +434,15 @@ export default function UpgradePage() {
           </div>
           <div className="divide-y divide-zinc-800/60">
             {[
-              { feature: 'Buddy AI Chat',              free: '20/mo',  pro: '100/mo',  elite: '250/mo',  founding: '300/mo' },
-              { feature: 'Screenshot Analysis',         free: '—',      pro: '10/mo',   elite: '20/mo',   founding: '25/mo' },
-              { feature: '⚔️ Battle Report Analyzer',  free: '—',      pro: '8/mo',    elite: '16/mo',   founding: '16/mo' },
-              { feature: 'Pack Scanner',                free: '—',      pro: '✓',       elite: '✓',       founding: '✓' },
-              { feature: 'Daily Briefing',              free: '✓',      pro: '✓',       elite: '✓',       founding: '✓' },
-              { feature: 'Daily Action Plan',           free: '✓',      pro: '✓',       elite: '✓',       founding: '✓' },
-              { feature: '🏜️ DS War Room',             free: '✓',      pro: '✓',       elite: '✓',       founding: '✓' },
-              { feature: 'Profile Context',             free: '✓',      pro: '✓',       elite: '✓',       founding: '✓' },
-              { feature: 'New Features',                free: 'Basic',  pro: 'Standard', elite: 'Priority', founding: 'All — forever' },
+              { feature: 'Buddy AI Chat',             free: '20/mo', pro: '100/mo',  elite: '250/mo',  founding: '300/mo' },
+              { feature: 'Screenshot Analysis',       free: '—',     pro: '10/mo',   elite: '20/mo',   founding: '25/mo' },
+              { feature: '⚔️ Battle Report Analyzer', free: '—',     pro: '8/mo',    elite: '16/mo',   founding: '16/mo' },
+              { feature: 'Pack Scanner',              free: '—',     pro: '✓',       elite: '✓',       founding: '✓' },
+              { feature: 'Daily Briefing',            free: '✓',     pro: '✓',       elite: '✓',       founding: '✓' },
+              { feature: 'Daily Action Plan',         free: '✓',     pro: '✓',       elite: '✓',       founding: '✓' },
+              { feature: '🏜️ DS War Room',            free: '✓',     pro: '✓',       elite: '✓',       founding: '✓' },
+              { feature: 'Profile Context',           free: '✓',     pro: '✓',       elite: '✓',       founding: '✓' },
+              { feature: 'New Features',              free: 'Basic', pro: 'Standard',elite: 'Priority', founding: 'All — forever' },
             ].map(({ feature, free, pro, elite, founding }) => (
               <div key={feature} className="grid grid-cols-5 px-5 py-3 text-xs items-center">
                 <span className="text-zinc-300 font-medium col-span-1">{feature}</span>
