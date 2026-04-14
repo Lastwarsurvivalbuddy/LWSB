@@ -109,6 +109,41 @@ function troopTierDisplay(tier: string): string {
   return map[tier] ?? tier ?? '—'
 }
 
+const PWA_BANNER_KEY = 'lwsb_pwa_banner_dismissed'
+
+// ─────────────────────────────────────────────────────────────
+// PWA INSTALL BANNER
+// ─────────────────────────────────────────────────────────────
+function PWAInstallBanner({ onDismiss }: { onDismiss: () => void }) {
+  return (
+    <div
+      className="mt-4 flex items-center justify-between gap-3 rounded-xl px-4 py-3"
+      style={{
+        backgroundColor: 'rgba(14,165,233,0.06)',
+        border: '1px solid rgba(14,165,233,0.25)',
+        borderLeft: '3px solid #0ea5e9',
+      }}
+    >
+      <div className="flex items-center gap-2.5 min-w-0">
+        <span className="text-base flex-shrink-0">📱</span>
+        <p className="text-xs text-sky-200/80 leading-snug">
+          <span className="font-bold text-sky-300">LWSB is now an app.</span>{' '}
+          iPhone: Share → Add to Home Screen. Android: tap ⋮ → Install app.
+        </p>
+      </div>
+      <button
+        onClick={onDismiss}
+        className="flex-shrink-0 text-zinc-600 hover:text-zinc-400 transition-colors"
+        title="Dismiss"
+      >
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16">
+          <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      </button>
+    </div>
+  )
+}
+
 // ─────────────────────────────────────────────────────────────
 // ROOKIE COMMANDER CARD
 // Shown for players with server_day <= 60
@@ -165,9 +200,29 @@ export default function Dashboard() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [manageSubLoading, setManageSubLoading] = useState(false)
   const [manageSubError, setManageSubError] = useState<string | null>(null)
+  const [showPWABanner, setShowPWABanner] = useState(false)
   const redirecting = useRef(false)
   const router = useRouter()
   const duel = getDuelDay()
+
+  // ── PWA banner — suppress if already running as installed app ──
+  useEffect(() => {
+    try {
+      const isStandalone =
+        ('standalone' in window.navigator && (window.navigator as Navigator & { standalone: boolean }).standalone === true) ||
+        window.matchMedia('(display-mode: standalone)').matches
+      if (isStandalone) return
+      const dismissed = localStorage.getItem(PWA_BANNER_KEY)
+      if (!dismissed) setShowPWABanner(true)
+    } catch { /* Non-fatal */ }
+  }, [])
+
+  function handleDismissPWABanner() {
+    try {
+      localStorage.setItem(PWA_BANNER_KEY, '1')
+    } catch { /* Non-fatal */ }
+    setShowPWABanner(false)
+  }
 
   useEffect(() => {
     async function loadProfile() {
@@ -491,6 +546,11 @@ export default function Dashboard() {
       </header>
 
       <main className="max-w-2xl mx-auto px-4 pb-24">
+
+        {/* ── PWA install banner — dismissible, localStorage flag ── */}
+        {showPWABanner && (
+          <PWAInstallBanner onDismiss={handleDismissPWABanner} />
+        )}
 
         {/* ── Manage billing strip — paid users only, top of feed ── */}
         {!isFree && (
