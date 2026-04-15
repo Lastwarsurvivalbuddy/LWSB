@@ -216,7 +216,7 @@ export async function POST(req: NextRequest) {
       .from('daily_usage')
       .select('question_count, screenshot_count')
       .eq('user_id', user.id)
-      .eq('date', monthKey)
+      .eq('usage_date', monthKey)
       .single();
 
     const questionCount = usage?.question_count || 0;
@@ -348,11 +348,11 @@ export async function POST(req: NextRequest) {
       .upsert(
         {
           user_id: user.id,
-          date: monthKey,
+          usage_date: monthKey,
           question_count: questionCount + 1,
           screenshot_count: isScreenshot ? screenshotCount + 1 : screenshotCount,
         },
-        { onConflict: 'user_id,date' }
+        { onConflict: 'user_id,usage_date' }
       );
 
     await incrementStreak(supabase, user.id);

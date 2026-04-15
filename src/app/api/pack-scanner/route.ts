@@ -8,6 +8,18 @@ import { buildPackScannerPrompt } from '@/lib/packScannerPrompt';
 
 const ALLOWED_TIERS = ['pro', 'elite', 'founding', 'alliance'];
 
+const TIER_LIMITS: Record<string, { questions: number; screenshots: number }> = {
+  free:     { questions: 20,  screenshots: 0  },
+  pro:      { questions: 100, screenshots: 10 },
+  elite:    { questions: 250, screenshots: 20 },
+  founding: { questions: 300, screenshots: 25 },
+  alliance: { questions: 250, screenshots: 20 },
+};
+
+function getCurrentMonthKey(): string {
+  return new Date().toISOString().slice(0, 7); // YYYY-MM
+}
+
 export async function POST(req: NextRequest) {
   try {
     // --- Auth ---
@@ -28,7 +40,7 @@ export async function POST(req: NextRequest) {
     // --- Subscription check — Free users blocked ---
     const { data: sub } = await supabase
       .from('subscriptions')
-      .select('tier')
+      .select('tier, bonus_questions')
       .eq('user_id', user.id)
       .single();
 
@@ -49,8 +61,6 @@ export async function POST(req: NextRequest) {
     }
 
     const mediaType = screenshot_media_type ?? 'image/jpeg';
-
-    // Sanitize playerContext — empty string becomes undefined
     const sanitizedContext = typeof playerContext === 'string' ? playerContext.trim() || undefined : undefined;
 
     // --- Load commander profile ---
@@ -64,36 +74,40 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
-    // --- Daily usage check (shared quota with Buddy) ---
-    const today = new Date().toISOString().split('T')[0];
+    // --- Monthly quota check (matches buddy route) ---
+    const bonusQuestions = sub?.bonus_questions ?? 0;
+    const baseLimits = TIER_LIMITS[tier.toLowerCase()] ?? TIER_LIMITS.free;
+    const limits = {
+      questions:   baseLimits.questions + bonusQuestions,
+      screenshots: baseLimits.screenshots,
+    };
+
+    const monthKey = getCurrentMonthKey();
     const { data: usage } = await supabase
       .from('daily_usage')
       .select('question_count, screenshot_count')
       .eq('user_id', user.id)
-      .eq('date', today)
+      .eq('usage_date', monthKey)
       .single();
 
-    const questionLimits: Record<string, number> = {
-      free: 0, pro: 30, elite: 100, founding: 9999, alliance: 100,
-    };
-    const screenshotLimits: Record<string, number> = {
-      free: 0, pro: 10, elite: 20, founding: 9999, alliance: 20,
-    };
-
-    const currentQuestions  = usage?.question_count  ?? 0;
+    const currentQuestions   = usage?.question_count   ?? 0;
     const currentScreenshots = usage?.screenshot_count ?? 0;
-    const questionLimit      = questionLimits[tier.toLowerCase()]  ?? 0;
-    const screenshotLimit    = screenshotLimits[tier.toLowerCase()] ?? 0;
 
-    if (currentQuestions >= questionLimit) {
+    if (currentQuestions >= limits.questions) {
       return NextResponse.json(
-        { error: 'daily_limit_reached', message: 'Daily question limit reached. Resets at midnight UTC.' },
+        {
+          error: 'monthly_limit_reached',
+          message: `You've used all ${limits.questions} questions for this month. Resets on the 1st.`,
+        },
         { status: 429 }
       );
     }
-    if (currentScreenshots >= screenshotLimit) {
+    if (currentScreenshots >= limits.screenshots) {
       return NextResponse.json(
-        { error: 'screenshot_limit_reached', message: 'Daily screenshot limit reached.' },
+        {
+          error: 'screenshot_limit_reached',
+          message: `You've used all ${limits.screenshots} screenshot analyses for this month. Resets on the 1st.`,
+        },
         { status: 429 }
       );
     }
@@ -160,31 +174,23 @@ export async function POST(req: NextRequest) {
     const verdictMatch = rawText.match(/VERDICT:\s*(BUY|SKIP|MAYBE|UNKNOWN)/i);
     const verdict = verdictMatch ? verdictMatch[1].toUpperCase() : 'UNKNOWN';
 
-    // --- Update daily usage ---
-    if (usage) {
-      await supabase
-        .from('daily_usage')
-        .update({
-          question_count:   currentQuestions  + 1,
-          screenshot_count: currentScreenshots + 1,
-        })
-        .eq('user_id', user.id)
-        .eq('date', today);
-    } else {
-      await supabase
-        .from('daily_usage')
-        .insert({
+    // --- Update monthly usage (matches buddy route upsert pattern) ---
+    await supabase
+      .from('daily_usage')
+      .upsert(
+        {
           user_id:          user.id,
-          date:             today,
-          question_count:   1,
-          screenshot_count: 1,
-        });
-    }
+          usage_date:       monthKey,
+          question_count:   currentQuestions   + 1,
+          screenshot_count: currentScreenshots + 1,
+        },
+        { onConflict: 'user_id,usage_date' }
+      );
 
     return NextResponse.json({
       verdict,
       analysis: rawText,
-      questions_remaining: questionLimit - currentQuestions - 1,
+      questions_remaining: limits.questions - currentQuestions - 1,
     });
   } catch (err) {
     console.error('Pack scanner error:', err);
