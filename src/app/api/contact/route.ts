@@ -6,19 +6,15 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-async function verifyAdmin(req: NextRequest): Promise<string | null> {
+const BOYD_EMAIL = process.env.BOYD_EMAIL!
+
+async function verifyAdmin(req: NextRequest): Promise<boolean> {
   const auth = req.headers.get('Authorization')
-  if (!auth?.startsWith('Bearer ')) return null
+  if (!auth?.startsWith('Bearer ')) return false
   const token = auth.slice(7)
   const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
-  if (error || !user) return null
-  const { data: profile } = await supabaseAdmin
-    .from('profiles')
-    .select('tier')
-    .eq('id', user.id)
-    .single()
-  if (profile?.tier !== 'admin') return null
-  return user.id
+  if (error || !user) return false
+  return user.email === BOYD_EMAIL
 }
 
 // ── User-facing: submit a contact form entry ──────────────────────────────────
@@ -29,17 +25,7 @@ export async function POST(req: NextRequest) {
   }
 
   const token = authHeader.slice(7)
-
-  const supabaseAuth = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabaseAuth.auth.getUser(token)
-
+  const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
   if (authError || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -56,7 +42,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'invalid category' }, { status: 400 })
   }
 
-  // Write to DB — always, regardless of email success
   const { data: submission, error: dbError } = await supabaseAdmin
     .from('contact_submissions')
     .insert({
@@ -109,13 +94,12 @@ ${screenshot_base64 ? `Screenshot attached: ${screenshot_name || 'screenshot.jpg
         },
         body: JSON.stringify({
           from: 'LWSB Contact <noreply@lastwarsurvivalbuddy.com>',
-          to: ['support@lastwarsurvivalbuddy.com'],
+          to: [BOYD_EMAIL],
           subject: `[LWSB] ${categoryLabels[category] ?? category} — ${email || user.email}`,
           text: emailBody,
         }),
       })
     } catch (emailErr) {
-      // Non-fatal — DB write succeeded, just log
       console.error('[contact] resend email failed:', emailErr)
     }
   }
@@ -125,8 +109,9 @@ ${screenshot_base64 ? `Screenshot attached: ${screenshot_name || 'screenshot.jpg
 
 // ── Admin: list all contact submissions ──────────────────────────────────────
 export async function GET(req: NextRequest) {
-  const adminId = await verifyAdmin(req)
-  if (!adminId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!(await verifyAdmin(req))) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
 
   const { searchParams } = new URL(req.url)
   const status = searchParams.get('status')
@@ -148,8 +133,9 @@ export async function GET(req: NextRequest) {
 
 // ── Admin: update status and/or admin_notes on a submission ──────────────────
 export async function PATCH(req: NextRequest) {
-  const adminId = await verifyAdmin(req)
-  if (!adminId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!(await verifyAdmin(req))) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
 
   const body = await req.json()
   const { id, status, admin_notes } = body
