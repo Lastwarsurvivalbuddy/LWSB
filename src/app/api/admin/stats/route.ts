@@ -85,17 +85,19 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // FIX: column is usage_date, not date
     const { data: usageDates } = await supabase
       .from('daily_usage')
-      .select('user_id, date')
+      .select('user_id, usage_date')
       .in('user_id', profileIds)
-      .order('date', { ascending: false })
+      .order('usage_date', { ascending: false })
 
     const lastActiveMap: Record<string, string> = {}
     for (const u of (usageDates ?? [])) {
-      if (!lastActiveMap[u.user_id]) lastActiveMap[u.user_id] = u.date
+      if (!lastActiveMap[u.user_id]) lastActiveMap[u.user_id] = u.usage_date
     }
 
+    // FIX: column is usage_date, not date
     const { data: usageTotals } = await supabase
       .from('daily_usage')
       .select('user_id, question_count')
@@ -182,11 +184,6 @@ export async function GET(req: NextRequest) {
   const thirtyDaysAgo = new Date()
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-  const { data: recentProfiles } = await supabase
-    .from('commander_profile')
-    .select('id')
-    .order('id', { ascending: true })
-
   // Pull signup dates from auth for overview chart
   const { data: authDataOverview } = await supabase.auth.admin.listUsers({ perPage: 1000 })
   const allAuthUsers = authDataOverview?.users ?? []
@@ -212,15 +209,17 @@ export async function GET(req: NextRequest) {
 
   const sevenDaysAgo = new Date()
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+  const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0]
 
+  // FIX: column is usage_date, not date
   const { data: dauRows } = await supabase
     .from('daily_usage')
-    .select('user_id, date')
-    .gte('date', sevenDaysAgo.toISOString().split('T')[0])
+    .select('user_id, usage_date')
+    .gte('usage_date', sevenDaysAgoStr)
 
   const dauByDay: Record<string, Set<string>> = {}
   for (const row of (dauRows || [])) {
-    const d = row.date
+    const d = row.usage_date
     if (!dauByDay[d]) dauByDay[d] = new Set()
     dauByDay[d].add(row.user_id)
   }
@@ -234,11 +233,13 @@ export async function GET(req: NextRequest) {
   const thisMonthStart = new Date()
   thisMonthStart.setDate(1)
   thisMonthStart.setHours(0, 0, 0, 0)
+  const thisMonthStartStr = thisMonthStart.toISOString().split('T')[0]
 
+  // FIX: column is usage_date, not date
   const { data: usageRows } = await supabase
     .from('daily_usage')
     .select('question_count, screenshot_count, battle_report_count')
-    .gte('date', thisMonthStart.toISOString().split('T')[0])
+    .gte('usage_date', thisMonthStartStr)
 
   let totalQuestions = 0, totalScreenshots = 0, totalBattleReports = 0
   for (const row of (usageRows || [])) {
