@@ -85,6 +85,16 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    const { data: profilesBase } = await supabase
+      .from('profiles')
+      .select('id, welcomed')
+      .in('id', profileIds)
+
+    const welcomedMap: Record<string, boolean> = {}
+    for (const p of (profilesBase ?? [])) {
+      welcomedMap[p.id] = p.welcomed ?? false
+    }
+
     // FIX: column is usage_date, not date
     const { data: usageDates } = await supabase
       .from('daily_usage')
@@ -158,6 +168,7 @@ export async function GET(req: NextRequest) {
         totalQuestions: questionTotals[p.id] ?? 0,
         lifetimeRevenue: Math.round((revenueMap[p.id] ?? 0) * 100) / 100,
         referredBy: affiliateId ? (affiliateCodeMap[affiliateId] ?? affiliateId) : null,
+        welcomed: welcomedMap[p.id] ?? false,
       }
     })
 

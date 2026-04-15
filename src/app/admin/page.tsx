@@ -85,6 +85,7 @@ interface UserRow {
   totalQuestions: number
   lifetimeRevenue: number
   referredBy: string | null
+  welcomed: boolean
 }
 
 interface NewsItem {
@@ -194,6 +195,7 @@ export default function MissionControlPage() {
   const [messageInputs, setMessageInputs] = useState<Record<string, string>>({})
   const [messageActing, setMessageActing] = useState<string | null>(null)
   const [messageSent, setMessageSent] = useState<Record<string, boolean>>({})
+  const [welcomeActing, setWelcomeActing] = useState<string | null>(null)
 
   const [newsItems, setNewsItems] = useState<NewsItem[]>([])
   const [newsLoading, setNewsLoading] = useState(false)
@@ -574,6 +576,20 @@ export default function MissionControlPage() {
       setTimeout(() => setMessageSent(prev => ({ ...prev, [userId]: false })), 3000)
     }
     setMessageActing(null)
+  }
+
+  async function handleWelcomeToggle(userId: string, current: boolean) {
+    if (!token) return
+    setWelcomeActing(userId)
+    const res = await fetch('/api/admin/welcome', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ userId, welcomed: !current }),
+    })
+    if (res.ok) {
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, welcomed: !current } : u))
+    }
+    setWelcomeActing(null)
   }
 
   async function handleNewsPost() {
@@ -1470,6 +1486,9 @@ export default function MissionControlPage() {
                             {label}<SortIcon col={col} />
                           </th>
                         ))}
+                        <th className="px-4 py-2.5 text-[11px] font-mono text-zinc-500 uppercase tracking-wide whitespace-nowrap text-center">
+                          Welcome
+                        </th>
                         <th className="px-4 py-2.5 text-[11px] font-mono text-zinc-500 uppercase tracking-wide whitespace-nowrap">
                           Actions
                         </th>
@@ -1521,6 +1540,26 @@ export default function MissionControlPage() {
                             <td className="px-4 py-3 text-[11px] text-zinc-500 max-w-[120px] truncate">
                               {u.referredBy ?? <span className="text-zinc-700">—</span>}
                             </td>
+                            {/* ── Welcomed checkbox ── */}
+                            <td className="px-4 py-3 text-center">
+                              <button
+                                onClick={() => handleWelcomeToggle(u.id, u.welcomed)}
+                                disabled={welcomeActing === u.id}
+                                title={u.welcomed ? 'Welcomed ✓ — click to undo' : 'Mark as welcomed'}
+                                className={`w-5 h-5 rounded border-2 flex items-center justify-center mx-auto transition-colors disabled:opacity-40 ${
+                                  u.welcomed
+                                    ? 'bg-green-500 border-green-500 text-black'
+                                    : 'border-zinc-600 hover:border-zinc-400 bg-transparent'
+                                }`}
+                              >
+                                {welcomeActing === u.id
+                                  ? <span className="text-[8px]">…</span>
+                                  : u.welcomed
+                                    ? <span className="text-[10px] font-bold leading-none">✓</span>
+                                    : null
+                                }
+                              </button>
+                            </td>
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-2">
                                 {(u.flagged || u.banned) && (
@@ -1547,7 +1586,7 @@ export default function MissionControlPage() {
                           </tr>
                           {messagePanelId === u.id && (
                             <tr key={`${u.id}-msg`} className="border-b border-zinc-800/50 bg-zinc-900/40">
-                              <td colSpan={9} className="px-4 py-3">
+                              <td colSpan={10} className="px-4 py-3">
                                 <div className="flex gap-2 items-start">
                                   <textarea
                                     value={messageInputs[u.id] ?? ''}
@@ -1923,7 +1962,6 @@ export default function MissionControlPage() {
               </button>
             </div>
 
-            {/* Filter pills */}
             <div className="flex gap-2 mb-5 flex-wrap">
               {(['down', 'up', 'all'] as const).map(f => (
                 <button
@@ -1971,7 +2009,6 @@ export default function MissionControlPage() {
                         fb.rating === 'down' ? 'border-red-900/30' : 'border-green-900/20'
                       }`}
                     >
-                      {/* Row header */}
                       <button
                         className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-zinc-800/30 transition-colors"
                         onClick={() => setFeedbackExpandedId(isExpanded ? null : fb.id)}
@@ -1985,9 +2022,7 @@ export default function MissionControlPage() {
                         </span>
                         <div className="flex-shrink-0 text-right ml-2">
                           <p className="text-[10px] text-zinc-600 font-mono whitespace-nowrap">
-                            {new Date(fb.created_at).toLocaleDateString('en-US', {
-                              month: 'short', day: 'numeric',
-                            })}
+                            {new Date(fb.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                           </p>
                           <p className="text-[10px] text-zinc-700 font-mono">
                             {new Date(fb.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
@@ -1996,7 +2031,6 @@ export default function MissionControlPage() {
                         <span className={`text-zinc-600 text-xs transition-transform ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
                       </button>
 
-                      {/* Expanded panel */}
                       {isExpanded && (
                         <div className="px-4 pb-4 pt-1 border-t border-zinc-800/60 space-y-3">
                           <div>
