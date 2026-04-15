@@ -88,7 +88,8 @@ const TIER_LIMITS: Record<string, { questions: number; screenshots: number }> = 
 };
 
 function getCurrentMonthKey(): string {
-  return new Date().toISOString().slice(0, 7);
+  const d = new Date()
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-01`
 }
 
 function getCurrentDuelDay(): { day: number; label: string } {
