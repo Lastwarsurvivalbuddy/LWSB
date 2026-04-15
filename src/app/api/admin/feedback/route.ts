@@ -6,15 +6,12 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+const BOYD_EMAIL = process.env.BOYD_EMAIL!;
+
 async function verifyAdmin(token: string): Promise<boolean> {
   const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
   if (error || !user) return false;
-  const { data: profile } = await supabaseAdmin
-    .from('profiles')
-    .select('tier')
-    .eq('id', user.id)
-    .single();
-  return profile?.tier === 'admin';
+  return user.email === BOYD_EMAIL;
 }
 
 export async function GET(req: NextRequest) {
