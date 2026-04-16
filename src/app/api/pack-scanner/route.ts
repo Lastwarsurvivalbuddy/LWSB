@@ -16,8 +16,12 @@ const TIER_LIMITS: Record<string, { questions: number; screenshots: number }> = 
   alliance: { questions: 250, screenshots: 20 },
 };
 
+// Monthly usage key — matches buddy route exactly.
+// daily_usage.usage_date is a `date` type: requires full YYYY-MM-DD,
+// anchored to the 1st of the month for one row per user per month.
 function getCurrentMonthKey(): string {
-  return new Date().toISOString().slice(0, 7); // YYYY-MM
+  const d = new Date();
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-01`;
 }
 
 export async function POST(req: NextRequest) {
@@ -136,7 +140,7 @@ export async function POST(req: NextRequest) {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 600,
         system: systemPrompt,
         messages: [
