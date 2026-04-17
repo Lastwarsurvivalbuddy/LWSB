@@ -3,17 +3,15 @@
 // src/components/battle-hq/AnnotationCanvas.tsx
 // Battle HQ V1 — annotation canvas for battle plan maps.
 //
-// Architecture:
-//   - This file owns state, pointer handlers, undo/redo, toolbar, text overlay.
-//   - KonvaCanvas (dynamic-imported, ssr:false) owns rendering of react-konva
-//     primitives. Isolated as a single default export because next/dynamic
-//     cannot resolve named exports from react-konva cleanly.
+// This file owns: state, pointer handlers, undo/redo, toolbar, text overlay.
+// KonvaCanvas owns: rendering + view transform (pinch-zoom, pan, wheel).
 //
-// Coordinate system:
-//   Shape positions are NORMALIZED (0-1). Same JSON renders on any screen.
-//
-// Mobile:
-//   touch-action:none on container, pointer events, ResizeObserver + orientationchange.
+// Coordinate flow:
+//   Pointer event (client coords)
+//     → container-local pixels (subtract rect)
+//     → UNZOOMED image pixels (subtract offset, divide by scale)
+//     → NORMALIZED (0-1, divide by width/height)
+//   Shapes are stored normalized so zooming changes view, not data.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
@@ -73,6 +71,17 @@ export default function AnnotationCanvas({
   const [textOverlay, setTextOverlay] = useState<{ nx: number; ny: number; value: string } | null>(null);
   const textInputRef = useRef<HTMLInputElement | null>(null);
 
+  // View transform from KonvaCanvas — kept in a ref so pointer handlers
+  // always read the current value without re-registering callbacks.
+  const viewRef = useRef<{ scale: number; x: number; y: number }>({ scale: 1, x: 0, y: 0 });
+
+  // Active pointer ID — prevents a second finger from hijacking a draw
+  const activePointerRef = useRef<number | null>(null);
+
+  const handleViewChange = useCallback((t: { scale: number; x: number; y: number }) => {
+    viewRef.current = t;
+  }, []);
+
   // Load base image
   useEffect(() => {
     if (!imageUrl) return;
@@ -114,14 +123,21 @@ export default function AnnotationCanvas({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shapes]);
 
-  // Coord helpers
+  // Coord helpers — account for current view transform
   const getNormalizedPoint = useCallback(
     (clientX: number, clientY: number): { nx: number; ny: number } | null => {
       const el = containerRef.current;
       if (!el || !stageSize.w || !stageSize.h) return null;
       const rect = el.getBoundingClientRect();
-      const nx = Math.max(0, Math.min(1, (clientX - rect.left) / stageSize.w));
-      const ny = Math.max(0, Math.min(1, (clientY - rect.top) / stageSize.h));
+      const localX = clientX - rect.left;
+      const localY = clientY - rect.top;
+      const { scale, x: ox, y: oy } = viewRef.current;
+      // Undo view transform to get image-space pixels
+      const imgPxX = (localX - ox) / scale;
+      const imgPxY = (localY - oy) / scale;
+      // Normalize
+      const nx = Math.max(0, Math.min(1, imgPxX / stageSize.w));
+      const ny = Math.max(0, Math.min(1, imgPxY / stageSize.h));
       return { nx, ny };
     },
     [stageSize.w, stageSize.h]
@@ -155,12 +171,21 @@ export default function AnnotationCanvas({
     setShapes([]);
   }, [shapes, pushUndo]);
 
-  // Pointer handlers
+  // Pointer handlers — abort drawing on second pointer (pinch gesture takes over)
   const handlePointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
       if (readOnly) return;
       if (tool === 'select') return;
       if (textOverlay) return;
+
+      // If another pointer is already down (pinch starting), abort
+      if (activePointerRef.current !== null) {
+        setDrawingShape(null);
+        activePointerRef.current = null;
+        return;
+      }
+
+      activePointerRef.current = e.pointerId;
 
       const pt = getNormalizedPoint(e.clientX, e.clientY);
       if (!pt) return;
@@ -197,6 +222,8 @@ export default function AnnotationCanvas({
   const handlePointerMove = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
       if (!drawingShape) return;
+      if (activePointerRef.current !== e.pointerId) return;
+
       const pt = getNormalizedPoint(e.clientX, e.clientY);
       if (!pt) return;
       const { nx, ny } = pt;
@@ -225,7 +252,10 @@ export default function AnnotationCanvas({
     [drawingShape, stageSize.h, stageSize.w, getNormalizedPoint]
   );
 
-  const handlePointerUp = useCallback(() => {
+  const handlePointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (activePointerRef.current === e.pointerId) {
+      activePointerRef.current = null;
+    }
     if (!drawingShape) return;
     const s = drawingShape;
     let keep = true;
@@ -319,6 +349,10 @@ export default function AnnotationCanvas({
         </div>
       )}
 
+      <div className="text-[10px] font-mono text-zinc-600 mb-1.5 tracking-wider uppercase">
+        One finger to draw · Two fingers to pinch-zoom · Double-tap to reset
+      </div>
+
       <div
         ref={containerRef}
         className="relative w-full rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800"
@@ -346,6 +380,7 @@ export default function AnnotationCanvas({
             bgImage={bgImage}
             shapes={shapes}
             drawingShape={drawingShape}
+            onViewChange={handleViewChange}
           />
         )}
 
@@ -353,8 +388,8 @@ export default function AnnotationCanvas({
           <div
             className="absolute bg-zinc-950/95 border border-amber-500 rounded-md p-1.5"
             style={{
-              left: `${textOverlay.nx * stageSize.w}px`,
-              top: `${textOverlay.ny * stageSize.h}px`,
+              left: `${textOverlay.nx * stageSize.w * viewRef.current.scale + viewRef.current.x}px`,
+              top: `${textOverlay.ny * stageSize.h * viewRef.current.scale + viewRef.current.y}px`,
               transform: 'translate(-4px, -4px)',
             }}
           >
