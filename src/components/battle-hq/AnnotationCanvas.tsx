@@ -3,45 +3,30 @@
 // src/components/battle-hq/AnnotationCanvas.tsx
 // Battle HQ V1 — annotation canvas for battle plan maps.
 //
-// Contract:
-//   Props: { imageUrl, initialAnnotations?, readOnly?, onChange? }
-//   Emits: onChange(annotationsJson) on every shape add/edit/delete
-//
-// Storage shape (stored in battle_plans.map_annotations_json):
-//   { version: 1, shapes: Shape[] }
+// Architecture:
+//   - This file owns state, pointer handlers, undo/redo, toolbar, text overlay.
+//   - KonvaCanvas (dynamic-imported, ssr:false) owns rendering of react-konva
+//     primitives. Isolated as a single default export because next/dynamic
+//     cannot resolve named exports from react-konva cleanly.
 //
 // Coordinate system:
-//   All shape positions are NORMALIZED (0-1 range) relative to the base image.
-//   Same JSON renders correctly on phone, tablet, or desktop without re-upload.
+//   Shape positions are NORMALIZED (0-1). Same JSON renders on any screen.
 //
-// Mobile notes:
-//   - touch-action: none on Stage wrapper — prevents iOS page-scroll/pinch.
-//   - Pointer events — Konva handles touch + mouse under one API.
-//   - Text tool spawns overlay <input> so iOS keyboard opens correctly.
-//   - ResizeObserver + orientationchange — re-fits Stage on rotation.
-//
-// react-konva is SSR-incompatible, so Konva pieces load via next/dynamic
-// with ssr:false. The outer shell renders without the canvas; the canvas
-// hydrates client-side.
+// Mobile:
+//   touch-action:none on container, pointer events, ResizeObserver + orientationchange.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
+import type {
+  Tool,
+  ColorKey,
+  Shape,
+  AnnotationsJson,
+} from './AnnotationCanvas.types';
 
-// ─── Dynamic imports (client-only) ───────────────────────────────────────
-const Stage = dynamic(() => import('react-konva').then((m) => m.Stage), { ssr: false });
-const Layer = dynamic(() => import('react-konva').then((m) => m.Layer), { ssr: false });
-const KImage = dynamic(() => import('react-konva').then((m) => m.Image), { ssr: false });
-const KRect = dynamic(() => import('react-konva').then((m) => m.Rect), { ssr: false });
-const KCircle = dynamic(() => import('react-konva').then((m) => m.Circle), { ssr: false });
-const KLine = dynamic(() => import('react-konva').then((m) => m.Line), { ssr: false });
-const KArrow = dynamic(() => import('react-konva').then((m) => m.Arrow), { ssr: false });
-const KText = dynamic(() => import('react-konva').then((m) => m.Text), { ssr: false });
-const KGroup = dynamic(() => import('react-konva').then((m) => m.Group), { ssr: false });
+export type { AnnotationsJson, Shape, ColorKey } from './AnnotationCanvas.types';
 
-// ─── Types ───────────────────────────────────────────────────────────────
-type Tool = 'select' | 'arrow' | 'rect' | 'circle' | 'pen' | 'text' | 'pin';
-
-export type ColorKey = 'red' | 'amber' | 'sky' | 'green' | 'purple' | 'white';
+const KonvaCanvas = dynamic(() => import('./KonvaCanvas'), { ssr: false });
 
 const COLOR_MAP: Record<ColorKey, string> = {
   red: '#ef4444',
@@ -52,23 +37,6 @@ const COLOR_MAP: Record<ColorKey, string> = {
   white: '#ffffff',
 };
 
-type BaseShape = { id: string; color: ColorKey };
-
-type ArrowShape = BaseShape & { type: 'arrow'; x1: number; y1: number; x2: number; y2: number };
-type RectShape = BaseShape & { type: 'rect'; x: number; y: number; w: number; h: number };
-type CircleShape = BaseShape & { type: 'circle'; x: number; y: number; r: number };
-type PenShape = BaseShape & { type: 'pen'; points: number[] };
-type TextShape = BaseShape & { type: 'text'; x: number; y: number; text: string };
-type PinShape = BaseShape & { type: 'pin'; x: number; y: number; n: number };
-
-export type Shape = ArrowShape | RectShape | CircleShape | PenShape | TextShape | PinShape;
-
-export type AnnotationsJson = {
-  version: 1;
-  shapes: Shape[];
-};
-
-// ─── Props ───────────────────────────────────────────────────────────────
 export interface AnnotationCanvasProps {
   imageUrl: string;
   initialAnnotations?: AnnotationsJson | null;
@@ -76,12 +44,10 @@ export interface AnnotationCanvasProps {
   onChange?: (annotations: AnnotationsJson) => void;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────
 function makeId(): string {
   return Math.random().toString(36).slice(2, 10);
 }
 
-// ─── Component ───────────────────────────────────────────────────────────
 export default function AnnotationCanvas({
   imageUrl,
   initialAnnotations,
@@ -107,7 +73,7 @@ export default function AnnotationCanvas({
   const [textOverlay, setTextOverlay] = useState<{ nx: number; ny: number; value: string } | null>(null);
   const textInputRef = useRef<HTMLInputElement | null>(null);
 
-  // ─── Load base image ───────────────────────────────────────────────────
+  // Load base image
   useEffect(() => {
     if (!imageUrl) return;
     const img = new window.Image();
@@ -117,13 +83,11 @@ export default function AnnotationCanvas({
       setImgNatural({ w: img.naturalWidth || 1, h: img.naturalHeight || 1 });
       setImgError(null);
     };
-    img.onerror = () => {
-      setImgError('Failed to load battle map image.');
-    };
+    img.onerror = () => setImgError('Failed to load battle map image.');
     img.src = imageUrl;
   }, [imageUrl]);
 
-  // ─── Fit stage to container, preserving aspect ratio ───────────────────
+  // Fit stage to container
   useEffect(() => {
     if (!containerRef.current) return;
     const el = containerRef.current;
@@ -131,9 +95,7 @@ export default function AnnotationCanvas({
       const containerW = el.clientWidth;
       if (!containerW || !imgNatural.w || !imgNatural.h) return;
       const aspect = imgNatural.h / imgNatural.w;
-      const w = containerW;
-      const h = Math.round(containerW * aspect);
-      setStageSize({ w, h });
+      setStageSize({ w: containerW, h: Math.round(containerW * aspect) });
     };
     recompute();
     const ro = new ResizeObserver(recompute);
@@ -145,14 +107,14 @@ export default function AnnotationCanvas({
     };
   }, [imgNatural]);
 
-  // ─── Emit onChange whenever shapes settle ──────────────────────────────
+  // Emit onChange
   useEffect(() => {
     if (!onChange) return;
     onChange({ version: 1, shapes });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shapes]);
 
-  // ─── Coord helpers ─────────────────────────────────────────────────────
+  // Coord helpers
   const getNormalizedPoint = useCallback(
     (clientX: number, clientY: number): { nx: number; ny: number } | null => {
       const el = containerRef.current;
@@ -165,12 +127,7 @@ export default function AnnotationCanvas({
     [stageSize.w, stageSize.h]
   );
 
-  const toPx = useCallback(
-    (nx: number, ny: number) => ({ x: nx * stageSize.w, y: ny * stageSize.h }),
-    [stageSize.w, stageSize.h]
-  );
-
-  // ─── Undo / Redo / Clear ───────────────────────────────────────────────
+  // Undo/Redo/Clear
   const pushUndo = useCallback((prev: Shape[]) => {
     undoStack.current.push(prev);
     if (undoStack.current.length > 50) undoStack.current.shift();
@@ -193,13 +150,12 @@ export default function AnnotationCanvas({
 
   const handleClear = useCallback(() => {
     if (shapes.length === 0) return;
-    const confirmed = window.confirm('Clear all annotations? This can be undone.');
-    if (!confirmed) return;
+    if (!window.confirm('Clear all annotations? This can be undone.')) return;
     pushUndo(shapes);
     setShapes([]);
   }, [shapes, pushUndo]);
 
-  // ─── Pointer handlers ──────────────────────────────────────────────────
+  // Pointer handlers
   const handlePointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
       if (readOnly) return;
@@ -230,10 +186,7 @@ export default function AnnotationCanvas({
         case 'pin': {
           const pinNumber = shapes.filter((s) => s.type === 'pin').length + 1;
           pushUndo(shapes);
-          setShapes([
-            ...shapes,
-            { id: makeId(), type: 'pin', color, x: nx, y: ny, n: pinNumber },
-          ]);
+          setShapes([...shapes, { id: makeId(), type: 'pin', color, x: nx, y: ny, n: pinNumber }]);
           break;
         }
       }
@@ -288,7 +241,7 @@ export default function AnnotationCanvas({
     setDrawingShape(null);
   }, [drawingShape, shapes, pushUndo]);
 
-  // ─── Text commit / cancel ──────────────────────────────────────────────
+  // Text commit
   const commitText = useCallback(() => {
     if (!textOverlay) return;
     const value = textOverlay.value.trim();
@@ -304,112 +257,7 @@ export default function AnnotationCanvas({
 
   const cancelText = useCallback(() => setTextOverlay(null), []);
 
-  // ─── Render shapes in pixel space ──────────────────────────────────────
-  const renderedShapes = useMemo(() => {
-    const all = drawingShape ? [...shapes, drawingShape] : shapes;
-    return all.map((s) => {
-      const stroke = COLOR_MAP[s.color];
-      switch (s.type) {
-        case 'arrow': {
-          const p1 = toPx(s.x1, s.y1);
-          const p2 = toPx(s.x2, s.y2);
-          return (
-            <KArrow
-              key={s.id}
-              points={[p1.x, p1.y, p2.x, p2.y]}
-              stroke={stroke}
-              fill={stroke}
-              strokeWidth={3}
-              pointerLength={12}
-              pointerWidth={12}
-              lineCap="round"
-              lineJoin="round"
-            />
-          );
-        }
-        case 'rect': {
-          const p = toPx(s.x, s.y);
-          return (
-            <KRect
-              key={s.id}
-              x={p.x}
-              y={p.y}
-              width={s.w * stageSize.w}
-              height={s.h * stageSize.h}
-              stroke={stroke}
-              strokeWidth={3}
-            />
-          );
-        }
-        case 'circle': {
-          const p = toPx(s.x, s.y);
-          return (
-            <KCircle
-              key={s.id}
-              x={p.x}
-              y={p.y}
-              radius={s.r * stageSize.w}
-              stroke={stroke}
-              strokeWidth={3}
-            />
-          );
-        }
-        case 'pen': {
-          const pts: number[] = [];
-          for (let i = 0; i < s.points.length; i += 2) {
-            pts.push(s.points[i] * stageSize.w, s.points[i + 1] * stageSize.h);
-          }
-          return (
-            <KLine
-              key={s.id}
-              points={pts}
-              stroke={stroke}
-              strokeWidth={3}
-              lineCap="round"
-              lineJoin="round"
-              tension={0.3}
-            />
-          );
-        }
-        case 'text': {
-          const p = toPx(s.x, s.y);
-          return (
-            <KText
-              key={s.id}
-              x={p.x}
-              y={p.y}
-              text={s.text}
-              fontSize={18}
-              fontStyle="bold"
-              fill={stroke}
-              stroke="#000"
-              strokeWidth={0.5}
-            />
-          );
-        }
-        case 'pin': {
-          const p = toPx(s.x, s.y);
-          return (
-            <KGroup key={s.id} x={p.x} y={p.y}>
-              <KCircle x={0} y={0} radius={14} fill={stroke} stroke="#000" strokeWidth={1.5} />
-              <KText
-                x={-14}
-                y={-8}
-                width={28}
-                text={String(s.n)}
-                fontSize={15}
-                fontStyle="bold"
-                fill="#000"
-                align="center"
-              />
-            </KGroup>
-          );
-        }
-      }
-    });
-  }, [shapes, drawingShape, stageSize.w, stageSize.h, toPx]);
-
-  // ─── Toolbar button style helpers ──────────────────────────────────────
+  // Button styles
   const toolBtnClass = (t: Tool) =>
     `px-2.5 py-1.5 rounded-md text-[11px] font-bold font-mono tracking-wider transition-colors ${
       tool === t
@@ -422,10 +270,8 @@ export default function AnnotationCanvas({
       color === c ? 'scale-110 border-white' : 'border-zinc-700'
     }`;
 
-  // ─── Render ────────────────────────────────────────────────────────────
   return (
     <div className="w-full">
-      {/* Toolbar — hidden in readOnly */}
       {!readOnly && (
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <div className="flex flex-wrap gap-1.5">
@@ -473,7 +319,6 @@ export default function AnnotationCanvas({
         </div>
       )}
 
-      {/* Canvas container */}
       <div
         ref={containerRef}
         className="relative w-full rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800"
@@ -495,21 +340,15 @@ export default function AnnotationCanvas({
         )}
 
         {!imgError && stageSize.w > 0 && stageSize.h > 0 && (
-          <Stage width={stageSize.w} height={stageSize.h}>
-            <Layer listening={false}>
-              {bgImage && (
-                <KImage
-                  image={bgImage}
-                  width={stageSize.w}
-                  height={stageSize.h}
-                />
-              )}
-            </Layer>
-            <Layer>{renderedShapes}</Layer>
-          </Stage>
+          <KonvaCanvas
+            width={stageSize.w}
+            height={stageSize.h}
+            bgImage={bgImage}
+            shapes={shapes}
+            drawingShape={drawingShape}
+          />
         )}
 
-        {/* Text overlay input — positioned absolutely over canvas */}
         {textOverlay && (
           <div
             className="absolute bg-zinc-950/95 border border-amber-500 rounded-md p-1.5"
