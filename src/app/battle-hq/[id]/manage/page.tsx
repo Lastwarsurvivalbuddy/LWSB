@@ -6,6 +6,11 @@
 //
 // This file owns: auth gate, HQ + members fetch, tab switcher, layout.
 // Each tab is a separate component in src/components/battle-hq/dashboard/.
+//
+// API response normalization:
+//   GET /api/battle-hq/[id]       returns { hq, membership: { role } }
+//   GET /api/battle-hq/[id]/members returns { members: { active, removed }, counts }
+//     — "editors" are inside members.active with role === 'editor'
 
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -47,9 +52,9 @@ interface Member {
 }
 
 interface MembersResponse {
-  active: Member[];
-  editors: Member[];
-  removed: Member[];
+  active: Member[];   // active viewers + creator (tab filters creator out)
+  editors: Member[];  // active editors only
+  removed: Member[];  // revoked + left
 }
 
 // ---------- Tab config ----------
@@ -97,7 +102,14 @@ export default function BattleHqManagePage() {
         return null;
       }
       const data = await res.json();
-      return { hq: data.battle_hq as BattleHq, role: data.role as Role };
+      // API shape: { hq, membership: { role, ... } }
+      const hqData = data?.hq as BattleHq | undefined;
+      const roleData = data?.membership?.role as Role | undefined;
+      if (!hqData || !roleData) {
+        setError('Unexpected response from server.');
+        return null;
+      }
+      return { hq: hqData, role: roleData };
     },
     [hqId, router]
   );
@@ -109,11 +121,12 @@ export default function BattleHqManagePage() {
       });
       if (!res.ok) return null;
       const data = await res.json();
-      return {
-        active: data.active ?? [],
-        editors: data.editors ?? [],
-        removed: data.removed ?? [],
-      };
+      // API shape: { members: { active: Member[], removed: Member[] }, counts }
+      // Editors live inside members.active with role === 'editor'.
+      const activeAll: Member[] = data?.members?.active ?? [];
+      const removed: Member[] = data?.members?.removed ?? [];
+      const editors = activeAll.filter((m) => m.role === 'editor');
+      return { active: activeAll, editors, removed };
     },
     [hqId]
   );
