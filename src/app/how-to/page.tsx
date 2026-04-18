@@ -97,8 +97,28 @@ const features = [
     quota: 'Free: Locked · Pro/Elite/Founding: Shared with Buddy AI monthly quota',
   },
   {
-    id: 'war-room',
+    id: 'battle-hq',
     number: '06',
+    name: 'Battle HQ',
+    tagline: "Your alliance's private command center",
+    icon: '⚡',
+    color: '#c090f0',
+    description:
+      "Founding-exclusive. Built for R4s and R5s. Upload a screenshot of any battle area, annotate it with targets and routes, stage your battle plans and standing intel — then drop one link in alliance chat. Your whole alliance joins free to view. Viewers can be promoted to editors when you trust them. You stay in command.",
+    steps: [
+      'Tap Battle HQ from the dashboard. (Founding Members only.)',
+      'Create your HQ — pick a slug, set your alliance tag and server.',
+      'Stage a Battle Plan for each war: Desert Storm, Canyon Storm, SvS, Warzone Duel, or anything else.',
+      'Upload a battle map screenshot and annotate it with arrows, pins, rectangles, and labels. Write your orders, brief, and intel.',
+      'Copy the invite link and drop it in alliance chat. Your whole squad signs up free to view.',
+      'Promote trusted officers to editors. Revoke members who leave. Standing intel carries across every plan.',
+    ],
+    tip: "The per-user pre-war checklist travels with every plan — members tick off their own troop, shield, teleport, and stamina prep independently.",
+    quota: 'Founding-only. Up to 3 HQs per 7-day rolling window. Unlimited viewers per HQ.',
+  },
+  {
+    id: 'war-room',
+    number: '07',
     name: 'War Room',
     tagline: 'Battle planning for DS, WZ, and Canyon Storm',
     icon: '🗺️',
@@ -116,7 +136,7 @@ const features = [
   },
   {
     id: 'commander-card',
-    number: '07',
+    number: '08',
     name: 'Commander Card',
     tagline: 'Your shareable player identity card',
     icon: '🪪',
@@ -134,7 +154,7 @@ const features = [
   },
   {
     id: 'teach-buddy',
-    number: '08',
+    number: '09',
     name: 'TeachBuddy',
     tagline: 'You teach. Everyone benefits.',
     icon: '🧠',
@@ -274,7 +294,7 @@ export default function HowToPage() {
             margin: 0,
           }}
         >
-          Eight features. One goal: tell you exactly what to do, right now, for your game. Here&apos;s
+          Nine features. One goal: tell you exactly what to do, right now, for your game. Here&apos;s
           how each one works.
         </p>
       </div>
