@@ -13,6 +13,7 @@ import BattleReportAnalyzer from '@/components/BattleReportAnalyzer'
 import WarfighterBanner from '@/components/WarfighterBanner'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import BattleHQCards from '@/components/BattleHQCards'
+import { resolvePendingBattleHq } from '@/lib/battle-hq-pending'
 import {
   RANK_BUCKET_LABELS,
   SQUAD_POWER_TIER_LABELS,
@@ -236,16 +237,33 @@ export default function Dashboard() {
         }
         setAccessToken(session.access_token)
 
-        // ── Pending tier intent — redirect to upgrade to complete Stripe checkout ──
-        try {
-          const pendingTier = localStorage.getItem('lwsb_pending_tier')
-          if (pendingTier && pendingTier !== 'free') {
-            localStorage.removeItem('lwsb_pending_tier')
-            redirecting.current = true
-            router.push('/upgrade')
-            return
+ // ── Pending tier intent — redirect to upgrade to complete Stripe checkout ──
+          try {
+            const pendingTier = localStorage.getItem('lwsb_pending_tier')
+            if (pendingTier && pendingTier !== 'free') {
+              localStorage.removeItem('lwsb_pending_tier')
+              redirecting.current = true
+              router.push('/upgrade')
+              return
+            }
+          } catch {
+            /* Non-fatal */
           }
-        } catch { /* Non-fatal */ }
+
+          // ── Pending Battle HQ invite — resolve join and redirect to /cc/[slug] ──
+          // Fires when a logged-out user clicks an invite link, captures the slug
+          // in localStorage on /cc/[slug], then completes auth via signin / signup.
+          // This bootstrap catches every entry path into the authed app.
+          try {
+            const pendingHq = await resolvePendingBattleHq(session.access_token)
+            if (pendingHq.redirectTo) {
+              redirecting.current = true
+              router.push(pendingHq.redirectTo)
+              return
+            }
+          } catch {
+            /* Non-fatal — user lands on dashboard normally */
+          }
 
         const adminUserId = process.env.NEXT_PUBLIC_ADMIN_USER_ID
         if (adminUserId && session.user.id === adminUserId) {
