@@ -1,14 +1,15 @@
 // src/app/api/battle-hq/[id]/plans/[planId]/route.ts
 // Battle HQ V1 — Single Battle Plan CRUD.
 //
-// GET    /api/battle-hq/[id]/plans/[planId] — load plan (member-gated; drafts editor+ only)
-// PATCH  /api/battle-hq/[id]/plans/[planId] — update plan (creator/editor)
+// GET /api/battle-hq/[id]/plans/[planId] — load plan (member-gated; drafts editor+ only)
+// PATCH /api/battle-hq/[id]/plans/[planId] — update plan (creator/editor)
 // DELETE /api/battle-hq/[id]/plans/[planId] — soft-delete (creator/editor)
 //
 // PATCHable fields:
 //   name            — non-empty string if present
 //   war_type        — one of the 6 valid types if present
 //   scheduled_at    — ISO string / null (empty string = null)
+//   scheduled_label — free-text label / null (empty string = null)
 //   comms_channel   — nullable text
 //   orders          — nullable text
 //   brief           — nullable text
@@ -24,9 +25,9 @@
 // and /annotations.
 //
 // Viewer vs editor visibility on GET:
-//   - viewer          → only status in ('published','active','archived') returned; drafts 404
-//   - creator/editor  → all non-deleted plans visible; deleted plans 404 to non-creator
-//   - creator         → soft-deleted plans visible (for trash / restore UX)
+//   - viewer         → only status in ('published','active','archived') returned; drafts 404
+//   - creator/editor → all non-deleted plans visible; deleted plans 404 to non-creator
+//   - creator        → soft-deleted plans visible (for trash / restore UX)
 
 import { NextRequest, NextResponse } from 'next/server';
 import {
@@ -61,7 +62,7 @@ const VALID_WAR_TYPES = new Set<string>([
 
 // Full plan columns — used on GET + PATCH return. Editor UI needs everything.
 const PLAN_FULL_COLUMNS =
-  'id, battle_hq_id, created_by_user_id, name, war_type, scheduled_at, status, comms_channel, orders, brief, intel, map_image_url, map_annotations_json, parent_plan_id, created_at, updated_at, published_at, archived_at, deleted_at';
+  'id, battle_hq_id, created_by_user_id, name, war_type, scheduled_at, scheduled_label, status, comms_channel, orders, brief, intel, map_image_url, map_annotations_json, parent_plan_id, created_at, updated_at, published_at, archived_at, deleted_at';
 
 // Statuses viewers are allowed to see
 const VIEWER_VISIBLE_STATUSES = new Set<string>([
@@ -73,6 +74,7 @@ const VIEWER_VISIBLE_STATUSES = new Set<string>([
 // ─────────────────────────────────────────────────────────────────────────
 // GET — load single plan
 // ─────────────────────────────────────────────────────────────────────────
+
 export async function GET(req: NextRequest, context: RouteContext) {
   try {
     const userId = await getAuthedUserId(req);
@@ -105,6 +107,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
       console.error('[plan GET] Query error:', planError);
       return internalErrorResponse();
     }
+
     if (!plan) return notFoundResponse();
 
     const isPrivileged = isEditorOrCreator(membership);
@@ -135,6 +138,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
 // ─────────────────────────────────────────────────────────────────────────
 // PATCH — update plan (creator/editor only)
 // ─────────────────────────────────────────────────────────────────────────
+
 export async function PATCH(req: NextRequest, context: RouteContext) {
   try {
     const userId = await getAuthedUserId(req);
@@ -233,6 +237,10 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       }
     }
 
+    // scheduled_label: free-text label, nullable text
+    const scheduledLabel = coerceNullableText(body.scheduled_label);
+    if (scheduledLabel !== undefined) updates.scheduled_label = scheduledLabel;
+
     const commsChannel = coerceNullableText(body.comms_channel);
     if (commsChannel !== undefined) updates.comms_channel = commsChannel;
 
@@ -277,6 +285,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 // ─────────────────────────────────────────────────────────────────────────
 // DELETE — soft-delete (creator/editor)
 // ─────────────────────────────────────────────────────────────────────────
+
 export async function DELETE(req: NextRequest, context: RouteContext) {
   try {
     const userId = await getAuthedUserId(req);
