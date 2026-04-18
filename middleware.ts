@@ -4,19 +4,22 @@ import { createClient } from '@supabase/supabase-js'
 // ─────────────────────────────────────────────────────────────
 // RATE LIMIT CONFIG — requests per minute by route and tier
 //
-// Why 2/min: A human reading a battle report analysis takes
-// 30-60 seconds minimum. Buddy responses take 10-20 seconds
-// to read. 2/min = one request every 30 seconds.
-// Any script fires faster and hits the wall on request 3.
-// Tier doesn't change the per-minute cap — it changes monthly
-// quota. A Founding Member still can't fire 60 requests/min.
+// AI inference routes (Buddy, battle-report, pack-scanner, briefing):
+//   Tight limit (2/min). These cost real money per call and a human
+//   reader takes 10-60 seconds to process each response anyway.
+//   Any faster is a script.
+//
+// Default (all other API routes):
+//   Sane CRUD limit (30/min). Page loads that fire 3-5 API calls in
+//   a couple seconds must always work. This catches obvious script
+//   abuse without tripping on normal user flows.
 // ─────────────────────────────────────────────────────────────
 const RATE_LIMITS: Record<string, Record<string, number>> = {
   '/api/battle-report': { free: 0, pro: 2, elite: 2, alliance: 2, founding: 2, anon: 1 },
   '/api/buddy':         { free: 2, pro: 2, elite: 2, alliance: 2, founding: 2, anon: 1 },
   '/api/pack-scanner':  { free: 0, pro: 2, elite: 2, alliance: 2, founding: 2, anon: 1 },
   '/api/briefing':      { free: 2, pro: 2, elite: 2, alliance: 2, founding: 2, anon: 1 },
-  'default':            { free: 2, pro: 2, elite: 2, alliance: 2, founding: 2, anon: 1 },
+  'default':            { free: 30, pro: 30, elite: 30, alliance: 30, founding: 30, anon: 15 },
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -68,7 +71,13 @@ export async function middleware(req: NextRequest) {
   if (!pathname.startsWith('/api/')) return NextResponse.next()
 
   // ── Exempt routes — bypass rate limiter entirely ──────────
+  // Note: Battle HQ is fully exempt. Its routes are CRUD that back
+  // normal UI flows (dashboard, editor, viewer). Abuse protection
+  // happens inside the create route itself (3 HQs per 7 days per
+  // Founding user). Plans, members, checklist, annotations etc are
+  // not abuse surfaces and must not be globally throttled.
   if (pathname.startsWith('/api/stripe/webhook'))  return NextResponse.next()
+  if (pathname.startsWith('/api/stripe'))          return NextResponse.next()
   if (pathname.startsWith('/api/auth'))            return NextResponse.next()
   if (pathname.startsWith('/api/pulse'))           return NextResponse.next()
   if (pathname.startsWith('/api/admin'))           return NextResponse.next()
@@ -79,6 +88,7 @@ export async function middleware(req: NextRequest) {
   if (pathname.startsWith('/api/contact'))         return NextResponse.next()
   if (pathname.startsWith('/api/site-news'))       return NextResponse.next()
   if (pathname.startsWith('/api/affiliate'))       return NextResponse.next()
+  if (pathname.startsWith('/api/battle-hq'))       return NextResponse.next()
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
