@@ -6,7 +6,7 @@
 // Sections:
 //   1. Slug — read-only reference + Copy
 //   2. Alliance identity — read-only V1 (tag + server immutable once created)
-//   3. Transfer ownership — modal, requires typed-confirm of target commander name
+//   3. Transfer ownership — modal, requires typed-confirm
 //   4. Delete HQ — modal, requires typed-confirm of slug
 //
 // V1 scope note: changing alliance tag / server mid-cycle is deliberately
@@ -81,7 +81,7 @@ export default function SettingsTab({
   const handleTransfer = useCallback(async () => {
     setTransferError(null);
     if (!transferEmail.trim()) {
-      setTransferError('Enter the new owner\u2019s account email.');
+      setTransferError('Enter the new owner’s account email.');
       return;
     }
     if (transferConfirm !== 'TRANSFER') {
@@ -190,8 +190,8 @@ export default function SettingsTab({
           </button>
         </div>
         <div className="text-[11px] font-mono text-zinc-500 tracking-wider mt-3 leading-relaxed">
-          The slug is permanent for the lifetime of this HQ and can\u2019t be
-          changed. It\u2019s the ID in your invite link.
+          The slug is permanent for the lifetime of this HQ and can’t be
+          changed. It’s the ID in your invite link.
         </div>
       </div>
 
@@ -236,7 +236,7 @@ export default function SettingsTab({
               Transfer Ownership
             </div>
             <div className="text-[11px] font-mono text-zinc-400 tracking-wider mt-0.5 leading-relaxed">
-              Hand the HQ to another Founding-tier commander. You\u2019ll be demoted
+              Hand the HQ to another Founding-tier commander. You’ll be demoted
               to editor automatically.
             </div>
           </div>
@@ -279,7 +279,7 @@ export default function SettingsTab({
             </h2>
             <p className="text-xs text-zinc-400 leading-relaxed mb-4">
               The new owner must already have a Founding-tier account and be an
-              active member of this HQ. You\u2019ll become an editor after transfer.
+              active member of this HQ. You’ll become an editor after transfer.
             </p>
 
             <div className="space-y-3">
