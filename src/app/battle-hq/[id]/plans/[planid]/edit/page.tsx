@@ -4,18 +4,12 @@
 // Battle HQ V1 — Battle Plan Editor.
 // Creator + editor only. Viewers bounced.
 //
-// Layout: single scrollable page with sections:
-//   1. Duplicate banner (if parent_plan_id)
-//   2. Metadata (name, war type, scheduled_label, comms_channel)   ← shipped
-//   3. Map + annotation canvas                                     ← placeholder
-//   4. Rich text (orders, brief, intel)                            ← placeholder
-//   5. Status action bar (Save Draft / Publish / Archive / Delete) ← placeholder
+// Rewrite: bootstrap effect depends ONLY on [hqId, planId, router]. All
+// fetch logic is inlined in the effect body, not pulled through useCallback
+// deps (which were causing the effect to re-run/cancel mid-flight in the
+// previous version — symptom: loader stuck forever).
 //
-// Saves are inline — fields save on blur. Status transitions are explicit.
-//
-// scheduled_label note: free-text by design (per Flynn). Stored separately
-// from the TIMESTAMPTZ scheduled_at column. Added via SQL migration:
-//   ALTER TABLE battle_plans ADD COLUMN scheduled_label TEXT DEFAULT NULL;
+// Metadata saves still use a stable fetch wrapper; status actions will too.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -96,7 +90,7 @@ export default function BattlePlanEditorPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Metadata draft state (independent of `plan` — commits on blur/change)
+  // Metadata draft state
   const [metaDraft, setMetaDraft] = useState<{
     name: string;
     war_type: WarType;
@@ -128,81 +122,25 @@ export default function BattlePlanEditorPage() {
     comms_channel: null,
   });
 
-  // ---------- Fetchers ----------
+  // Ref-mirror of `plan` so save logic can diff without being a dep of saveMetaField
+  const planRef = useRef<BattlePlan | null>(null);
+  useEffect(() => {
+    planRef.current = plan;
+  }, [plan]);
 
-  const fetchHq = useCallback(
-    async (token: string): Promise<{ hq: BattleHq; role: Role } | null> => {
-      const res = await fetch(`/api/battle-hq/${hqId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.status === 401) {
-        router.push('/signin');
-        return null;
-      }
-      if (!res.ok) {
-        setError('Failed to load Battle HQ.');
-        return null;
-      }
-      const data = await res.json();
-      const hqData = data?.hq as BattleHq | undefined;
-      const roleData = data?.membership?.role as Role | undefined;
-      if (!hqData || !roleData) {
-        setError('Unexpected response from server.');
-        return null;
-      }
-      return { hq: hqData, role: roleData };
-    },
-    [hqId, router]
-  );
+  // Ref-mirror of `accessToken` so save logic can read without being a dep
+  const tokenRef = useRef<string | null>(null);
+  useEffect(() => {
+    tokenRef.current = accessToken;
+  }, [accessToken]);
 
-  const fetchPlan = useCallback(
-    async (token: string): Promise<BattlePlan | null> => {
-      const res = await fetch(`/api/battle-hq/${hqId}/plans/${planId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.status === 404) {
-        setError('Battle plan not found.');
-        return null;
-      }
-      if (!res.ok) {
-        setError('Failed to load battle plan.');
-        return null;
-      }
-      const data = await res.json();
-      const planData = (data?.plan ?? data) as BattlePlan | undefined;
-      if (!planData?.id) {
-        setError('Unexpected response from server.');
-        return null;
-      }
-      return planData;
-    },
-    [hqId, planId]
-  );
+  // Ref-mirror of `metaDraft` — read on blur, doesn't need to retrigger the fn
+  const metaDraftRef = useRef(metaDraft);
+  useEffect(() => {
+    metaDraftRef.current = metaDraft;
+  }, [metaDraft]);
 
-  const fetchParentName = useCallback(
-    async (token: string, parentId: string): Promise<string | null> => {
-      const res = await fetch(`/api/battle-hq/${hqId}/plans/${parentId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) return null;
-      const data = await res.json();
-      const p = (data?.plan ?? data) as BattlePlan | undefined;
-      return p?.name ?? null;
-    },
-    [hqId]
-  );
-
-  // Seed metaDraft from a loaded plan
-  const seedDraftFromPlan = useCallback((p: BattlePlan) => {
-    setMetaDraft({
-      name: p.name ?? '',
-      war_type: p.war_type ?? 'other',
-      scheduled_label: p.scheduled_label ?? '',
-      comms_channel: p.comms_channel ?? '',
-    });
-  }, []);
-
-  // ---------- Bootstrap ----------
+  // ---------- Bootstrap (single effect, minimal deps) ----------
 
   useEffect(() => {
     if (!hqId || !planId) return;
@@ -210,62 +148,120 @@ export default function BattlePlanEditorPage() {
 
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
+      if (cancelled) return;
       if (!session) {
         router.push('/signin');
         return;
       }
-      if (cancelled) return;
-      setAccessToken(session.access_token);
+      const token = session.access_token;
+      setAccessToken(token);
 
-      const hqResult = await fetchHq(session.access_token);
-      if (cancelled || !hqResult) {
+      // --- Load HQ + membership (inline fetch, no callback indirection) ---
+      let hqData: BattleHq | null = null;
+      let roleData: Role | null = null;
+      try {
+        const hqRes = await fetch(`/api/battle-hq/${hqId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (cancelled) return;
+        if (hqRes.status === 401) {
+          router.push('/signin');
+          return;
+        }
+        if (!hqRes.ok) {
+          setError('Failed to load Battle HQ.');
+          setLoading(false);
+          return;
+        }
+        const json = await hqRes.json();
+        hqData = (json?.hq ?? null) as BattleHq | null;
+        roleData = (json?.membership?.role ?? null) as Role | null;
+      } catch {
+        if (cancelled) return;
+        setError('Network error loading Battle HQ.');
         setLoading(false);
         return;
       }
-
-      if (hqResult.role === 'viewer') {
+      if (cancelled) return;
+      if (!hqData || !roleData) {
+        setError('Unexpected Battle HQ response.');
+        setLoading(false);
+        return;
+      }
+      if (roleData === 'viewer') {
         setError('Viewers cannot edit battle plans.');
         setLoading(false);
         return;
       }
+      setHq(hqData);
+      setRole(roleData);
 
-      setHq(hqResult.hq);
-      setRole(hqResult.role);
-
-      const p = await fetchPlan(session.access_token);
-      if (cancelled) return;
-      if (!p) {
+      // --- Load plan ---
+      let planData: BattlePlan | null = null;
+      try {
+        const planRes = await fetch(`/api/battle-hq/${hqId}/plans/${planId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (cancelled) return;
+        if (planRes.status === 404) {
+          setError('Battle plan not found.');
+          setLoading(false);
+          return;
+        }
+        if (!planRes.ok) {
+          setError('Failed to load battle plan.');
+          setLoading(false);
+          return;
+        }
+        const json = await planRes.json();
+        planData = ((json?.plan ?? json) as BattlePlan | null) ?? null;
+      } catch {
+        if (cancelled) return;
+        setError('Network error loading battle plan.');
         setLoading(false);
         return;
       }
-      setPlan(p);
-      seedDraftFromPlan(p);
+      if (cancelled) return;
+      if (!planData?.id) {
+        setError('Unexpected battle plan response.');
+        setLoading(false);
+        return;
+      }
+      setPlan(planData);
+      setMetaDraft({
+        name: planData.name ?? '',
+        war_type: planData.war_type ?? 'other',
+        scheduled_label: planData.scheduled_label ?? '',
+        comms_channel: planData.comms_channel ?? '',
+      });
 
-      if (p.parent_plan_id) {
-        const pname = await fetchParentName(
-          session.access_token,
-          p.parent_plan_id
-        );
-        if (!cancelled) setParentName(pname);
+      // --- Optional: load parent name for duplicate banner ---
+      if (planData.parent_plan_id) {
+        try {
+          const parentRes = await fetch(
+            `/api/battle-hq/${hqId}/plans/${planData.parent_plan_id}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          if (!cancelled && parentRes.ok) {
+            const json = await parentRes.json();
+            const parent = ((json?.plan ?? json) as BattlePlan | null) ?? null;
+            if (parent?.name) setParentName(parent.name);
+          }
+        } catch {
+          // non-fatal — banner falls back to "another plan"
+        }
       }
 
-      setLoading(false);
+      if (!cancelled) setLoading(false);
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [
-    hqId,
-    planId,
-    fetchHq,
-    fetchPlan,
-    fetchParentName,
-    seedDraftFromPlan,
-    router,
-  ]);
+    // Minimal deps — router is stable, hqId/planId are strings from params.
+  }, [hqId, planId, router]);
 
-  // Cleanup savedTimers on unmount
+  // Cleanup saved-badge timers on unmount
   useEffect(() => {
     const timers = savedTimerRef.current;
     return () => {
@@ -286,28 +282,28 @@ export default function BattlePlanEditorPage() {
     []
   );
 
-  // Generic PATCH for a single metadata field.
-  // Empty-string text fields get written as null so the DB doesn't store ''.
+  // Stable — reads from refs, depends only on route params + helpers.
   const saveMetaField = useCallback(
     async (field: MetaFieldKey) => {
-      if (!plan || !accessToken) return;
+      const currentPlan = planRef.current;
+      const token = tokenRef.current;
+      const draft = metaDraftRef.current;
+      if (!currentPlan || !token) return;
 
-      const draftValue = metaDraft[field];
-      const currentValue = plan[field];
+      const draftValue = draft[field];
+      const currentValue = currentPlan[field];
 
-      // Normalize null/empty/trim equivalence
-      const normalizeForCompare = (v: string | null | undefined) =>
-        (v ?? '').trim();
+      const normalize = (v: string | null | undefined) => (v ?? '').trim();
+
       if (
         field !== 'war_type' &&
-        normalizeForCompare(draftValue as string) ===
-          normalizeForCompare(currentValue as string | null | undefined)
+        normalize(draftValue as string) ===
+          normalize(currentValue as string | null | undefined)
       ) {
         return;
       }
       if (field === 'war_type' && draftValue === currentValue) return;
 
-      // Name is required — fall back to "Untitled Battle Plan" on empty blur
       let toSend: string | null;
       if (field === 'name') {
         const trimmed = (draftValue as string).trim();
@@ -330,7 +326,7 @@ export default function BattlePlanEditorPage() {
             method: 'PATCH',
             headers: {
               'Content-Type': 'application/json',
-              Authorization: `Bearer ${accessToken}`,
+              Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({ [field]: toSend }),
           }
@@ -344,14 +340,8 @@ export default function BattlePlanEditorPage() {
           );
           return;
         }
-        // Update local plan snapshot so subsequent diffs work
         setPlan((prev) =>
-          prev
-            ? ({
-                ...prev,
-                [field]: toSend,
-              } as BattlePlan)
-            : prev
+          prev ? ({ ...prev, [field]: toSend } as BattlePlan) : prev
         );
         markSaveState(field, 'saved', 'Saved ✓');
         const existing = savedTimerRef.current[field];
@@ -367,7 +357,7 @@ export default function BattlePlanEditorPage() {
         );
       }
     },
-    [plan, accessToken, metaDraft, hqId, planId, markSaveState]
+    [hqId, planId, markSaveState]
   );
 
   const handleMetaChange = (field: MetaFieldKey, value: string) => {
@@ -377,10 +367,9 @@ export default function BattlePlanEditorPage() {
     }
   };
 
-  // For selects (war_type) — change + save in one step
-  const handleWarTypeChange = async (value: WarType) => {
+  const handleWarTypeChange = (value: WarType) => {
     setMetaDraft((d) => ({ ...d, war_type: value }));
-    // Use immediate next-tick so React state flushes before save reads it
+    // Let state flush before save reads the ref
     setTimeout(() => {
       saveMetaField('war_type');
     }, 0);
@@ -424,15 +413,9 @@ export default function BattlePlanEditorPage() {
   const renderSaveBadge = (field: MetaFieldKey) => {
     const state = saveStates[field];
     const msg = saveMessages[field];
-    if (state === 'saving') {
-      return <span className="text-zinc-500">Saving…</span>;
-    }
-    if (state === 'saved') {
-      return <span className="text-green-400">{msg}</span>;
-    }
-    if (state === 'error') {
-      return <span className="text-red-400">{msg}</span>;
-    }
+    if (state === 'saving') return <span className="text-zinc-500">Saving…</span>;
+    if (state === 'saved') return <span className="text-green-400">{msg}</span>;
+    if (state === 'error') return <span className="text-red-400">{msg}</span>;
     return null;
   };
 
