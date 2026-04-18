@@ -4,9 +4,12 @@
 // Battle HQ V1 — Battle Plan Editor.
 // Creator + editor only. Viewers bounced.
 //
-// Bootstrap effect depends ONLY on [hqId, planId, router]. All fetches
-// inlined in the effect body. saveMetaField reads plan / token / draft
-// from refs so its identity is stable.
+// Sections shipped:
+//   1. Duplicate banner (if parent_plan_id)
+//   2. Metadata (name, war type, scheduled_label, comms_channel)
+//   3. Rich text (orders, brief, intel)   ← File 3
+//
+// Remaining: battle map upload + canvas · action bar (publish/archive/delete)
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -58,7 +61,10 @@ interface BattleHq {
 }
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
+
 type MetaFieldKey = 'name' | 'war_type' | 'scheduled_label' | 'comms_channel';
+type RichFieldKey = 'orders' | 'brief' | 'intel';
+type AnyFieldKey = MetaFieldKey | RichFieldKey;
 
 // ---------- Constants ----------
 
@@ -69,6 +75,40 @@ const WAR_TYPE_OPTIONS: { value: WarType; label: string }[] = [
   { value: 'svs', label: 'SvS' },
   { value: 'alliance_mobilization', label: 'Alliance Mobilization' },
   { value: 'other', label: 'Other' },
+];
+
+const RICH_FIELD_META: Record<
+  RichFieldKey,
+  { label: string; placeholder: string; help: string }
+> = {
+  orders: {
+    label: 'Orders',
+    placeholder:
+      'What every commander needs to do — rally schedules, targets, formations, fallback plans…',
+    help: 'The actionable game plan. Keep it clear and numbered if possible.',
+  },
+  brief: {
+    label: 'Brief',
+    placeholder:
+      'Context for this battle — objectives, stakes, timing windows, priority assignments…',
+    help: 'The why behind the orders. Context for anyone reading the plan cold.',
+  },
+  intel: {
+    label: 'Intel',
+    placeholder:
+      'What we know about the enemy — top players, strategies, power levels, hero combos, timing tells…',
+    help: 'Enemy-specific intel for this battle. Standing intel from your HQ appears separately on the viewer.',
+  },
+};
+
+const ALL_FIELD_KEYS: AnyFieldKey[] = [
+  'name',
+  'war_type',
+  'scheduled_label',
+  'comms_channel',
+  'orders',
+  'brief',
+  'intel',
 ];
 
 // ---------- Page ----------
@@ -99,26 +139,35 @@ export default function BattlePlanEditorPage() {
     comms_channel: '',
   });
 
-  const [saveStates, setSaveStates] = useState<Record<MetaFieldKey, SaveState>>({
-    name: 'idle',
-    war_type: 'idle',
-    scheduled_label: 'idle',
-    comms_channel: 'idle',
-  });
-  const [saveMessages, setSaveMessages] = useState<Record<MetaFieldKey, string>>({
-    name: '',
-    war_type: '',
-    scheduled_label: '',
-    comms_channel: '',
-  });
-  const savedTimerRef = useRef<Record<MetaFieldKey, number | null>>({
-    name: null,
-    war_type: null,
-    scheduled_label: null,
-    comms_channel: null,
+  const [richDraft, setRichDraft] = useState<{
+    orders: string;
+    brief: string;
+    intel: string;
+  }>({
+    orders: '',
+    brief: '',
+    intel: '',
   });
 
-  // Ref mirrors so saveMetaField stays stable
+  const initialSaveStates = Object.fromEntries(
+    ALL_FIELD_KEYS.map((k) => [k, 'idle'])
+  ) as Record<AnyFieldKey, SaveState>;
+  const initialSaveMessages = Object.fromEntries(
+    ALL_FIELD_KEYS.map((k) => [k, ''])
+  ) as Record<AnyFieldKey, string>;
+  const initialSavedTimers = Object.fromEntries(
+    ALL_FIELD_KEYS.map((k) => [k, null])
+  ) as Record<AnyFieldKey, number | null>;
+
+  const [saveStates, setSaveStates] =
+    useState<Record<AnyFieldKey, SaveState>>(initialSaveStates);
+  const [saveMessages, setSaveMessages] =
+    useState<Record<AnyFieldKey, string>>(initialSaveMessages);
+  const savedTimerRef = useRef<Record<AnyFieldKey, number | null>>(
+    initialSavedTimers
+  );
+
+  // Ref mirrors
   const planRef = useRef<BattlePlan | null>(null);
   useEffect(() => {
     planRef.current = plan;
@@ -133,6 +182,11 @@ export default function BattlePlanEditorPage() {
   useEffect(() => {
     metaDraftRef.current = metaDraft;
   }, [metaDraft]);
+
+  const richDraftRef = useRef(richDraft);
+  useEffect(() => {
+    richDraftRef.current = richDraft;
+  }, [richDraft]);
 
   // ---------- Bootstrap ----------
 
@@ -228,8 +282,13 @@ export default function BattlePlanEditorPage() {
         scheduled_label: planData.scheduled_label ?? '',
         comms_channel: planData.comms_channel ?? '',
       });
+      setRichDraft({
+        orders: planData.orders ?? '',
+        brief: planData.brief ?? '',
+        intel: planData.intel ?? '',
+      });
 
-      // --- Optional: load parent name for duplicate banner ---
+      // --- Parent name for duplicate banner ---
       if (planData.parent_plan_id) {
         try {
           const parentRes = await fetch(
@@ -257,7 +316,7 @@ export default function BattlePlanEditorPage() {
   useEffect(() => {
     const timers = savedTimerRef.current;
     return () => {
-      (Object.keys(timers) as MetaFieldKey[]).forEach((k) => {
+      (Object.keys(timers) as AnyFieldKey[]).forEach((k) => {
         const t = timers[k];
         if (t !== null) window.clearTimeout(t);
       });
@@ -267,29 +326,39 @@ export default function BattlePlanEditorPage() {
   // ---------- Save helpers ----------
 
   const markSaveState = useCallback(
-    (field: MetaFieldKey, state: SaveState, message = '') => {
+    (field: AnyFieldKey, state: SaveState, message = '') => {
       setSaveStates((prev) => ({ ...prev, [field]: state }));
       setSaveMessages((prev) => ({ ...prev, [field]: message }));
     },
     []
   );
 
-  const saveMetaField = useCallback(
-    async (field: MetaFieldKey) => {
+  // Reads current draft values from refs
+  const readDraftValue = (field: AnyFieldKey): string => {
+    if (field === 'orders' || field === 'brief' || field === 'intel') {
+      return richDraftRef.current[field] ?? '';
+    }
+    const v = metaDraftRef.current[field as MetaFieldKey];
+    return typeof v === 'string' ? v : String(v ?? '');
+  };
+
+  const saveField = useCallback(
+    async (field: AnyFieldKey) => {
       const currentPlan = planRef.current;
       const token = tokenRef.current;
-      const draft = metaDraftRef.current;
       if (!currentPlan || !token) return;
 
-      const draftValue = draft[field];
-      const currentValue = currentPlan[field];
+      const draftValue = readDraftValue(field);
+      const currentValue = currentPlan[field as keyof BattlePlan] as
+        | string
+        | null
+        | undefined;
 
       const normalize = (v: string | null | undefined) => (v ?? '').trim();
 
       if (
         field !== 'war_type' &&
-        normalize(draftValue as string) ===
-          normalize(currentValue as string | null | undefined)
+        normalize(draftValue) === normalize(currentValue)
       ) {
         return;
       }
@@ -297,15 +366,15 @@ export default function BattlePlanEditorPage() {
 
       let toSend: string | null;
       if (field === 'name') {
-        const trimmed = (draftValue as string).trim();
+        const trimmed = draftValue.trim();
         toSend = trimmed === '' ? 'Untitled Battle Plan' : trimmed;
         if (trimmed === '') {
           setMetaDraft((d) => ({ ...d, name: 'Untitled Battle Plan' }));
         }
       } else if (field === 'war_type') {
-        toSend = draftValue as string;
+        toSend = draftValue;
       } else {
-        const trimmed = (draftValue as string).trim();
+        const trimmed = draftValue.trim();
         toSend = trimmed === '' ? null : trimmed;
       }
 
@@ -358,10 +427,17 @@ export default function BattlePlanEditorPage() {
     }
   };
 
+  const handleRichChange = (field: RichFieldKey, value: string) => {
+    setRichDraft((d) => ({ ...d, [field]: value }));
+    if (saveStates[field] === 'error' || saveStates[field] === 'saved') {
+      markSaveState(field, 'idle');
+    }
+  };
+
   const handleWarTypeChange = (value: WarType) => {
     setMetaDraft((d) => ({ ...d, war_type: value }));
     setTimeout(() => {
-      saveMetaField('war_type');
+      saveField('war_type');
     }, 0);
   };
 
@@ -400,7 +476,7 @@ export default function BattlePlanEditorPage() {
 
   // ---------- Render helpers ----------
 
-  const renderSaveBadge = (field: MetaFieldKey) => {
+  const renderSaveBadge = (field: AnyFieldKey) => {
     const state = saveStates[field];
     const msg = saveMessages[field];
     if (state === 'saving') return <span className="text-zinc-500">Saving…</span>;
@@ -409,7 +485,7 @@ export default function BattlePlanEditorPage() {
     return null;
   };
 
-  const fieldLabel = (text: string, field: MetaFieldKey) => (
+  const fieldLabel = (text: string, field: AnyFieldKey) => (
     <div className="flex items-center justify-between gap-3 mb-1.5">
       <div className="text-[10px] font-mono text-amber-500 tracking-widest uppercase">
         {text}
@@ -467,19 +543,19 @@ export default function BattlePlanEditorPage() {
           </div>
         )}
 
+        {/* Metadata */}
         <section className="space-y-4">
           <div className="text-[10px] font-mono text-zinc-500 tracking-widest uppercase">
             Plan Metadata
           </div>
 
-          {/* Name */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
             {fieldLabel('Plan Name', 'name')}
             <input
               type="text"
               value={metaDraft.name}
               onChange={(e) => handleMetaChange('name', e.target.value)}
-              onBlur={() => saveMetaField('name')}
+              onBlur={() => saveField('name')}
               placeholder="e.g. Canyon Storm — Saturday prime"
               className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-amber-500"
             />
@@ -488,7 +564,6 @@ export default function BattlePlanEditorPage() {
             </div>
           </div>
 
-          {/* War type */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
             {fieldLabel('War Type', 'war_type')}
             <select
@@ -504,7 +579,6 @@ export default function BattlePlanEditorPage() {
             </select>
           </div>
 
-          {/* Scheduled label */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
             {fieldLabel('Scheduled Time', 'scheduled_label')}
             <input
@@ -513,7 +587,7 @@ export default function BattlePlanEditorPage() {
               onChange={(e) =>
                 handleMetaChange('scheduled_label', e.target.value)
               }
-              onBlur={() => saveMetaField('scheduled_label')}
+              onBlur={() => saveField('scheduled_label')}
               placeholder="Saturday 20:00 server · Sunday after reset · 2026-04-20 14:00 UTC…"
               className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-amber-500"
             />
@@ -523,7 +597,6 @@ export default function BattlePlanEditorPage() {
             </div>
           </div>
 
-          {/* Comms channel */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
             {fieldLabel('Comms Channel', 'comms_channel')}
             <input
@@ -532,7 +605,7 @@ export default function BattlePlanEditorPage() {
               onChange={(e) =>
                 handleMetaChange('comms_channel', e.target.value)
               }
-              onBlur={() => saveMetaField('comms_channel')}
+              onBlur={() => saveField('comms_channel')}
               placeholder="Alliance Chat, Discord voice, Line group, WhatsApp…"
               className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-amber-500"
             />
@@ -554,18 +627,38 @@ export default function BattlePlanEditorPage() {
           </p>
         </section>
 
-        {/* Rich text placeholder — File 3 */}
-        <section className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-          <div className="text-[10px] font-mono text-amber-500 tracking-widest uppercase mb-2">
+        {/* Rich text — File 3 */}
+        <section className="space-y-4">
+          <div className="text-[10px] font-mono text-zinc-500 tracking-widest uppercase">
             Orders · Brief · Intel
           </div>
-          <p className="text-xs text-zinc-500">
-            Rich text sections coming next.
-          </p>
+
+          {(['orders', 'brief', 'intel'] as RichFieldKey[]).map((field) => {
+            const meta = RICH_FIELD_META[field];
+            return (
+              <div
+                key={field}
+                className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4"
+              >
+                {fieldLabel(meta.label, field)}
+                <textarea
+                  value={richDraft[field]}
+                  onChange={(e) => handleRichChange(field, e.target.value)}
+                  onBlur={() => saveField(field)}
+                  placeholder={meta.placeholder}
+                  rows={8}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-amber-500 resize-y leading-relaxed"
+                />
+                <div className="text-[11px] font-mono text-zinc-600 tracking-wider mt-2 leading-relaxed">
+                  {meta.help}
+                </div>
+              </div>
+            );
+          })}
         </section>
       </div>
 
-      {/* Action bar placeholder */}
+      {/* Action bar placeholder — File 5 */}
       <div className="fixed bottom-0 left-0 right-0 border-t border-zinc-800 bg-zinc-950/95 backdrop-blur z-10">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 text-center">
           <p className="text-[11px] font-mono text-zinc-500 tracking-wider uppercase">
