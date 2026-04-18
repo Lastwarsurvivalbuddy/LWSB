@@ -24,6 +24,7 @@ interface CommanderData {
   kill_tier: KillTier | null;
   alliance_name: string | null;
   alliance_tag: string | null;
+  rank: string | null;
   season: number | null;
   subscription_tier: string;
 }
@@ -93,6 +94,12 @@ function troopTypeLabel(t: string | null): string {
   return t.split(' ').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
 }
 
+// Alliance rank validator — strictly R1–R5 or null. Guards against stale/bad data.
+function validAllianceRank(r: string | null): string | null {
+  if (r === 'R1' || r === 'R2' || r === 'R3' || r === 'R4' || r === 'R5') return r;
+  return null;
+}
+
 export default function CommanderCardPage() {
   const router = useRouter();
   const cardRef = useRef<HTMLDivElement>(null);
@@ -109,7 +116,7 @@ export default function CommanderCardPage() {
       if (!session) { router.push('/signin'); return; }
       const { data: profile } = await supabase
         .from('commander_profile')
-        .select('commander_name, server_number, computed_server_day, hq_level, troop_type, troop_tier, squad_power_tier, rank_bucket, kill_tier, alliance_name, alliance_tag, season, subscription_tier')
+        .select('commander_name, server_number, computed_server_day, hq_level, troop_type, troop_tier, squad_power_tier, rank_bucket, kill_tier, alliance_name, alliance_tag, rank, season, subscription_tier')
         .eq('user_id', session.user.id)
         .single();
       if (profile) setData(profile as CommanderData);
@@ -196,12 +203,13 @@ const exportCard = async (format: 'png' | 'jpg') => {
     </div>
   );
 
-  const serverDay  = data.computed_server_day ?? '—';
-  const squadPower = data.squad_power_tier ? SQUAD_POWER_TIER_LABELS[data.squad_power_tier] : '—';
-  const rankLabel  = data.rank_bucket ? RANK_BUCKET_LABELS[data.rank_bucket] : '—';
-  const alliance   = data.alliance_tag
+  const serverDay    = data.computed_server_day ?? '—';
+  const squadPower   = data.squad_power_tier ? SQUAD_POWER_TIER_LABELS[data.squad_power_tier] : '—';
+  const rankLabel    = data.rank_bucket ? RANK_BUCKET_LABELS[data.rank_bucket] : '—';
+  const alliance     = data.alliance_tag
     ? `[${data.alliance_tag}] ${data.alliance_name ?? ''}`
     : (data.alliance_name ?? null);
+  const allianceRank = validAllianceRank(data.rank);
 
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-start py-8 px-4 gap-6">
@@ -269,9 +277,9 @@ const exportCard = async (format: 'png' | 'jpg') => {
           >
             {data.commander_name ?? 'COMMANDER'}
           </div>
-          {alliance && (
+          {(alliance || allianceRank) && (
             <div style={{ color: '#d4a017', fontSize: '12px', fontWeight: 600, marginTop: '4px', letterSpacing: '0.05em' }}>
-              {alliance}
+              {alliance}{alliance && allianceRank ? ' · ' : ''}{allianceRank ?? ''}
             </div>
           )}
           <div style={{ marginTop: '6px', height: '2px', width: '48px', background: 'linear-gradient(90deg, #d4a017, transparent)' }} />

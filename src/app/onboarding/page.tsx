@@ -36,7 +36,13 @@ const theme = {
   green: '#22c55e',
 };
 
-const TOTAL_STEPS = 13;
+// One new step added (Alliance Rank) — TOTAL_STEPS moves 13 → 14
+const TOTAL_STEPS = 14;
+
+// Alliance Rank — R1–R5 or ''. Completely separate from rank_bucket
+// (server leaderboard rank based on hero power).
+type AllianceRank = 'R1' | 'R2' | 'R3' | 'R4' | 'R5';
+const ALLIANCE_RANKS: AllianceRank[] = ['R1', 'R2', 'R3', 'R4', 'R5'];
 
 interface ProfileData {
   commander_name: string;
@@ -48,6 +54,7 @@ interface ProfileData {
   playstyle: string;
   troop_type: string;
   troop_tier: string;
+  alliance_rank: AllianceRank | '';
   rank_bucket: RankBucket | '';
   squad_power_tier: SquadPowerTier | '';
   power_bucket: PowerBucket | '';
@@ -489,12 +496,11 @@ function Step7_SpendStyle({ data, setData, onNext, onBack, step }: StepProps) {
         <OptionCard
           key={o.value}
           {...o}
-          selected={data.spend_style === o.value} // FIX: was data.spend_tier
-          onClick={() => setData({ ...data, spend_style: o.value })} // FIX: was spend_tier
+          selected={data.spend_style === o.value}
+          onClick={() => setData({ ...data, spend_style: o.value })}
         />
       ))}
       <NavButtons step={step} onBack={onBack} onNext={onNext} nextDisabled={!data.spend_style} />
-      {/* FIX: was !data.spend_tier */}
     </div>
   );
 }
@@ -553,7 +559,53 @@ function Step10_TroopTier({ data, setData, onNext, onBack, step }: StepProps) {
   );
 }
 
-function Step11_RankAndPower({ data, setData, onNext, onBack, step }: StepProps) {
+// NEW STEP — Alliance Rank (R1–R5, skippable)
+function Step11_AllianceRank({ data, setData, onNext, onBack, step }: StepProps) {
+  const options: { value: AllianceRank; label: string; sublabel: string; icon: string }[] = [
+    { value: 'R1', label: 'R1', sublabel: 'Member', icon: '▪️' },
+    { value: 'R2', label: 'R2', sublabel: 'Elite member', icon: '▫️' },
+    { value: 'R3', label: 'R3', sublabel: 'Veteran', icon: '◾' },
+    { value: 'R4', label: 'R4', sublabel: 'Officer', icon: '◼️' },
+    { value: 'R5', label: 'R5', sublabel: 'Leader', icon: '⬛' },
+  ];
+  return (
+    <div>
+      <StepTitle
+        title="What's your alliance rank?"
+        subtitle="Your role in your alliance — R1 through R5. You can skip this if you're not sure."
+      />
+      {options.map(o => (
+        <OptionCard
+          key={o.value}
+          label={o.label}
+          sublabel={o.sublabel}
+          icon={o.icon}
+          selected={data.alliance_rank === o.value}
+          onClick={() => setData({ ...data, alliance_rank: o.value })}
+        />
+      ))}
+      <HintBox text="Not in an alliance or not sure? Skip this — you can set it anytime from your profile." />
+      <div style={{ display: 'flex', gap: 12, marginTop: 32 }}>
+        <button onClick={onBack} style={btnStyle('ghost')}>← Back</button>
+        <button
+          onClick={() => { setData({ ...data, alliance_rank: '' }); onNext(); }}
+          style={{ ...btnStyle('ghost'), flex: 1 }}
+        >
+          Skip for now
+        </button>
+        <button
+          onClick={onNext}
+          disabled={!data.alliance_rank}
+          style={{ ...btnStyle('gold'), flex: 1, opacity: !data.alliance_rank ? 0.4 : 1, cursor: !data.alliance_rank ? 'not-allowed' : 'pointer' }}
+        >
+          Continue
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Step12_RankAndPower({ data, setData, onNext, onBack, step }: StepProps) {
   const rankValid = !!data.rank_bucket;
   const squadValid = !!data.squad_power_tier;
   const powerValid = !!data.power_bucket;
@@ -587,7 +639,7 @@ function Step11_RankAndPower({ data, setData, onNext, onBack, step }: StepProps)
   );
 }
 
-function Step12_KillTier({ data, setData, onNext, onBack, step }: StepProps) {
+function Step13_KillTier({ data, setData, onNext, onBack, step }: StepProps) {
   return (
     <div>
       <StepTitle title="What's your kill count?" subtitle="Check your profile — total kills earned across all events." />
@@ -630,10 +682,11 @@ function StepComplete({ data, setData, onDone }: {
     ['Server', `#${data.server_number} · Day ${data.server_day}`],
     ['Season', SEASON_LABELS[data.season] ?? String(data.season)],
     ['HQ Level', String(data.hq_level)],
-    ['Spend Style', tierLabels[data.spend_style] ?? data.spend_style], // FIX: was data.spend_tier
+    ['Spend Style', tierLabels[data.spend_style] ?? data.spend_style],
     ['Playstyle', playstyleLabels[data.playstyle] ?? data.playstyle],
     ['Squad 1 Type', troopLabels[data.troop_type] ?? data.troop_type],
     ['Troop Tier', troopTierLabels[data.troop_tier] ?? data.troop_tier],
+    ['Alliance Rank', data.alliance_rank || ''],
     ['Server Rank', data.rank_bucket ? RANK_BUCKET_LABELS[data.rank_bucket] : ''],
     ['Squad 1 Power', data.squad_power_tier ? SQUAD_POWER_TIER_LABELS[data.squad_power_tier] : ''],
     ['Total Power', data.power_bucket ? POWER_BUCKET_LABELS[data.power_bucket] : ''],
@@ -732,10 +785,11 @@ export default function OnboardingFlow() {
     server_day: '',
     season: 0,
     hq_level: '',
-    spend_style: '', // FIX: was spend_tier
+    spend_style: '',
     playstyle: '',
     troop_type: '',
     troop_tier: '',
+    alliance_rank: '',
     rank_bucket: '',
     squad_power_tier: '',
     power_bucket: '',
@@ -750,6 +804,12 @@ export default function OnboardingFlow() {
       if (!user) return;
       const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
       if (profile && !profile.onboarding_complete) {
+        // Validate rank against allowed values on load
+        const loadedRank: AllianceRank | '' =
+          profile.rank && ALLIANCE_RANKS.includes(profile.rank as AllianceRank)
+            ? (profile.rank as AllianceRank)
+            : '';
+
         setData(prev => ({
           ...prev,
           commander_name: profile.commander_name || '',
@@ -762,6 +822,7 @@ export default function OnboardingFlow() {
           playstyle: profile.playstyle || '',
           troop_type: profile.troop_type || '',
           troop_tier: profile.troop_tier || '',
+          alliance_rank: loadedRank,
           rank_bucket: profile.rank_bucket || '',
           squad_power_tier: profile.squad_power_tier || '',
           power_bucket: profile.power_bucket || '',
@@ -789,10 +850,11 @@ export default function OnboardingFlow() {
         server_day: serverDay,
         season: data.season ?? 0,
         hq_level: parseInt(String(data.hq_level)) || 1,
-        spend_style: data.spend_style || 'f2p', // FIX: was spend_tier: data.spend_tier
+        spend_style: data.spend_style || 'f2p',
         playstyle: data.playstyle || 'scout',
         troop_type: data.troop_type || 'mixed',
         troop_tier: data.troop_tier || 'under_t10',
+        rank: data.alliance_rank || null,
         rank_bucket: data.rank_bucket || null,
         squad_power_tier: data.squad_power_tier || null,
         power_bucket: data.power_bucket || null,
@@ -867,9 +929,10 @@ export default function OnboardingFlow() {
           {step === 8 && <Step8_Playstyle {...stepProps} />}
           {step === 9 && <Step9_TroopType {...stepProps} />}
           {step === 10 && <Step10_TroopTier {...stepProps} />}
-          {step === 11 && <Step11_RankAndPower {...stepProps} />}
-          {step === 12 && <Step12_KillTier {...stepProps} />}
-          {step === 13 && <StepComplete data={data} setData={setData} onDone={complete} />}
+          {step === 11 && <Step11_AllianceRank {...stepProps} />}
+          {step === 12 && <Step12_RankAndPower {...stepProps} />}
+          {step === 13 && <Step13_KillTier {...stepProps} />}
+          {step === 14 && <StepComplete data={data} setData={setData} onDone={complete} />}
         </div>
       </div>
     </>

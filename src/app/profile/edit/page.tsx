@@ -15,6 +15,11 @@ import {
   type KillTier,
 } from '@/lib/profileTypes'
 
+// Alliance Rank — R1–R5 or null. Completely separate from rank_bucket
+// (which is server leaderboard rank based on hero power).
+type AllianceRank = 'R1' | 'R2' | 'R3' | 'R4' | 'R5'
+const ALLIANCE_RANKS: AllianceRank[] = ['R1', 'R2', 'R3', 'R4', 'R5']
+
 interface ProfileForm {
   commander_name: string
   server_number: string
@@ -32,6 +37,7 @@ interface ProfileForm {
   update_reminder_frequency: string
   alliance_name: string
   alliance_tag: string
+  alliance_rank: AllianceRank | ''
   beginner_mode: boolean
 }
 
@@ -115,6 +121,7 @@ export default function ProfileEditPage() {
     update_reminder_frequency: 'weekly',
     alliance_name: '',
     alliance_tag: '',
+    alliance_rank: '',
     beginner_mode: false,
   })
   const [originalName, setOriginalName] = useState('')
@@ -195,6 +202,12 @@ export default function ProfileEditPage() {
         serverDayValue = data.server_day.toString()
       }
 
+      // Alliance rank — validate against allowed values, else treat as null
+      const loadedRank: AllianceRank | '' =
+        data.rank && ALLIANCE_RANKS.includes(data.rank as AllianceRank)
+          ? (data.rank as AllianceRank)
+          : ''
+
       const loaded: ProfileForm = {
         commander_name: data.commander_name || '',
         server_number: data.server_number?.toString() || '',
@@ -212,6 +225,7 @@ export default function ProfileEditPage() {
         update_reminder_frequency: data.update_reminder_frequency || 'weekly',
         alliance_name: data.alliance_name || '',
         alliance_tag: data.alliance_tag || '',
+        alliance_rank: loadedRank,
         beginner_mode: data.beginner_mode ?? false,
       }
       setForm(loaded)
@@ -282,6 +296,7 @@ export default function ProfileEditPage() {
         server_start_date: serverDay ? calcServerStartDate(serverDay) : null,
         alliance_name: form.alliance_name || null,
         alliance_tag: form.alliance_tag || null,
+        rank: form.alliance_rank || null,
         beginner_mode: form.beginner_mode,
         last_profile_update: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -458,6 +473,26 @@ export default function ProfileEditPage() {
               </Field>
             </div>
           </div>
+          <Field label="Alliance Rank" hint="Your role in your alliance · R1–R5 · optional">
+            <div className="flex flex-wrap gap-2">
+              {ALLIANCE_RANKS.map(r => (
+                <Chip
+                  key={r}
+                  label={r}
+                  selected={form.alliance_rank === r}
+                  onClick={() => set('alliance_rank', r)}
+                />
+              ))}
+              {form.alliance_rank !== '' && (
+                <button
+                  onClick={() => set('alliance_rank', '')}
+                  className="text-xs px-3 py-1.5 rounded-full border border-zinc-700 text-zinc-500 hover:border-zinc-500 hover:text-zinc-300 transition-all font-medium"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          </Field>
         </section>
 
         {/* ── Base ── */}
