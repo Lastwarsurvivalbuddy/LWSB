@@ -170,7 +170,7 @@ export default function NewBattleHqPage() {
       return;
     }
 
-    // Debounce DB check by 400ms
+// Debounce DB check by 400ms
     setSlugState({ kind: 'checking' });
     slugDebounceRef.current = setTimeout(async () => {
       const controller = new AbortController();
@@ -180,11 +180,15 @@ export default function NewBattleHqPage() {
           `/api/battle-hq/slug-check?slug=${encodeURIComponent(trimmed)}`,
           { signal: controller.signal }
         );
+        // If this request was aborted between send and response, ignore everything.
+        if (controller.signal.aborted) return;
         if (!res.ok) {
           setSlugState({ kind: 'error' });
           return;
         }
         const data: { available: boolean; reason?: SlugReason } = await res.json();
+        // Re-check abort after the JSON parse — parse can race too.
+        if (controller.signal.aborted) return;
         if (data.available) {
           setSlugState({ kind: 'available' });
         } else if (data.reason === 'taken') {
@@ -195,6 +199,10 @@ export default function NewBattleHqPage() {
           setSlugState({ kind: 'error' });
         }
       } catch (err) {
+        // Ignore any error if the controller was aborted — the next keystroke will
+        // kick off a fresh check. Covers AbortError (DOMException) AND the TypeError
+        // some browser/network combos throw when aborting mid-flight.
+        if (controller.signal.aborted) return;
         if ((err as Error).name === 'AbortError') return;
         setSlugState({ kind: 'error' });
       }
