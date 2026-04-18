@@ -36,13 +36,40 @@ const theme = {
   green: '#22c55e',
 };
 
-// One new step added (Alliance Rank) — TOTAL_STEPS moves 13 → 14
-const TOTAL_STEPS = 14;
+// Reasons (Step 14) added + conditional Affiliate Nudge (Step 15) added
+// — TOTAL_STEPS moves 14 → 16
+const TOTAL_STEPS = 16;
+
+// Progress bar denominator — always shows 15 even though max step is 16.
+// Step 15 (Affiliate Nudge) is conditional and invisible to non-R4/R5 users.
+// R4/R5 users see 14/15 on nudge step, then 15/15 on Complete.
+// Non-triggers skip Step 15 entirely so the denominator stays honest from
+// their perspective.
+const PROGRESS_DENOMINATOR = 15;
 
 // Alliance Rank — R1–R5 or ''. Completely separate from rank_bucket
 // (server leaderboard rank based on hero power).
 type AllianceRank = 'R1' | 'R2' | 'R3' | 'R4' | 'R5';
 const ALLIANCE_RANKS: AllianceRank[] = ['R1', 'R2', 'R3', 'R4', 'R5'];
+
+// Onboarding reasons — multi-check on Step 14. Value list documented in
+// profiles.onboarding_reasons migration.
+type OnboardingReason =
+  | 'efficient_player'
+  | 'maximize_growth'
+  | 'analyze_battle_reports'
+  | 'analyze_packs'
+  | 'run_alliance'
+  | 'beginner_guidance';
+
+const ONBOARDING_REASONS: OnboardingReason[] = [
+  'efficient_player',
+  'maximize_growth',
+  'analyze_battle_reports',
+  'analyze_packs',
+  'run_alliance',
+  'beginner_guidance',
+];
 
 interface ProfileData {
   commander_name: string;
@@ -60,12 +87,26 @@ interface ProfileData {
   power_bucket: PowerBucket | '';
   kill_tier: KillTier | '';
   beginner_mode: boolean;
+  onboarding_reasons: OnboardingReason[];
+}
+
+// Strict AND gate for the affiliate nudge: "run_alliance" reason checked
+// AND alliance_rank is R4 or R5.
+function shouldShowAffiliateNudge(data: ProfileData): boolean {
+  const pickedAllianceReason = data.onboarding_reasons.includes('run_alliance');
+  const isR4OrR5 = data.alliance_rank === 'R4' || data.alliance_rank === 'R5';
+  return pickedAllianceReason && isR4OrR5;
 }
 
 // ─── SHARED COMPONENTS ───────────────────────────────────────────────────────
 
 function ProgressBar({ step }: { step: number }) {
-  const pct = ((step - 1) / (TOTAL_STEPS - 1)) * 100;
+  // step - 1 because Step 1 is the welcome screen (pre-progress).
+  // Cap numerator at PROGRESS_DENOMINATOR so conditional Step 15 doesn't
+  // push the bar over 100% for R4/R5 triggers.
+  const rawStep = step - 1;
+  const displayStep = Math.min(rawStep, PROGRESS_DENOMINATOR);
+  const pct = (displayStep / PROGRESS_DENOMINATOR) * 100;
   return (
     <div style={{ width: '100%', marginBottom: 32 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
@@ -73,7 +114,7 @@ function ProgressBar({ step }: { step: number }) {
           Commander Profile
         </span>
         <span style={{ fontSize: 11, color: theme.goldDim, letterSpacing: '0.08em' }}>
-          {step - 1} / {TOTAL_STEPS - 1}
+          {displayStep} / {PROGRESS_DENOMINATOR}
         </span>
       </div>
       <div style={{ height: 2, background: theme.border, borderRadius: 2, overflow: 'hidden' }}>
@@ -188,6 +229,39 @@ function OptionCard({ label, sublabel, icon, selected, onClick }: {
         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
       }}>
         {selected && <span style={{ color: '#0a0c10', fontSize: 11, fontWeight: 900 }}>✓</span>}
+      </div>
+    </button>
+  );
+}
+
+// Multi-select checkbox card — variant of OptionCard for the Reasons step.
+function CheckCard({ label, selected, onClick }: {
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 14, width: '100%',
+        padding: '14px 16px',
+        background: selected ? `${theme.gold}12` : theme.surface,
+        border: `1px solid ${selected ? theme.gold : theme.border}`,
+        borderRadius: 8, cursor: 'pointer', textAlign: 'left',
+        transition: 'all 0.15s', marginBottom: 8,
+      }}
+    >
+      <div style={{
+        width: 20, height: 20, borderRadius: 4,
+        border: `2px solid ${selected ? theme.gold : theme.border}`,
+        background: selected ? theme.gold : 'transparent',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+      }}>
+        {selected && <span style={{ color: '#0a0c10', fontSize: 12, fontWeight: 900 }}>✓</span>}
+      </div>
+      <div style={{ color: selected ? theme.gold : theme.text, fontWeight: 600, fontSize: 15, fontFamily: '"Rajdhani", "Oswald", sans-serif', letterSpacing: '0.03em' }}>
+        {label}
       </div>
     </button>
   );
@@ -654,6 +728,97 @@ function Step13_KillTier({ data, setData, onNext, onBack, step }: StepProps) {
   );
 }
 
+// NEW STEP — Why Did You Join LWSB? (multi-check, required, ≥1 selection)
+function Step14_Reasons({ data, setData, onNext, onBack, step }: StepProps) {
+  const reasonLabels: Record<OnboardingReason, string> = {
+    efficient_player: 'Become a more efficient player/spender',
+    maximize_growth: 'Maximize my growth',
+    analyze_battle_reports: 'Analyze my battle reports',
+    analyze_packs: 'Analyze packs before I buy',
+    run_alliance: 'Run my alliance (R4/R5 tools)',
+    beginner_guidance: "See what I'm missing as a beginner",
+  };
+
+  const toggle = (reason: OnboardingReason) => {
+    const current = data.onboarding_reasons;
+    const next = current.includes(reason)
+      ? current.filter(r => r !== reason)
+      : [...current, reason];
+    setData({ ...data, onboarding_reasons: next });
+  };
+
+  const hasSelection = data.onboarding_reasons.length > 0;
+
+  return (
+    <div>
+      <StepTitle
+        title="What brought you here, Commander?"
+        subtitle="Check all that apply. This helps Buddy show you the right things first."
+      />
+      {ONBOARDING_REASONS.map(r => (
+        <CheckCard
+          key={r}
+          label={reasonLabels[r]}
+          selected={data.onboarding_reasons.includes(r)}
+          onClick={() => toggle(r)}
+        />
+      ))}
+      <NavButtons step={step} onBack={onBack} onNext={onNext} nextDisabled={!hasSelection} />
+    </div>
+  );
+}
+
+// NEW STEP — Affiliate nudge (conditional, only rendered when R4/R5 gate met)
+function Step15_AffiliateNudge({ data, onApply, onSkip, onBack }: {
+  data: ProfileData;
+  onApply: () => void;
+  onSkip: () => void;
+  onBack: () => void;
+}) {
+  return (
+    <div>
+      <StepTitle
+        title="You're the kind of user who grows LWSB."
+        subtitle={`${data.alliance_rank}s have real influence in their alliance. When you share LWSB with your members, you can earn commission on anyone who upgrades.`}
+      />
+      <div style={{ background: theme.surface, border: `1px solid ${theme.goldDim}`, borderRadius: 10, padding: 20, marginBottom: 24 }}>
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 12 }}>
+            <span style={{ fontSize: 18, minWidth: 24 }}>🎯</span>
+            <span style={{ color: theme.textDim, fontSize: 14, lineHeight: 1.5 }}>
+              Battle HQ access is free for anyone you invite. Your alliance doesn't pay to see your war plans.
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 12 }}>
+            <span style={{ fontSize: 18, minWidth: 24 }}>💰</span>
+            <span style={{ color: theme.textDim, fontSize: 14, lineHeight: 1.5 }}>
+              As an affiliate, you earn commission only if they choose to upgrade later.
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+            <span style={{ fontSize: 18, minWidth: 24 }}>⚡</span>
+            <span style={{ color: theme.textDim, fontSize: 14, lineHeight: 1.5 }}>
+              Applications are reviewed manually. You'll hear back within 48 hours.
+            </span>
+          </div>
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 12 }}>
+        <button onClick={onBack} style={btnStyle('ghost')}>← Back</button>
+        <button onClick={onSkip} style={{ ...btnStyle('ghost'), flex: 1 }}>
+          Skip for now
+        </button>
+        <button
+          onClick={onApply}
+          style={{ ...btnStyle('gold'), flex: 1 }}
+        >
+          Apply to the Program
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── COMPLETE STEP with beginner mode auto-suggest ────────────────────────────
 
 function StepComplete({ data, setData, onDone }: {
@@ -795,6 +960,7 @@ export default function OnboardingFlow() {
     power_bucket: '',
     kill_tier: '',
     beginner_mode: false,
+    onboarding_reasons: [],
   });
 
   useEffect(() => {
@@ -809,6 +975,13 @@ export default function OnboardingFlow() {
           profile.rank && ALLIANCE_RANKS.includes(profile.rank as AllianceRank)
             ? (profile.rank as AllianceRank)
             : '';
+
+        // Validate onboarding_reasons against allowed values on load
+        const loadedReasons: OnboardingReason[] = Array.isArray(profile.onboarding_reasons)
+          ? profile.onboarding_reasons.filter((r: string): r is OnboardingReason =>
+              ONBOARDING_REASONS.includes(r as OnboardingReason)
+            )
+          : [];
 
         setData(prev => ({
           ...prev,
@@ -828,6 +1001,7 @@ export default function OnboardingFlow() {
           power_bucket: profile.power_bucket || '',
           kill_tier: profile.kill_tier || '',
           beginner_mode: profile.beginner_mode ?? false,
+          onboarding_reasons: loadedReasons,
         }));
         if (profile.onboarding_step > 1) setStep(profile.onboarding_step);
       }
@@ -860,6 +1034,7 @@ export default function OnboardingFlow() {
         power_bucket: data.power_bucket || null,
         kill_tier: data.kill_tier || null,
         beginner_mode: data.beginner_mode,
+        onboarding_reasons: data.onboarding_reasons.length > 0 ? data.onboarding_reasons : null,
         onboarding_step: nextStep,
         onboarding_complete: complete,
         server_start_date: serverStartDate,
@@ -875,13 +1050,42 @@ export default function OnboardingFlow() {
     }
   }
 
+  // Standard advance — used by steps 1–13.
   async function advance() {
     const nextStep = step + 1;
     await saveProgress(nextStep);
     setStep(nextStep);
   }
 
+  // Advance from Step 14 (Reasons). Skip Step 15 entirely if the R4/R5 gate
+  // isn't met — jump straight to Complete (Step 16).
+  async function advanceFromReasons() {
+    const nextStep = shouldShowAffiliateNudge(data) ? 15 : 16;
+    await saveProgress(nextStep);
+    setStep(nextStep);
+  }
+
+  // Affiliate nudge "Apply" — save progress as Complete, then route to /affiliate.
+  // Treating Apply as completion of onboarding; they come back to dashboard from
+  // the affiliate flow independently.
+  async function advanceApplyToAffiliate() {
+    await saveProgress(TOTAL_STEPS + 1, true);
+    window.location.href = '/affiliate';
+  }
+
+  // Affiliate nudge "Skip for now" — advance to Complete (Step 16).
+  async function advanceSkipAffiliate() {
+    await saveProgress(16);
+    setStep(16);
+  }
+
   function back() {
+    // From Step 16 (Complete), back should return to Step 15 if the nudge
+    // was shown, otherwise Step 14 (Reasons). Mirrors the forward skip logic.
+    if (step === 16 && !shouldShowAffiliateNudge(data)) {
+      setStep(14);
+      return;
+    }
     setStep(s => Math.max(1, s - 1));
   }
 
@@ -909,7 +1113,9 @@ export default function OnboardingFlow() {
               LWSB
             </span>
             {step > 1 && step <= TOTAL_STEPS && (
-              <span style={{ fontSize: 12, color: theme.textMuted }}>Step {step - 1} of {TOTAL_STEPS - 1}</span>
+              <span style={{ fontSize: 12, color: theme.textMuted }}>
+                Step {Math.min(step - 1, PROGRESS_DENOMINATOR)} of {PROGRESS_DENOMINATOR}
+              </span>
             )}
           </div>
           {step > 1 && step <= TOTAL_STEPS && <ProgressBar step={step} />}
@@ -932,7 +1138,16 @@ export default function OnboardingFlow() {
           {step === 11 && <Step11_AllianceRank {...stepProps} />}
           {step === 12 && <Step12_RankAndPower {...stepProps} />}
           {step === 13 && <Step13_KillTier {...stepProps} />}
-          {step === 14 && <StepComplete data={data} setData={setData} onDone={complete} />}
+          {step === 14 && <Step14_Reasons {...{ ...stepProps, onNext: advanceFromReasons }} />}
+          {step === 15 && (
+            <Step15_AffiliateNudge
+              data={data}
+              onApply={advanceApplyToAffiliate}
+              onSkip={advanceSkipAffiliate}
+              onBack={back}
+            />
+          )}
+          {step === 16 && <StepComplete data={data} setData={setData} onDone={complete} />}
         </div>
       </div>
     </>
