@@ -1,22 +1,26 @@
 'use client';
 
 // src/app/battle-hq/new/page.tsx
-// Battle HQ V1 — HQ creation page (Launch Blocker #1).
+// Battle HQ V1.1 — HQ creation page. Human-resilient version.
 //
 // Founding-only gate. Form fields:
-//   - alliance_tag (required, non-empty)
-//   - server (required, non-empty)
-//   - slug (required, real-time availability check)
-//   - comms_channel (optional)
+// - alliance_tag (required, non-empty)
+// - server (required, non-empty)
+// - slug (required, real-time availability check — BEST EFFORT, never blocks submit)
+// - comms_channel (optional)
 //
-// Flow:
-//   1. Auth check → redirect /signin if logged out
-//   2. Founding-tier check → show upgrade CTA if not Founding
-//   3. User fills form; slug availability debounced 400ms against /api/battle-hq/slug-check
-//   4. Submit → POST /api/battle-hq/create → router.push(`/battle-hq/${id}/manage`)
+// Design principle:
+// The slug-check endpoint is a courtesy. It helps the user learn "taken"
+// before they hit submit. It MUST NOT gate submission. The create route is
+// the definitive source of truth — if a slug is actually taken, it'll reject
+// with a clear error, and we show that error inline.
 //
-// Client-side slug rules MUST stay in sync with spec §3.2 / create route / slug-check route:
-//   - 3-30 chars, [A-Za-z0-9-] only, not in reserved blocklist, case-insensitive unique.
+// Rate limiting / network errors on slug-check → we show a soft "–" status
+// and let the user submit anyway. The create route handles the real decision.
+//
+// Debounce = 600ms (up from 400) — reduces call volume without feeling slow.
+// Retry-on-429 = one silent retry after 1200ms — swallows transient platform
+// rate limits that users would otherwise see as mysterious errors.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -24,25 +28,10 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 
 // ---------- Slug validation (mirrors create/route.ts and slug-check/route.ts) ----------
-
 const RESERVED_SLUGS = new Set<string>([
-  'admin',
-  'api',
-  'guide',
-  'signin',
-  'signup',
-  'dashboard',
-  'mission-control',
-  'upgrade',
-  'affiliate',
-  'contact',
-  'news',
-  'cc',
-  'join',
-  'new',
-  'trash',
-  'settings',
-  'profile',
+  'admin', 'api', 'guide', 'signin', 'signup', 'dashboard',
+  'mission-control', 'upgrade', 'affiliate', 'contact', 'news',
+  'cc', 'join', 'new', 'trash', 'settings', 'profile',
 ]);
 
 const SLUG_PATTERN = /^[A-Za-z0-9-]+$/;
@@ -59,33 +48,31 @@ function validateSlugFormat(slug: string): SlugReason | null {
 
 function slugReasonCopy(reason: SlugReason): string {
   switch (reason) {
-    case 'too_short':
-      return 'Slug must be at least 3 characters.';
-    case 'too_long':
-      return 'Slug must be 30 characters or fewer.';
-    case 'invalid_format':
-      return 'Letters, numbers, and dashes only.';
-    case 'reserved':
-      return 'That slug is reserved. Try another.';
-    case 'taken':
-      return 'This slug is already in use. Try adding your server number or a variation.';
-    default:
-      return 'Slug is not valid.';
+    case 'too_short': return 'Slug must be at least 3 characters.';
+    case 'too_long': return 'Slug must be 30 characters or fewer.';
+    case 'invalid_format': return 'Letters, numbers, and dashes only.';
+    case 'reserved': return 'That slug is reserved. Try another.';
+    case 'taken': return 'This slug is already in use. Try adding your server number or a variation.';
+    default: return 'Slug is not valid.';
   }
 }
 
 // ---------- Slug availability state ----------
-
+// Note: 'unknown' replaces the old 'error' state. Semantics: we couldn't
+// verify but we're not going to block the user. Submit is allowed from this
+// state — create route will be authoritative.
 type SlugState =
   | { kind: 'idle' }
   | { kind: 'invalid'; reason: SlugReason }
   | { kind: 'checking' }
   | { kind: 'available' }
   | { kind: 'taken' }
-  | { kind: 'error' };
+  | { kind: 'unknown' };
+
+const DEBOUNCE_MS = 600;
+const RETRY_DELAY_MS = 1200;
 
 // ---------- Page ----------
-
 export default function NewBattleHqPage() {
   const router = useRouter();
 
@@ -113,20 +100,14 @@ export default function NewBattleHqPage() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
+      const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         router.push('/signin');
         return;
       }
-
       if (cancelled) return;
       setAccessToken(session.access_token);
 
-      // Check founding tier via subscriptions table.
-      // The create route will 403 if non-founding; we gate client-side for better UX.
       const { data: sub } = await supabase
         .from('subscriptions')
         .select('tier')
@@ -137,13 +118,56 @@ export default function NewBattleHqPage() {
       setIsFounding(sub?.tier === 'founding');
       setBootLoading(false);
     })();
-
     return () => {
       cancelled = true;
     };
   }, [router]);
 
-  // ---------- Slug availability check (debounced) ----------
+  // ---------- Slug availability check (debounced, retry-resilient) ----------
+
+  /**
+   * Run one slug-check attempt. Returns a SlugState result or 'retry' to
+   * indicate the caller should back off and try once more. Aborted requests
+   * return null — caller should ignore.
+   */
+  const attemptSlugCheck = useCallback(
+    async (
+      trimmed: string,
+      signal: AbortSignal
+    ): Promise<SlugState | 'retry' | null> => {
+      try {
+        const res = await fetch(
+          `/api/battle-hq/slug-check?slug=${encodeURIComponent(trimmed)}`,
+          { signal }
+        );
+        if (signal.aborted) return null;
+
+        if (res.status === 429) {
+          return 'retry';
+        }
+
+        if (!res.ok) {
+          // Any other non-OK: fall back to unknown — lets user submit.
+          return { kind: 'unknown' };
+        }
+
+        const data: { available: boolean; reason?: SlugReason } = await res.json();
+        if (signal.aborted) return null;
+
+        if (data.available) return { kind: 'available' };
+        if (data.reason === 'taken') return { kind: 'taken' };
+        if (data.reason) return { kind: 'invalid', reason: data.reason };
+        return { kind: 'unknown' };
+      } catch (err) {
+        if (signal.aborted) return null;
+        if ((err as Error).name === 'AbortError') return null;
+        // Network error — fall back to unknown. User can still submit.
+        return { kind: 'unknown' };
+      }
+    },
+    []
+  );
+
   useEffect(() => {
     // Cancel any pending debounce + inflight request.
     if (slugDebounceRef.current) {
@@ -170,43 +194,37 @@ export default function NewBattleHqPage() {
       return;
     }
 
-// Debounce DB check by 400ms
+    // Debounce DB check
     setSlugState({ kind: 'checking' });
+
     slugDebounceRef.current = setTimeout(async () => {
       const controller = new AbortController();
       slugAbortRef.current = controller;
-      try {
-        const res = await fetch(
-          `/api/battle-hq/slug-check?slug=${encodeURIComponent(trimmed)}`,
-          { signal: controller.signal }
-        );
-        // If this request was aborted between send and response, ignore everything.
-        if (controller.signal.aborted) return;
-        if (!res.ok) {
-          setSlugState({ kind: 'error' });
-          return;
-        }
-        const data: { available: boolean; reason?: SlugReason } = await res.json();
-        // Re-check abort after the JSON parse — parse can race too.
-        if (controller.signal.aborted) return;
-        if (data.available) {
-          setSlugState({ kind: 'available' });
-        } else if (data.reason === 'taken') {
-          setSlugState({ kind: 'taken' });
-        } else if (data.reason) {
-          setSlugState({ kind: 'invalid', reason: data.reason });
-        } else {
-          setSlugState({ kind: 'error' });
-        }
-      } catch (err) {
-        // Ignore any error if the controller was aborted — the next keystroke will
-        // kick off a fresh check. Covers AbortError (DOMException) AND the TypeError
-        // some browser/network combos throw when aborting mid-flight.
-        if (controller.signal.aborted) return;
-        if ((err as Error).name === 'AbortError') return;
-        setSlugState({ kind: 'error' });
+
+      // First attempt
+      const first = await attemptSlugCheck(trimmed, controller.signal);
+      if (controller.signal.aborted || first === null) return;
+
+      if (first !== 'retry') {
+        setSlugState(first);
+        return;
       }
-    }, 400);
+
+      // 429 — one silent retry after backoff. User should never see this.
+      await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+      if (controller.signal.aborted) return;
+
+      const second = await attemptSlugCheck(trimmed, controller.signal);
+      if (controller.signal.aborted || second === null) return;
+
+      // If second attempt also returns 'retry', give up and let user submit.
+      // Create route is the final authority — no point nagging them further.
+      if (second === 'retry') {
+        setSlugState({ kind: 'unknown' });
+        return;
+      }
+      setSlugState(second);
+    }, DEBOUNCE_MS);
 
     return () => {
       if (slugDebounceRef.current) {
@@ -214,15 +232,26 @@ export default function NewBattleHqPage() {
         slugDebounceRef.current = null;
       }
     };
-  }, [slug]);
+  }, [slug, attemptSlugCheck]);
 
   // ---------- Derived: is form submittable? ----------
+  // IMPORTANT: submission is allowed when slug state is 'available' OR
+  // 'unknown'. The 'unknown' state means our preflight couldn't verify, but
+  // the create route will make the final call. We never trap the user just
+  // because our check fritzed.
   const canSubmit = useMemo(() => {
     if (submitting) return false;
     if (!allianceTag.trim()) return false;
     if (!server.trim()) return false;
     if (!slug.trim()) return false;
-    if (slugState.kind !== 'available') return false;
+
+    // Block only on states we KNOW are bad.
+    if (slugState.kind === 'invalid') return false;
+    if (slugState.kind === 'taken') return false;
+    if (slugState.kind === 'checking') return false;
+    if (slugState.kind === 'idle') return false;
+
+    // 'available' and 'unknown' both proceed — let the server decide.
     return true;
   }, [submitting, allianceTag, server, slug, slugState]);
 
@@ -250,7 +279,6 @@ export default function NewBattleHqPage() {
           }),
         });
 
-        // ---- Error handling per create/route.ts contract ----
         if (res.status === 429) {
           const body = await res.json().catch(() => ({}));
           setSubmitError(
@@ -274,8 +302,10 @@ export default function NewBattleHqPage() {
 
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
+
           if (body?.error === 'invalid_slug' && body?.reason) {
-            // Slug became taken between check and submit, or client-side validation drifted.
+            // Slug is actually taken, or client-side validation drifted.
+            // This is the create route being authoritative — sync our UI.
             setSlugState({
               kind: body.reason === 'taken' ? 'taken' : 'invalid',
               reason: body.reason,
@@ -283,15 +313,17 @@ export default function NewBattleHqPage() {
             setSubmitError(slugReasonCopy(body.reason));
             return;
           }
+
           if (body?.error === 'missing_field') {
             setSubmitError(`Missing required field: ${body.field ?? 'unknown'}.`);
             return;
           }
+
           setSubmitError('Something went wrong creating the Battle HQ. Try again.');
           return;
         }
 
-        // ---- Success ----
+        // Success
         const data: { id: string; slug: string } = await res.json();
         router.push(`/battle-hq/${data.id}/manage`);
       } catch {
@@ -423,7 +455,7 @@ export default function NewBattleHqPage() {
               inputMode="numeric"
             />
             <p className="text-[11px] text-zinc-500 mt-1">
-              Your current server number. Can't be changed later.
+              Your current server number. Can&apos;t be changed later.
             </p>
           </div>
 
@@ -469,9 +501,9 @@ export default function NewBattleHqPage() {
                     Invalid
                   </span>
                 )}
-                {slugState.kind === 'error' && (
-                  <span className="text-[10px] font-mono text-zinc-500 tracking-widest uppercase">
-                    —
+                {slugState.kind === 'unknown' && (
+                  <span className="text-[10px] font-mono text-amber-400 tracking-widest uppercase">
+                    Ready
                   </span>
                 )}
               </div>
@@ -495,14 +527,18 @@ export default function NewBattleHqPage() {
               {slugState.kind === 'taken' && (
                 <p className="text-[11px] text-red-400">{slugReasonCopy('taken')}</p>
               )}
-              {slugState.kind === 'error' && (
-                <p className="text-[11px] text-zinc-500">
-                  Couldn't check availability. Try again in a moment.
+              {slugState.kind === 'unknown' && previewSlug && (
+                <p className="text-[11px] font-mono text-zinc-500">
+                  Invite link:{' '}
+                  <span className="text-amber-400">
+                    lastwarsurvivalbuddy.com/cc/{previewSlug}
+                  </span>
+                  <span className="text-zinc-600"> — we&apos;ll confirm on create.</span>
                 </p>
               )}
               {slugState.kind === 'idle' && (
                 <p className="text-[11px] text-zinc-500">
-                  3–30 characters. Letters, numbers, and dashes only. Permanent — can't be changed.
+                  3–30 characters. Letters, numbers, and dashes only. Permanent — can&apos;t be changed.
                 </p>
               )}
             </div>
