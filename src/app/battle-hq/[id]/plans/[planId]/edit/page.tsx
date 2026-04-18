@@ -1,16 +1,15 @@
 'use client';
 
 // src/app/battle-hq/[id]/plans/[planId]/edit/page.tsx
-// Battle HQ V1 — Battle Plan Editor.
+// Battle HQ V1 — Battle Plan Editor. COMPLETE.
 // Creator + editor only. Viewers bounced.
 //
-// Sections shipped:
+// Sections:
 //   1. Duplicate banner (if parent_plan_id)
 //   2. Metadata (name, war type, scheduled_label, comms_channel)
-//   3. Battle map upload + AnnotationCanvas embed   ← File 4
+//   3. Battle map upload + AnnotationCanvas embed
 //   4. Rich text (orders, brief, intel)
-//
-// Remaining: action bar (Save Draft / Publish / Archive / Delete)
+//   5. Action bar (Save Draft / Publish / Archive / Unarchive / Delete)  ← File 5
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -70,12 +69,14 @@ type MetaFieldKey = 'name' | 'war_type' | 'scheduled_label' | 'comms_channel';
 type RichFieldKey = 'orders' | 'brief' | 'intel';
 type AnyFieldKey = MetaFieldKey | RichFieldKey;
 
+type PlanAction = 'publish' | 'archive' | 'unarchive' | 'delete' | null;
+
 // ---------- Constants ----------
 
 const MAPS_BUCKET = 'battle-hq-maps';
-const SIGNED_URL_SECONDS = 60 * 60; // 1 hour
+const SIGNED_URL_SECONDS = 60 * 60;
 const ANNOTATION_SAVE_DEBOUNCE_MS = 1500;
-const MAP_MAX_BYTES = 10 * 1024 * 1024; // 10 MB
+const MAP_MAX_BYTES = 10 * 1024 * 1024;
 const MAP_ALLOWED_MIMES = ['image/png', 'image/jpeg', 'image/webp'];
 
 const WAR_TYPE_OPTIONS: { value: WarType; label: string }[] = [
@@ -192,6 +193,12 @@ export default function BattlePlanEditorPage() {
   const annotationsSavedTimerRef = useRef<number | null>(null);
   const annotationsInFlightRef = useRef(false);
   const annotationsPendingRef = useRef<AnnotationsJson | null>(null);
+  const latestAnnotationsRef = useRef<AnnotationsJson | null>(null);
+
+  // --- Action bar state ---
+  const [pendingAction, setPendingAction] = useState<PlanAction>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
 
   // Ref mirrors
   const planRef = useRef<BattlePlan | null>(null);
@@ -313,8 +320,8 @@ export default function BattlePlanEditorPage() {
         brief: planData.brief ?? '',
         intel: planData.intel ?? '',
       });
+      latestAnnotationsRef.current = planData.map_annotations_json ?? null;
 
-      // Parent name for duplicate banner
       if (planData.parent_plan_id) {
         try {
           const parentRes = await fetch(
@@ -339,7 +346,7 @@ export default function BattlePlanEditorPage() {
     };
   }, [hqId, planId, router]);
 
-  // Generate signed URL whenever plan.map_image_url changes
+  // Signed URL
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -370,7 +377,7 @@ export default function BattlePlanEditorPage() {
     };
   }, [plan?.map_image_url]);
 
-  // Cleanup all timers on unmount
+  // Cleanup timers
   useEffect(() => {
     const timers = savedTimerRef.current;
     return () => {
@@ -559,11 +566,11 @@ export default function BattlePlanEditorPage() {
             ? ({
                 ...prev,
                 map_image_url: newPath,
-                // Fresh map → clear stale annotations from the previous image
                 map_annotations_json: null,
               } as BattlePlan)
             : prev
         );
+        latestAnnotationsRef.current = null;
       } catch (err) {
         setMapError(
           err instanceof Error ? err.message : 'Network error during upload.'
@@ -578,7 +585,6 @@ export default function BattlePlanEditorPage() {
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) uploadMap(file);
-    // Reset so selecting the same file twice still fires change
     if (e.target) e.target.value = '';
   };
 
@@ -595,7 +601,6 @@ export default function BattlePlanEditorPage() {
     setMapRemoving(true);
     setMapError(null);
     try {
-      // Clear annotations first (null is explicit clear)
       await fetch(
         `/api/battle-hq/${hqId}/plans/${planId}/annotations`,
         {
@@ -608,7 +613,6 @@ export default function BattlePlanEditorPage() {
         }
       );
 
-      // Then null the map_image_url via PATCH
       const res = await fetch(`/api/battle-hq/${hqId}/plans/${planId}`, {
         method: 'PATCH',
         headers: {
@@ -617,8 +621,6 @@ export default function BattlePlanEditorPage() {
         },
         body: JSON.stringify({ map_image_url: null }),
       });
-      // Note: PATCH route allowlist may not include map_image_url. We still
-      // clear locally for UX — the next upload overwrites the row anyway.
       if (!res.ok) {
         console.warn(
           '[map remove] PATCH map_image_url=null returned',
@@ -634,6 +636,7 @@ export default function BattlePlanEditorPage() {
             } as BattlePlan)
           : prev
       );
+      latestAnnotationsRef.current = null;
     } catch (err) {
       setMapError(
         err instanceof Error ? err.message : 'Network error removing map.'
@@ -643,14 +646,13 @@ export default function BattlePlanEditorPage() {
     }
   }, [hqId, planId]);
 
-  // ---------- Annotations save (debounced + concurrency-safe) ----------
+  // ---------- Annotations save ----------
 
   const flushAnnotationsSave = useCallback(
     async (annotations: AnnotationsJson): Promise<void> => {
       const token = tokenRef.current;
       if (!token) return;
 
-      // If one is already in flight, stash this as the pending next write.
       if (annotationsInFlightRef.current) {
         annotationsPendingRef.current = annotations;
         return;
@@ -700,7 +702,6 @@ export default function BattlePlanEditorPage() {
         );
       } finally {
         annotationsInFlightRef.current = false;
-        // Drain queue — if another change came in during the flight, flush it now.
         const pending = annotationsPendingRef.current;
         if (pending) {
           annotationsPendingRef.current = null;
@@ -713,6 +714,7 @@ export default function BattlePlanEditorPage() {
 
   const handleAnnotationsChange = useCallback(
     (next: AnnotationsJson) => {
+      latestAnnotationsRef.current = next;
       setAnnotationsSaveState('saving');
       setAnnotationsSaveMessage('');
 
@@ -724,17 +726,157 @@ export default function BattlePlanEditorPage() {
         flushAnnotationsSave(next);
       }, ANNOTATION_SAVE_DEBOUNCE_MS);
 
-      // Safety net: if user closes tab before debounce fires, flush sync.
-      // Re-register every call so the latest annotations are captured.
       const beforeUnload = () => {
-        // navigator.sendBeacon would be ideal but our route needs auth headers.
-        // Best-effort async flush; modern browsers give us ~a second.
         flushAnnotationsSave(next);
       };
       window.addEventListener('beforeunload', beforeUnload, { once: true });
     },
     [flushAnnotationsSave]
   );
+
+  // Force-flush pending debounced annotations immediately
+  const forceFlushAnnotations = useCallback(async () => {
+    if (annotationsDebounceRef.current !== null) {
+      window.clearTimeout(annotationsDebounceRef.current);
+      annotationsDebounceRef.current = null;
+      if (latestAnnotationsRef.current !== null) {
+        await flushAnnotationsSave(latestAnnotationsRef.current);
+      }
+    }
+    // If a save is in flight, wait briefly for it to resolve
+    let waited = 0;
+    while (annotationsInFlightRef.current && waited < 3000) {
+      await new Promise((r) => setTimeout(r, 100));
+      waited += 100;
+    }
+  }, [flushAnnotationsSave]);
+
+  // ---------- Action bar ----------
+
+  const runPlanAction = useCallback(
+    async (
+      action: PlanAction,
+      method: 'POST' | 'DELETE',
+      subpath: string | null
+    ) => {
+      const token = tokenRef.current;
+      if (!token || !action) return;
+
+      setActionError(null);
+      setActionNotice(null);
+      setPendingAction(action);
+
+      try {
+        // Flush any pending annotations before state transitions
+        await forceFlushAnnotations();
+
+        const path = subpath
+          ? `/api/battle-hq/${hqId}/plans/${planId}/${subpath}`
+          : `/api/battle-hq/${hqId}/plans/${planId}`;
+        const res = await fetch(path, {
+          method,
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) {
+          const text = await res.text().catch(() => '');
+          setActionError(
+            `Action failed (${res.status})${text ? `: ${text.slice(0, 160)}` : ''}`
+          );
+          return;
+        }
+
+        if (action === 'delete') {
+          // Bounce to Command Deck — plan is gone from the list
+          router.push(`/battle-hq/${hqId}/manage`);
+          return;
+        }
+
+        // For other actions, re-fetch plan to reflect new status
+        const refetch = await fetch(
+          `/api/battle-hq/${hqId}/plans/${planId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (refetch.ok) {
+          const json = await refetch.json();
+          const refreshed = ((json?.plan ?? json) as BattlePlan | null) ?? null;
+          if (refreshed) setPlan(refreshed);
+        }
+
+        if (action === 'publish') setActionNotice('Published ✓');
+        if (action === 'archive') setActionNotice('Archived ✓');
+        if (action === 'unarchive') setActionNotice('Moved back to live ✓');
+
+        setTimeout(() => setActionNotice(null), 3000);
+      } catch (err) {
+        setActionError(
+          err instanceof Error ? err.message : 'Network error — try again.'
+        );
+      } finally {
+        setPendingAction(null);
+      }
+    },
+    [hqId, planId, router, forceFlushAnnotations]
+  );
+
+  const handleSaveDraft = useCallback(async () => {
+    setActionError(null);
+    setActionNotice(null);
+    setPendingAction('publish'); // reuse pending lock; doesn't matter which key
+    try {
+      await forceFlushAnnotations();
+      setActionNotice('All changes saved ✓');
+      setTimeout(() => setActionNotice(null), 2500);
+    } finally {
+      setPendingAction(null);
+    }
+  }, [forceFlushAnnotations]);
+
+  const handlePublish = useCallback(() => {
+    // Publish guards
+    const d = metaDraftRef.current;
+    const trimmedName = (d.name ?? '').trim();
+    const trimmedSchedule = (d.scheduled_label ?? '').trim();
+    if (!trimmedName || trimmedName === 'Untitled Battle Plan') {
+      setActionError('Give the plan a real name before publishing.');
+      return;
+    }
+    if (!trimmedSchedule) {
+      setActionError(
+        'Set a Scheduled Time before publishing so your alliance knows when to show up.'
+      );
+      return;
+    }
+    if (
+      !window.confirm(
+        'Publish this plan? It becomes visible to all members immediately.'
+      )
+    ) {
+      return;
+    }
+    runPlanAction('publish', 'POST', 'publish');
+  }, [runPlanAction]);
+
+  const handleArchive = useCallback(() => {
+    if (!window.confirm('Archive this plan? It hides from the active list.')) {
+      return;
+    }
+    runPlanAction('archive', 'POST', 'archive');
+  }, [runPlanAction]);
+
+  const handleUnarchive = useCallback(() => {
+    runPlanAction('unarchive', 'POST', 'unarchive');
+  }, [runPlanAction]);
+
+  const handleDelete = useCallback(() => {
+    if (
+      !window.confirm(
+        'Delete this plan?\n\nIt moves to Trash for 30 days, then is permanently removed.'
+      )
+    ) {
+      return;
+    }
+    runPlanAction('delete', 'DELETE', null);
+  }, [runPlanAction]);
 
   // ---------- Render guards ----------
 
@@ -800,6 +942,11 @@ export default function BattlePlanEditorPage() {
       </div>
     </div>
   );
+
+  const busy = pendingAction !== null;
+  const isLive = plan.status === 'published' || plan.status === 'active';
+  const isArchived = plan.status === 'archived';
+  const isDraft = plan.status === 'draft';
 
   // ---------- Render ----------
 
@@ -1033,12 +1180,61 @@ export default function BattlePlanEditorPage() {
         </section>
       </div>
 
-      {/* Action bar placeholder — File 5 */}
+      {/* Action bar */}
       <div className="fixed bottom-0 left-0 right-0 border-t border-zinc-800 bg-zinc-950/95 backdrop-blur z-10">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 text-center">
-          <p className="text-[11px] font-mono text-zinc-500 tracking-wider uppercase">
-            Action Bar · Save Draft · Publish · Archive · Delete
-          </p>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 space-y-2">
+          {(actionError || actionNotice) && (
+            <div
+              className={`text-[11px] font-mono tracking-wider text-center ${
+                actionError ? 'text-red-400' : 'text-green-400'
+              }`}
+            >
+              {actionError ?? actionNotice}
+            </div>
+          )}
+          <div className="flex flex-wrap justify-end gap-2">
+            <button
+              onClick={handleSaveDraft}
+              disabled={busy}
+              className="px-3 py-2 rounded-lg bg-zinc-800 text-zinc-300 border border-zinc-700 text-[11px] font-mono font-bold tracking-widest uppercase hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Save Draft
+            </button>
+            {isDraft && (
+              <button
+                onClick={handlePublish}
+                disabled={busy}
+                className="px-3 py-2 rounded-lg bg-amber-500 text-black text-[11px] font-mono font-bold tracking-widest uppercase hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {pendingAction === 'publish' ? 'Publishing…' : 'Publish'}
+              </button>
+            )}
+            {isLive && (
+              <button
+                onClick={handleArchive}
+                disabled={busy}
+                className="px-3 py-2 rounded-lg bg-zinc-800 text-zinc-300 border border-zinc-700 text-[11px] font-mono font-bold tracking-widest uppercase hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {pendingAction === 'archive' ? 'Archiving…' : 'Archive'}
+              </button>
+            )}
+            {isArchived && (
+              <button
+                onClick={handleUnarchive}
+                disabled={busy}
+                className="px-3 py-2 rounded-lg bg-sky-500/20 text-sky-400 border border-sky-500/40 text-[11px] font-mono font-bold tracking-widest uppercase hover:bg-sky-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {pendingAction === 'unarchive' ? 'Moving…' : 'Unarchive'}
+              </button>
+            )}
+            <button
+              onClick={handleDelete}
+              disabled={busy}
+              className="px-3 py-2 rounded-lg bg-red-950/60 text-red-400 border border-red-900/60 text-[11px] font-mono font-bold tracking-widest uppercase hover:bg-red-900/60 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {pendingAction === 'delete' ? 'Deleting…' : 'Delete'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
