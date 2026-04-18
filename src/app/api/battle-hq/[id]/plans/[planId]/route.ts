@@ -14,20 +14,14 @@
 //   orders          — nullable text
 //   brief           — nullable text
 //   intel           — nullable text
+//   map_image_url   — nullable text (clear-only, null to remove the map;
+//                     uploads still go through /upload-map which writes
+//                     the Storage path server-side)
 //
 // Immutable fields (silently ignored on PATCH):
-//   id, battle_hq_id, created_by_user_id, status, map_image_url,
+//   id, battle_hq_id, created_by_user_id, status,
 //   map_annotations_json, parent_plan_id, created_at, updated_at,
 //   published_at, archived_at, deleted_at
-//
-// Status transitions are NOT handled here — use /publish, /archive,
-// /unarchive, /restore instead. Map updates go through /upload-map
-// and /annotations.
-//
-// Viewer vs editor visibility on GET:
-//   - viewer         → only status in ('published','active','archived') returned; drafts 404
-//   - creator/editor → all non-deleted plans visible; deleted plans 404 to non-creator
-//   - creator        → soft-deleted plans visible (for trash / restore UX)
 
 import { NextRequest, NextResponse } from 'next/server';
 import {
@@ -169,7 +163,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     // Confirm plan exists + is not soft-deleted before allowing edits.
     const { data: existing, error: existingError } = await supabase
       .from('battle_plans')
-      .select('id, status, deleted_at')
+      .select('id, status, deleted_at, map_image_url')
       .eq('id', planId)
       .eq('battle_hq_id', hqId)
       .maybeSingle();
@@ -253,6 +247,24 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     const intel = coerceNullableText(body.intel);
     if (intel !== undefined) updates.intel = intel;
 
+    // map_image_url: clear-only. Only `null` accepted.
+    // Uploads go through /upload-map — we never accept arbitrary paths here
+    // since that would let a caller point at any Storage object they want.
+    if (body.map_image_url !== undefined) {
+      if (body.map_image_url !== null) {
+        return NextResponse.json(
+          {
+            error: 'invalid_field',
+            field: 'map_image_url',
+            message:
+              'map_image_url can only be set to null here. Use /upload-map to upload a new map.',
+          },
+          { status: 400 }
+        );
+      }
+      updates.map_image_url = null;
+    }
+
     if (Object.keys(updates).length === 0) {
       return NextResponse.json(
         { error: 'no_fields_to_update' },
@@ -273,6 +285,25 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     if (updateError || !updated) {
       console.error('[plan PATCH] Update error:', updateError);
       return internalErrorResponse();
+    }
+
+    // If the map was cleared, best-effort-delete the old Storage object so
+    // we don't orphan it. Only fires when we actually cleared — uploads
+    // handle their own cleanup in /upload-map.
+    if (
+      body.map_image_url === null &&
+      existing.map_image_url &&
+      existing.map_image_url.length > 0
+    ) {
+      await supabase.storage
+        .from('battle-hq-maps')
+        .remove([existing.map_image_url])
+        .catch((err) => {
+          console.warn(
+            '[plan PATCH] Orphan map cleanup failed (non-fatal):',
+            err
+          );
+        });
     }
 
     return NextResponse.json({ success: true, plan: updated });
