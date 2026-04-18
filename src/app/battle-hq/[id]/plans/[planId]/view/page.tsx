@@ -1,7 +1,7 @@
 'use client';
 
 // src/app/battle-hq/[id]/plans/[planId]/view/page.tsx
-// Battle HQ V1 — Battle Plan Viewer (read-only).
+// Battle HQ V1.1 — Battle Plan Viewer (read-only).
 // All active members (creator/editor/viewer). Viewers get 404 on drafts
 // from the API itself — we just react to the 404.
 //
@@ -10,7 +10,8 @@
 //   2. Comms channel
 //   3. Annotated map (read-only canvas)
 //   4. Orders · Brief · Intel
-//   5. Pre-war checklist (6 items, per-user state, toggle)
+//   5. Pre-war checklist — dynamic per plan (V1.1), per-user state, toggle.
+//      Disabled items are filtered out entirely (vanish doctrine).
 //   6. Footer attribution
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -22,11 +23,8 @@ import AnnotationCanvas, {
 } from '@/components/battle-hq/AnnotationCanvas';
 
 // ---------- Types ----------
-
 type Role = 'creator' | 'editor' | 'viewer';
-
 type PlanStatus = 'draft' | 'published' | 'active' | 'archived' | 'deleted';
-
 type WarType =
   | 'desert_storm'
   | 'warzone_duel'
@@ -66,21 +64,17 @@ interface BattleHq {
   comms_channel: string | null;
 }
 
-type ChecklistItemKey =
-  | 'troops_maxed'
-  | 'backups_trained'
-  | 'hospital_not_full'
-  | 'teleports_stocked'
-  | 'shields_stocked'
-  | 'stamina_topped';
-
-interface ChecklistRow {
-  item_key: ChecklistItemKey;
-  checked_at: string | null;
+interface ChecklistItem {
+  id: string;
+  battle_plan_id: string;
+  item_key: string;
+  label: string;
+  is_default: boolean;
+  enabled: boolean;
+  sort_order: number;
 }
 
 // ---------- Constants ----------
-
 const MAPS_BUCKET = 'battle-hq-maps';
 const SIGNED_URL_SECONDS = 60 * 60;
 
@@ -101,17 +95,7 @@ const STATUS_BADGE: Record<PlanStatus, string> = {
   deleted: 'bg-red-950/60 text-red-400 border-red-900/60',
 };
 
-const CHECKLIST_ITEMS: { key: ChecklistItemKey; label: string }[] = [
-  { key: 'troops_maxed', label: 'Troops at max capacity' },
-  { key: 'backups_trained', label: 'Backup troops trained and queued' },
-  { key: 'hospital_not_full', label: 'Hospital not full' },
-  { key: 'teleports_stocked', label: 'Teleports stocked (random + advanced)' },
-  { key: 'shields_stocked', label: 'Shields stocked' },
-  { key: 'stamina_topped', label: 'Stamina topped' },
-];
-
 // ---------- Page ----------
-
 export default function BattlePlanViewPage() {
   const router = useRouter();
   const params = useParams<{ id: string; planId: string }>();
@@ -125,19 +109,12 @@ export default function BattlePlanViewPage() {
   const [plan, setPlan] = useState<BattlePlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const [mapSignedUrl, setMapSignedUrl] = useState<string | null>(null);
-  const [checklist, setChecklist] = useState<Record<ChecklistItemKey, boolean>>({
-    troops_maxed: false,
-    backups_trained: false,
-    hospital_not_full: false,
-    teleports_stocked: false,
-    shields_stocked: false,
-    stamina_topped: false,
-  });
-  const [togglingItems, setTogglingItems] = useState<Set<ChecklistItemKey>>(
-    new Set()
-  );
+
+  // Checklist: dynamic per plan
+  const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
+  const [checkedState, setCheckedState] = useState<Record<string, boolean>>({});
+  const [togglingKeys, setTogglingKeys] = useState<Set<string>>(new Set());
   const [checklistError, setChecklistError] = useState<string | null>(null);
 
   const tokenRef = useRef<string | null>(null);
@@ -146,18 +123,20 @@ export default function BattlePlanViewPage() {
   }, [accessToken]);
 
   // ---------- Bootstrap ----------
-
   useEffect(() => {
     if (!hqId || !planId) return;
-    let cancelled = false;
 
+    let cancelled = false;
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (cancelled) return;
       if (!session) {
         router.push('/signin');
         return;
       }
+
       const token = session.access_token;
       const uid = session.user?.id ?? null;
       setAccessToken(token);
@@ -166,6 +145,7 @@ export default function BattlePlanViewPage() {
       // HQ + membership
       let hqData: BattleHq | null = null;
       let roleData: Role | null = null;
+
       try {
         const hqRes = await fetch(`/api/battle-hq/${hqId}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -189,12 +169,14 @@ export default function BattlePlanViewPage() {
         setLoading(false);
         return;
       }
+
       if (cancelled) return;
       if (!hqData || !roleData) {
         setError('Unexpected Battle HQ response.');
         setLoading(false);
         return;
       }
+
       setHq(hqData);
       setRole(roleData);
 
@@ -223,15 +205,39 @@ export default function BattlePlanViewPage() {
         setLoading(false);
         return;
       }
+
       if (cancelled) return;
       if (!planData?.id) {
         setError('Unexpected battle plan response.');
         setLoading(false);
         return;
       }
+
       setPlan(planData);
 
-      // Checklist — RLS enforces user only sees their own rows
+      // Checklist items (definitions) — from API so auto-seeding of defaults
+      // runs on first access. Filter to enabled-only for the viewer.
+      try {
+        const itemsRes = await fetch(
+          `/api/battle-hq/${hqId}/plans/${planId}/checklist-items`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (!cancelled && itemsRes.ok) {
+          const json = await itemsRes.json();
+          const allItems = Array.isArray(json?.items)
+            ? (json.items as ChecklistItem[])
+            : [];
+          // Vanish doctrine: disabled items do not appear for viewers
+          const enabledItems = allItems
+            .filter((i) => i.enabled)
+            .sort((a, b) => a.sort_order - b.sort_order);
+          setChecklistItems(enabledItems);
+        }
+      } catch {
+        // Non-fatal — checklist section will just render empty
+      }
+
+      // Checklist per-user state — RLS enforces user only sees their own rows
       if (uid) {
         try {
           const { data: rows } = await supabase
@@ -240,20 +246,11 @@ export default function BattlePlanViewPage() {
             .eq('battle_plan_id', planId)
             .eq('user_id', uid);
           if (!cancelled && Array.isArray(rows)) {
-            const next: Record<ChecklistItemKey, boolean> = {
-              troops_maxed: false,
-              backups_trained: false,
-              hospital_not_full: false,
-              teleports_stocked: false,
-              shields_stocked: false,
-              stamina_topped: false,
-            };
-            for (const r of rows as ChecklistRow[]) {
-              if (r.item_key in next) {
-                next[r.item_key] = r.checked_at !== null;
-              }
+            const next: Record<string, boolean> = {};
+            for (const r of rows as { item_key: string; checked_at: string | null }[]) {
+              next[r.item_key] = r.checked_at !== null;
             }
-            setChecklist(next);
+            setCheckedState(next);
           }
         } catch {
           // Non-fatal — UI starts all unchecked
@@ -297,20 +294,19 @@ export default function BattlePlanViewPage() {
   }, [plan?.map_image_url]);
 
   // ---------- Checklist toggle ----------
-
   const toggleItem = useCallback(
-    async (key: ChecklistItemKey) => {
+    async (itemKey: string) => {
       const token = tokenRef.current;
       if (!token) return;
 
-      const prev = checklist[key];
+      const prev = checkedState[itemKey] ?? false;
       const next = !prev;
 
       // Optimistic update
-      setChecklist((c) => ({ ...c, [key]: next }));
-      setTogglingItems((s) => {
+      setCheckedState((c) => ({ ...c, [itemKey]: next }));
+      setTogglingKeys((s) => {
         const n = new Set(s);
-        n.add(key);
+        n.add(itemKey);
         return n;
       });
       setChecklistError(null);
@@ -324,35 +320,35 @@ export default function BattlePlanViewPage() {
               'Content-Type': 'application/json',
               Authorization: `Bearer ${token}`,
             },
-            body: JSON.stringify({ item_key: key, checked: next }),
+            body: JSON.stringify({ item_key: itemKey, checked: next }),
           }
         );
+
         if (!res.ok) {
           // Rollback optimistic update
-          setChecklist((c) => ({ ...c, [key]: prev }));
+          setCheckedState((c) => ({ ...c, [itemKey]: prev }));
           const text = await res.text().catch(() => '');
           setChecklistError(
             `Couldn't save (${res.status})${text ? `: ${text.slice(0, 80)}` : ''}`
           );
         }
       } catch (err) {
-        setChecklist((c) => ({ ...c, [key]: prev }));
+        setCheckedState((c) => ({ ...c, [itemKey]: prev }));
         setChecklistError(
           err instanceof Error ? err.message : 'Network error — try again.'
         );
       } finally {
-        setTogglingItems((s) => {
+        setTogglingKeys((s) => {
           const n = new Set(s);
-          n.delete(key);
+          n.delete(itemKey);
           return n;
         });
       }
     },
-    [checklist, hqId, planId]
+    [checkedState, hqId, planId]
   );
 
   // ---------- Render guards ----------
-
   if (loading) {
     return (
       <div className="min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center">
@@ -390,11 +386,11 @@ export default function BattlePlanViewPage() {
     null;
 
   const isPrivileged = role === 'creator' || role === 'editor';
-  const checkedCount =
-    Object.values(checklist).filter(Boolean).length;
+  const checkedCount = checklistItems.filter(
+    (i) => checkedState[i.item_key]
+  ).length;
 
   // ---------- Render ----------
-
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
       {/* Header */}
@@ -470,7 +466,8 @@ export default function BattlePlanViewPage() {
               Comms Channel
             </div>
             <div className="text-sm text-white">{effectiveComms}</div>
-            {plan.comms_channel && hq.comms_channel &&
+            {plan.comms_channel &&
+              hq.comms_channel &&
               plan.comms_channel !== hq.comms_channel && (
                 <div className="text-[11px] font-mono text-zinc-500 tracking-wider mt-2">
                   Plan override · HQ default: {hq.comms_channel}
@@ -559,73 +556,79 @@ export default function BattlePlanViewPage() {
           </div>
         )}
 
-        {/* Pre-war checklist */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-          <div className="flex items-center justify-between gap-3 mb-3">
-            <div className="text-[10px] font-mono text-amber-500 tracking-widest uppercase">
-              Pre-War Checklist
+        {/* Pre-war checklist — dynamic items from DB, vanish disabled */}
+        {checklistItems.length > 0 && (
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <div className="text-[10px] font-mono text-amber-500 tracking-widest uppercase">
+                Pre-War Checklist
+              </div>
+              <div className="text-[10px] font-mono text-zinc-500 tracking-widest uppercase">
+                {checkedCount} / {checklistItems.length}
+              </div>
             </div>
-            <div className="text-[10px] font-mono text-zinc-500 tracking-widest uppercase">
-              {checkedCount} / {CHECKLIST_ITEMS.length}
+            <div className="text-[11px] font-mono text-zinc-500 tracking-wider mb-4 leading-relaxed">
+              Your own pre-war check. Private to you — no one else sees your state.
             </div>
-          </div>
-          <div className="text-[11px] font-mono text-zinc-500 tracking-wider mb-4 leading-relaxed">
-            Your own pre-war check. Private to you — no one else sees your state.
-          </div>
-          {checklistError && (
-            <div className="mb-3 bg-red-950/60 border border-red-900/60 rounded-xl px-3 py-2 text-xs text-red-300">
-              {checklistError}
-            </div>
-          )}
-          <div className="space-y-2">
-            {CHECKLIST_ITEMS.map((item) => {
-              const checked = checklist[item.key];
-              const busy = togglingItems.has(item.key);
-              return (
-                <button
-                  key={item.key}
-                  onClick={() => toggleItem(item.key)}
-                  disabled={busy}
-                  className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-colors text-left disabled:opacity-60 disabled:cursor-not-allowed ${
-                    checked
-                      ? 'bg-green-500/10 border-green-500/40 hover:bg-green-500/15'
-                      : 'bg-zinc-950 border-zinc-800 hover:bg-zinc-900 hover:border-zinc-700'
-                  }`}
-                >
-                  <div
-                    className={`shrink-0 w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors ${
+
+            {checklistError && (
+              <div className="mb-3 bg-red-950/60 border border-red-900/60 rounded-xl px-3 py-2 text-xs text-red-300">
+                {checklistError}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              {checklistItems.map((item) => {
+                const checked = checkedState[item.item_key] ?? false;
+                const busy = togglingKeys.has(item.item_key);
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => toggleItem(item.item_key)}
+                    disabled={busy}
+                    className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-colors text-left disabled:opacity-60 disabled:cursor-not-allowed ${
                       checked
-                        ? 'bg-green-500 border-green-500'
-                        : 'border-zinc-600'
+                        ? 'bg-green-500/10 border-green-500/40 hover:bg-green-500/15'
+                        : 'bg-zinc-950 border-zinc-800 hover:bg-zinc-900 hover:border-zinc-700'
                     }`}
                   >
-                    {checked && (
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="#000"
-                        strokeWidth="3"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                    )}
-                  </div>
-                  <span
-                    className={`text-sm ${
-                      checked ? 'text-green-300 line-through' : 'text-zinc-200'
-                    }`}
-                  >
-                    {item.label}
-                  </span>
-                </button>
-              );
-            })}
+                    <div
+                      className={`shrink-0 w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors ${
+                        checked
+                          ? 'bg-green-500 border-green-500'
+                          : 'border-zinc-600'
+                      }`}
+                    >
+                      {checked && (
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#000"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      )}
+                    </div>
+                    <span
+                      className={`text-sm ${
+                        checked
+                          ? 'text-green-300 line-through'
+                          : 'text-zinc-200'
+                      }`}
+                    >
+                      {item.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Footer */}
         <div className="pt-4 pb-8 text-center">

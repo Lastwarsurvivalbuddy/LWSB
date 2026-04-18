@@ -1,24 +1,31 @@
 // src/app/api/battle-hq/[id]/plans/[planId]/duplicate/route.ts
-// Battle HQ V1 — Duplicate a Battle Plan as a new Draft.
+// Battle HQ V1.1 — Duplicate a Battle Plan as a new Draft.
 //
 // POST /api/battle-hq/[id]/plans/[planId]/duplicate
 //
 // Creates a new battle_plans row copying:
-//   - name (with " (copy)" suffix)
-//   - war_type
-//   - orders, brief, intel
-//   - comms_channel
-//   - map_image_url        (re-references same Storage object — no re-upload)
-//   - map_annotations_json (structured overlay is cloned directly)
+// - name (with " (copy)" suffix)
+// - war_type
+// - orders, brief, intel
+// - comms_channel
+// - map_image_url (re-references same Storage object — no re-upload)
+// - map_annotations_json (structured overlay is cloned directly)
+//
+// Also copies:
+// - All battle_plan_checklist_items rows (labels, defaults, enabled flags,
+//   sort_order). Custom items get fresh UUIDs for their item_key so they
+//   stay unique per plan. Default items keep their fixed item_keys
+//   (troops_maxed, etc). Per-user toggle state does NOT carry over —
+//   fresh plan means fresh check state for everyone.
 //
 // Clears:
-//   - scheduled_at → NULL (forces conscious re-entry before publishing)
-//   - status → 'draft'
-//   - published_at, archived_at, deleted_at → NULL
+// - scheduled_at → NULL (forces conscious re-entry before publishing)
+// - status → 'draft'
+// - published_at, archived_at, deleted_at → NULL
 //
 // Sets:
-//   - parent_plan_id → source plan id (audit trail; banner copy in editor)
-//   - created_by_user_id → current user (the duplicator, not the original author)
+// - parent_plan_id → source plan id (audit trail; banner copy in editor)
+// - created_by_user_id → current user (the duplicator, not the original author)
 //
 // Permission: creator or editor.
 //
@@ -27,7 +34,7 @@
 //
 // Spec copy for the editor banner (Section 10):
 //   "This is a copy of [original name]. Edit freely — changes here do not
-//    affect the original. Set the new scheduled time before publishing."
+//   affect the original. Set the new scheduled time before publishing."
 //
 // Responses:
 //   201 { id, parent_plan_id }
@@ -53,6 +60,17 @@ interface RouteContext {
 }
 
 const COPY_SUFFIX = ' (copy)';
+
+// Fixed default item_keys — preserved across duplicates so default items
+// stay "the same item" conceptually. Custom items get new UUIDs.
+const DEFAULT_ITEM_KEYS = new Set<string>([
+  'troops_maxed',
+  'backups_trained',
+  'hospital_not_full',
+  'teleports_stocked',
+  'shields_stocked',
+  'stamina_topped',
+]);
 
 export async function POST(req: NextRequest, context: RouteContext) {
   try {
@@ -89,7 +107,6 @@ export async function POST(req: NextRequest, context: RouteContext) {
       return internalErrorResponse();
     }
     if (!source) return notFoundResponse();
-
     if (source.status === 'deleted' || source.deleted_at) {
       return NextResponse.json(
         {
@@ -126,6 +143,52 @@ export async function POST(req: NextRequest, context: RouteContext) {
     if (insertError || !created) {
       console.error('[plan duplicate] Insert error:', insertError);
       return internalErrorResponse();
+    }
+
+    // Copy checklist items from source → new plan. Best-effort; if this fails
+    // the new plan just falls back to auto-seeded defaults on first access.
+    try {
+      const { data: sourceItems, error: itemsError } = await supabase
+        .from('battle_plan_checklist_items')
+        .select('item_key, label, is_default, enabled, sort_order')
+        .eq('battle_plan_id', source.id)
+        .order('sort_order', { ascending: true });
+
+      if (itemsError) {
+        console.warn(
+          '[plan duplicate] Source items lookup failed (non-fatal):',
+          itemsError
+        );
+      } else if (sourceItems && sourceItems.length > 0) {
+        const newItems = sourceItems.map((item) => ({
+          battle_plan_id: created.id,
+          // Defaults keep their fixed keys; customs get fresh UUIDs
+          item_key: DEFAULT_ITEM_KEYS.has(item.item_key)
+            ? item.item_key
+            : crypto.randomUUID(),
+          label: item.label,
+          is_default: item.is_default,
+          enabled: item.enabled,
+          sort_order: item.sort_order,
+          created_by_user_id: userId,
+        }));
+
+        const { error: copyError } = await supabase
+          .from('battle_plan_checklist_items')
+          .insert(newItems);
+
+        if (copyError) {
+          console.warn(
+            '[plan duplicate] Checklist items copy failed (non-fatal):',
+            copyError
+          );
+        }
+      }
+    } catch (err) {
+      console.warn(
+        '[plan duplicate] Checklist items copy threw (non-fatal):',
+        err
+      );
     }
 
     return NextResponse.json(

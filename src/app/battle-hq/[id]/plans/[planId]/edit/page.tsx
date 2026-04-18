@@ -1,7 +1,7 @@
 'use client';
 
 // src/app/battle-hq/[id]/plans/[planId]/edit/page.tsx
-// Battle HQ V1 — Battle Plan Editor. COMPLETE.
+// Battle HQ V1.1 — Battle Plan Editor. COMPLETE.
 // Creator + editor only. Viewers bounced.
 //
 // Sections:
@@ -9,7 +9,8 @@
 //   2. Metadata (name, war type, scheduled_label, comms_channel)
 //   3. Battle map upload + AnnotationCanvas embed
 //   4. Rich text (orders, brief, intel)
-//   5. Action bar (Save Draft / Publish / Archive / Unarchive / Delete)  ← File 5
+//   5. Pre-war checklist editor (V1.1 — add/edit/reorder/disable)
+//   6. Action bar (Save Draft / Publish / Archive / Unarchive / Delete)
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -18,13 +19,11 @@ import { supabase } from '@/lib/supabase';
 import AnnotationCanvas, {
   type AnnotationsJson,
 } from '@/components/battle-hq/AnnotationCanvas';
+import ChecklistEditor from '@/components/battle-hq/ChecklistEditor';
 
 // ---------- Types ----------
-
 type Role = 'creator' | 'editor' | 'viewer';
-
 export type PlanStatus = 'draft' | 'published' | 'active' | 'archived' | 'deleted';
-
 export type WarType =
   | 'desert_storm'
   | 'warzone_duel'
@@ -64,15 +63,12 @@ interface BattleHq {
 }
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
-
 type MetaFieldKey = 'name' | 'war_type' | 'scheduled_label' | 'comms_channel';
 type RichFieldKey = 'orders' | 'brief' | 'intel';
 type AnyFieldKey = MetaFieldKey | RichFieldKey;
-
 type PlanAction = 'publish' | 'archive' | 'unarchive' | 'delete' | null;
 
 // ---------- Constants ----------
-
 const MAPS_BUCKET = 'battle-hq-maps';
 const SIGNED_URL_SECONDS = 60 * 60;
 const ANNOTATION_SAVE_DEBOUNCE_MS = 1500;
@@ -123,7 +119,6 @@ const ALL_FIELD_KEYS: AnyFieldKey[] = [
 ];
 
 // ---------- Page ----------
-
 export default function BattlePlanEditorPage() {
   const router = useRouter();
   const params = useParams<{ id: string; planId: string }>();
@@ -149,7 +144,6 @@ export default function BattlePlanEditorPage() {
     scheduled_label: '',
     comms_channel: '',
   });
-
   const [richDraft, setRichDraft] = useState<{
     orders: string;
     brief: string;
@@ -205,41 +199,41 @@ export default function BattlePlanEditorPage() {
   useEffect(() => {
     planRef.current = plan;
   }, [plan]);
-
   const tokenRef = useRef<string | null>(null);
   useEffect(() => {
     tokenRef.current = accessToken;
   }, [accessToken]);
-
   const metaDraftRef = useRef(metaDraft);
   useEffect(() => {
     metaDraftRef.current = metaDraft;
   }, [metaDraft]);
-
   const richDraftRef = useRef(richDraft);
   useEffect(() => {
     richDraftRef.current = richDraft;
   }, [richDraft]);
 
   // ---------- Bootstrap ----------
-
   useEffect(() => {
     if (!hqId || !planId) return;
-    let cancelled = false;
 
+    let cancelled = false;
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (cancelled) return;
       if (!session) {
         router.push('/signin');
         return;
       }
+
       const token = session.access_token;
       setAccessToken(token);
 
       // HQ + membership
       let hqData: BattleHq | null = null;
       let roleData: Role | null = null;
+
       try {
         const hqRes = await fetch(`/api/battle-hq/${hqId}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -263,17 +257,21 @@ export default function BattlePlanEditorPage() {
         setLoading(false);
         return;
       }
+
       if (cancelled) return;
+
       if (!hqData || !roleData) {
         setError('Unexpected Battle HQ response.');
         setLoading(false);
         return;
       }
+
       if (roleData === 'viewer') {
         setError('Viewers cannot edit battle plans.');
         setLoading(false);
         return;
       }
+
       setHq(hqData);
       setRole(roleData);
 
@@ -302,12 +300,15 @@ export default function BattlePlanEditorPage() {
         setLoading(false);
         return;
       }
+
       if (cancelled) return;
+
       if (!planData?.id) {
         setError('Unexpected battle plan response.');
         setLoading(false);
         return;
       }
+
       setPlan(planData);
       setMetaDraft({
         name: planData.name ?? '',
@@ -395,7 +396,6 @@ export default function BattlePlanEditorPage() {
   }, []);
 
   // ---------- Save helpers: metadata + rich text ----------
-
   const markSaveState = useCallback(
     (field: AnyFieldKey, state: SaveState, message = '') => {
       setSaveStates((prev) => ({ ...prev, [field]: state }));
@@ -425,7 +425,6 @@ export default function BattlePlanEditorPage() {
         | undefined;
 
       const normalize = (v: string | null | undefined) => (v ?? '').trim();
-
       if (
         field !== 'war_type' &&
         normalize(draftValue) === normalize(currentValue)
@@ -449,6 +448,7 @@ export default function BattlePlanEditorPage() {
       }
 
       markSaveState(field, 'saving');
+
       try {
         const res = await fetch(
           `/api/battle-hq/${hqId}/plans/${planId}`,
@@ -470,10 +470,12 @@ export default function BattlePlanEditorPage() {
           );
           return;
         }
+
         setPlan((prev) =>
           prev ? ({ ...prev, [field]: toSend } as BattlePlan) : prev
         );
         markSaveState(field, 'saved', 'Saved ✓');
+
         const existing = savedTimerRef.current[field];
         if (existing !== null) window.clearTimeout(existing);
         savedTimerRef.current[field] = window.setTimeout(() => {
@@ -512,7 +514,6 @@ export default function BattlePlanEditorPage() {
   };
 
   // ---------- Map upload ----------
-
   const openFilePicker = () => {
     if (mapInputRef.current) mapInputRef.current.click();
   };
@@ -523,6 +524,7 @@ export default function BattlePlanEditorPage() {
       if (!token) return;
 
       setMapError(null);
+
       if (!MAP_ALLOWED_MIMES.includes(file.type)) {
         setMapError('Battle maps must be PNG, JPEG, or WebP.');
         return;
@@ -598,6 +600,7 @@ export default function BattlePlanEditorPage() {
     ) {
       return;
     }
+
     setMapRemoving(true);
     setMapError(null);
     try {
@@ -627,6 +630,7 @@ export default function BattlePlanEditorPage() {
           res.status
         );
       }
+
       setPlan((prev) =>
         prev
           ? ({
@@ -647,21 +651,17 @@ export default function BattlePlanEditorPage() {
   }, [hqId, planId]);
 
   // ---------- Annotations save ----------
-
   const flushAnnotationsSave = useCallback(
     async (annotations: AnnotationsJson): Promise<void> => {
       const token = tokenRef.current;
       if (!token) return;
-
       if (annotationsInFlightRef.current) {
         annotationsPendingRef.current = annotations;
         return;
       }
-
       annotationsInFlightRef.current = true;
       setAnnotationsSaveState('saving');
       setAnnotationsSaveMessage('');
-
       try {
         const res = await fetch(
           `/api/battle-hq/${hqId}/plans/${planId}/annotations`,
@@ -752,7 +752,6 @@ export default function BattlePlanEditorPage() {
   }, [flushAnnotationsSave]);
 
   // ---------- Action bar ----------
-
   const runPlanAction = useCallback(
     async (
       action: PlanAction,
@@ -773,6 +772,7 @@ export default function BattlePlanEditorPage() {
         const path = subpath
           ? `/api/battle-hq/${hqId}/plans/${planId}/${subpath}`
           : `/api/battle-hq/${hqId}/plans/${planId}`;
+
         const res = await fetch(path, {
           method,
           headers: { Authorization: `Bearer ${token}` },
@@ -798,7 +798,8 @@ export default function BattlePlanEditorPage() {
         );
         if (refetch.ok) {
           const json = await refetch.json();
-          const refreshed = ((json?.plan ?? json) as BattlePlan | null) ?? null;
+          const refreshed =
+            ((json?.plan ?? json) as BattlePlan | null) ?? null;
           if (refreshed) setPlan(refreshed);
         }
 
@@ -836,6 +837,7 @@ export default function BattlePlanEditorPage() {
     const d = metaDraftRef.current;
     const trimmedName = (d.name ?? '').trim();
     const trimmedSchedule = (d.scheduled_label ?? '').trim();
+
     if (!trimmedName || trimmedName === 'Untitled Battle Plan') {
       setActionError('Give the plan a real name before publishing.');
       return;
@@ -846,6 +848,7 @@ export default function BattlePlanEditorPage() {
       );
       return;
     }
+
     if (
       !window.confirm(
         'Publish this plan? It becomes visible to all members immediately.'
@@ -853,6 +856,7 @@ export default function BattlePlanEditorPage() {
     ) {
       return;
     }
+
     runPlanAction('publish', 'POST', 'publish');
   }, [runPlanAction]);
 
@@ -879,7 +883,6 @@ export default function BattlePlanEditorPage() {
   }, [runPlanAction]);
 
   // ---------- Render guards ----------
-
   if (loading) {
     return (
       <div className="min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center">
@@ -912,12 +915,13 @@ export default function BattlePlanEditorPage() {
   if (!hq || !plan || !role || !accessToken) return null;
 
   // ---------- Render helpers ----------
-
   const renderSaveBadge = (field: AnyFieldKey) => {
     const state = saveStates[field];
     const msg = saveMessages[field];
-    if (state === 'saving') return <span className="text-zinc-500">Saving…</span>;
-    if (state === 'saved') return <span className="text-green-400">{msg}</span>;
+    if (state === 'saving')
+      return <span className="text-zinc-500">Saving…</span>;
+    if (state === 'saved')
+      return <span className="text-green-400">{msg}</span>;
     if (state === 'error') return <span className="text-red-400">{msg}</span>;
     return null;
   };
@@ -949,7 +953,6 @@ export default function BattlePlanEditorPage() {
   const isDraft = plan.status === 'draft';
 
   // ---------- Render ----------
-
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
       {/* Header */}
@@ -1044,8 +1047,8 @@ export default function BattlePlanEditorPage() {
               className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-amber-500"
             />
             <div className="text-[11px] font-mono text-zinc-600 tracking-wider mt-2 leading-relaxed">
-              Free-text. Write it however your alliance reads times — day,
-              hour, timezone, or anything else.
+              Free-text. Write it however your alliance reads times — day, hour,
+              timezone, or anything else.
             </div>
           </div>
 
@@ -1129,6 +1132,7 @@ export default function BattlePlanEditorPage() {
                   Loading map…
                 </div>
               )}
+
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={openFilePicker}
@@ -1154,7 +1158,6 @@ export default function BattlePlanEditorPage() {
           <div className="text-[10px] font-mono text-zinc-500 tracking-widest uppercase">
             Orders · Brief · Intel
           </div>
-
           {(['orders', 'brief', 'intel'] as RichFieldKey[]).map((field) => {
             const meta = RICH_FIELD_META[field];
             return (
@@ -1178,6 +1181,13 @@ export default function BattlePlanEditorPage() {
             );
           })}
         </section>
+
+        {/* Pre-War Checklist editor (V1.1) */}
+        <ChecklistEditor
+          hqId={hq.id}
+          planId={plan.id}
+          accessToken={accessToken}
+        />
       </div>
 
       {/* Action bar */}
@@ -1200,6 +1210,7 @@ export default function BattlePlanEditorPage() {
             >
               Save Draft
             </button>
+
             {isDraft && (
               <button
                 onClick={handlePublish}
@@ -1209,6 +1220,7 @@ export default function BattlePlanEditorPage() {
                 {pendingAction === 'publish' ? 'Publishing…' : 'Publish'}
               </button>
             )}
+
             {isLive && (
               <button
                 onClick={handleArchive}
@@ -1218,6 +1230,7 @@ export default function BattlePlanEditorPage() {
                 {pendingAction === 'archive' ? 'Archiving…' : 'Archive'}
               </button>
             )}
+
             {isArchived && (
               <button
                 onClick={handleUnarchive}
@@ -1227,6 +1240,7 @@ export default function BattlePlanEditorPage() {
                 {pendingAction === 'unarchive' ? 'Moving…' : 'Unarchive'}
               </button>
             )}
+
             <button
               onClick={handleDelete}
               disabled={busy}

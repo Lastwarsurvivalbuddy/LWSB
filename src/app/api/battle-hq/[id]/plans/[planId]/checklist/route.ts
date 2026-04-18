@@ -1,5 +1,5 @@
 // src/app/api/battle-hq/[id]/plans/[planId]/checklist/route.ts
-// Battle HQ V1 — Per-user Pre-War Checklist toggle.
+// Battle HQ V1.1 — Per-user Pre-War Checklist toggle.
 //
 // POST /api/battle-hq/[id]/plans/[planId]/checklist
 //
@@ -9,23 +9,24 @@
 // Request body:
 //   { item_key: string, checked: boolean }
 //
-// item_key must be one of the six hardcoded V1 keys (spec §3.5):
-//   troops_maxed · backups_trained · hospital_not_full
-//   · teleports_stocked · shields_stocked · stamina_topped
+// item_key is validated against battle_plan_checklist_items for this plan.
+// Any item_key that exists on the plan is valid — whether it's a default or
+// a custom commander-added item. Disabled items are rejected (viewers can't
+// toggle items the commander turned off).
 //
 // Behavior:
-//   - checked === true  → set checked_at = now (or keep existing if already set)
-//   - checked === false → set checked_at = NULL
-//   - Row may not exist yet → insert on first toggle
-//   - Row already matches target state → idempotent no-op, 200 with current state
+// - checked === true  → set checked_at = now (or keep existing if already set)
+// - checked === false → set checked_at = NULL
+// - Row may not exist yet → insert on first toggle
+// - Row already matches target state → idempotent no-op, 200 with current state
 //
 // Permission: any active member of the HQ (including viewers). The checklist
 // is a viewer-facing tool — that's its entire purpose.
 //
 // Plan must be visible to the caller:
-//   - viewers can toggle against published / active / archived
-//   - creator / editor can toggle against draft as well
-//   - deleted plans → 404 to everyone (can't check off a trashed plan)
+// - viewers can toggle against published / active / archived
+// - creator / editor can toggle against draft as well
+// - deleted plans → 404 to everyone
 //
 // Responses:
 //   200 { item_key, checked_at }
@@ -50,16 +51,6 @@ import {
 interface RouteContext {
   params: Promise<{ id: string; planId: string }>;
 }
-
-// Hardcoded V1 checklist item keys — spec §3.5
-const VALID_ITEM_KEYS = new Set<string>([
-  'troops_maxed',
-  'backups_trained',
-  'hospital_not_full',
-  'teleports_stocked',
-  'shields_stocked',
-  'stamina_topped',
-]);
 
 // Statuses a viewer can see → also the statuses a viewer can toggle on
 const VIEWER_VISIBLE_STATUSES = new Set<string>([
@@ -90,12 +81,6 @@ export async function POST(req: NextRequest, context: RouteContext) {
       );
     }
     const itemKey = body.item_key.trim();
-    if (!VALID_ITEM_KEYS.has(itemKey)) {
-      return NextResponse.json(
-        { error: 'invalid_item_key' },
-        { status: 400 }
-      );
-    }
 
     if (typeof body.checked !== 'boolean') {
       return NextResponse.json(
@@ -140,7 +125,34 @@ export async function POST(req: NextRequest, context: RouteContext) {
       return notFoundResponse();
     }
 
-    // Load existing row (if any) to make toggle idempotent
+    // item_key validation — must exist on this plan AND be enabled.
+    // Disabled items "vanish" for viewers (commander disables = item
+    // disappears from list, existing user toggle state preserved in DB).
+    const { data: itemDef, error: itemDefError } = await supabase
+      .from('battle_plan_checklist_items')
+      .select('id, item_key, enabled')
+      .eq('battle_plan_id', planId)
+      .eq('item_key', itemKey)
+      .maybeSingle();
+
+    if (itemDefError) {
+      console.error('[plan checklist] Item def lookup error:', itemDefError);
+      return internalErrorResponse();
+    }
+    if (!itemDef) {
+      return NextResponse.json(
+        { error: 'invalid_item_key' },
+        { status: 400 }
+      );
+    }
+    if (!itemDef.enabled) {
+      return NextResponse.json(
+        { error: 'invalid_item_key', message: 'This checklist item is disabled.' },
+        { status: 400 }
+      );
+    }
+
+    // Load existing toggle row (if any) to make toggle idempotent
     const { data: existing, error: existingError } = await supabase
       .from('battle_plan_checklists')
       .select('id, checked_at')
