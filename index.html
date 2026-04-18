@@ -236,11 +236,15 @@
     .feature-card.war-room-feature { border-color: rgba(192,144,32,0.4); background: linear-gradient(160deg, #120e02, var(--card)); }
     .feature-card.war-room-feature::before { background: linear-gradient(90deg, transparent, rgba(232,160,32,0.3), transparent); }
     .feature-card.war-room-feature:hover { border-color: rgba(232,160,32,0.5); }
+    .feature-card.battle-hq-feature { border-color: rgba(160,100,232,0.45); background: linear-gradient(160deg, #100820, var(--card)); }
+    .feature-card.battle-hq-feature::before { background: linear-gradient(90deg, transparent, rgba(160,100,232,0.4), transparent); }
+    .feature-card.battle-hq-feature:hover { border-color: rgba(192,144,240,0.6); }
     .feature-icon { width: 48px; height: 48px; border-radius: 12px;
       display: flex; align-items: center; justify-content: center; font-size: 22px;
       margin-bottom: 18px; background: rgba(232,160,32,0.08); border: 1px solid rgba(232,160,32,0.15); }
     .feature-icon.red { background: rgba(192,40,26,0.15); border-color: rgba(192,40,26,0.3); }
     .feature-icon.amber { background: rgba(232,160,32,0.12); border-color: rgba(232,160,32,0.25); }
+    .feature-icon.purple { background: rgba(160,100,232,0.15); border-color: rgba(160,100,232,0.35); }
     .feature-title { font-family: 'Oswald', sans-serif; font-size: 18px; font-weight: 600;
       letter-spacing: 0.06em; text-transform: uppercase; color: var(--text); margin-bottom: 10px; }
     .feature-desc { font-size: 13px; color: var(--muted2); line-height: 1.7; font-weight: 300; }
@@ -249,6 +253,7 @@
       letter-spacing: 0.12em; text-transform: uppercase; padding: 3px 8px; border-radius: 4px;
       background: rgba(192,40,26,0.15); border: 1px solid rgba(192,40,26,0.3); color: #e06050; }
     .feature-tag.amber { background: rgba(232,160,32,0.12); border-color: rgba(232,160,32,0.3); color: var(--gold); }
+    .feature-tag.purple { background: rgba(160,100,232,0.15); border-color: rgba(160,100,232,0.35); color: var(--purple2); }
     .feature-new-badge { display: inline-flex; align-items: center; gap: 5px;
       font-family: 'Rajdhani', sans-serif; font-size: 10px; font-weight: 700;
       letter-spacing: 0.15em; text-transform: uppercase;
@@ -263,6 +268,13 @@
       color: var(--green); border-radius: 100px; padding: 3px 10px; margin-bottom: 12px; }
     .feature-free-badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%;
       background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .feature-founding-badge { display: inline-flex; align-items: center; gap: 5px;
+      font-family: 'Rajdhani', sans-serif; font-size: 10px; font-weight: 700;
+      letter-spacing: 0.15em; text-transform: uppercase;
+      background: rgba(160,100,232,0.18); border: 1px solid rgba(160,100,232,0.4);
+      color: var(--purple2); border-radius: 100px; padding: 3px 10px; margin-bottom: 12px; }
+    .feature-founding-badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%;
+      background: var(--purple2); box-shadow: 0 0 6px var(--purple2); }
     .battle-report-banner { position: relative; z-index: 1;
       background: linear-gradient(135deg, #1a0806, #0e1014, #0a0c10);
       border-top: 1px solid rgba(192,40,26,0.3); border-bottom: 1px solid rgba(192,40,26,0.3); padding: 60px 5%; }
@@ -317,6 +329,40 @@
     .war-room-tile-label { font-family: 'Oswald', sans-serif; font-size: 13px; font-weight: 600;
       letter-spacing: 0.06em; text-transform: uppercase; color: var(--text); margin-bottom: 4px; }
     .war-room-tile-desc { font-size: 11px; color: var(--muted); line-height: 1.5; }
+    .battle-hq-banner { position: relative; z-index: 1;
+      background: linear-gradient(135deg, #100820, #0e1014, #0a0c10);
+      border-top: 1px solid rgba(160,100,232,0.3); border-bottom: 1px solid rgba(160,100,232,0.3); padding: 60px 5%; }
+    .battle-hq-inner { max-width: 960px; margin: 0 auto; display: grid;
+      grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+    .battle-hq-label { font-family: 'Rajdhani', sans-serif; font-size: 11px; font-weight: 700;
+      letter-spacing: 0.3em; color: var(--purple2); text-transform: uppercase; margin-bottom: 12px;
+      display: flex; align-items: center; gap: 8px; }
+    .battle-hq-label::before { content: ''; width: 6px; height: 6px; border-radius: 50%;
+      background: var(--purple2); box-shadow: 0 0 8px var(--purple2); animation: pulse 2s infinite; }
+    .battle-hq-title { font-family: 'Oswald', sans-serif; font-size: clamp(26px, 3.5vw, 40px);
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+      color: var(--text); margin-bottom: 16px; line-height: 1.1; }
+    .battle-hq-title span { color: var(--purple2); }
+    .battle-hq-rank-pill { display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(160,100,232,0.12); border: 1px solid rgba(160,100,232,0.35);
+      border-radius: 100px; padding: 6px 16px; margin-bottom: 20px; }
+    .battle-hq-rank-pill span { font-family: 'Rajdhani', sans-serif; font-size: 11px; font-weight: 700;
+      letter-spacing: 0.2em; text-transform: uppercase; color: var(--purple2); }
+    .battle-hq-desc { font-size: 14px; color: var(--muted2); line-height: 1.85; font-weight: 300; margin-bottom: 24px; }
+    .battle-hq-desc strong { color: var(--text); font-weight: 600; }
+    .battle-hq-cta { display: inline-flex; align-items: center; gap: 8px;
+      background: linear-gradient(135deg, var(--purple), #7040c0);
+      border: none; border-radius: 8px; padding: 13px 24px; color: #fff;
+      font-family: 'Oswald', sans-serif; font-size: 14px; font-weight: 600;
+      letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer;
+      box-shadow: 0 4px 20px rgba(160,100,232,0.35); transition: all 0.2s; text-decoration: none; }
+    .battle-hq-cta:hover { box-shadow: 0 8px 32px rgba(160,100,232,0.55); transform: translateY(-1px); }
+    .battle-hq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .battle-hq-tile { background: rgba(14,16,20,0.8); border: 1px solid rgba(160,100,232,0.2); border-radius: 10px; padding: 16px; }
+    .battle-hq-tile-icon { font-size: 20px; margin-bottom: 8px; }
+    .battle-hq-tile-label { font-family: 'Oswald', sans-serif; font-size: 13px; font-weight: 600;
+      letter-spacing: 0.06em; text-transform: uppercase; color: var(--text); margin-bottom: 4px; }
+    .battle-hq-tile-desc { font-size: 11px; color: var(--muted); line-height: 1.5; }
     .social-proof { position: relative; z-index: 1; padding: 72px 5%;
       background: linear-gradient(180deg, transparent, rgba(232,160,32,0.03), transparent);
       border-top: 1px solid var(--border); }
@@ -367,6 +413,8 @@
     .price-feature.highlight strong { color: #e8806a; }
     .price-feature.war-room { color: var(--gold); }
     .price-feature.war-room strong { color: var(--gold); }
+    .price-feature.battle-hq { color: var(--purple2); }
+    .price-feature.battle-hq strong { color: var(--purple2); }
     .price-badge { font-family: 'Rajdhani', sans-serif; font-size: 9px; font-weight: 700;
       letter-spacing: 0.15em; text-transform: uppercase; border-radius: 4px; padding: 2px 8px; }
     .price-header { display: flex; align-items: center; justify-content: space-between; }
@@ -489,6 +537,7 @@
       .learning-inner { grid-template-columns: 1fr; gap: 40px; }
       .battle-report-inner { grid-template-columns: 1fr; gap: 32px; }
       .war-room-inner { grid-template-columns: 1fr; gap: 32px; }
+      .battle-hq-inner { grid-template-columns: 1fr; gap: 32px; }
       .bottom-cta-btns { flex-direction: column; }
       .bottom-btn-primary, .bottom-btn-secondary { width: 100%; text-align: center; }
       .contact-inner { grid-template-columns: 1fr; gap: 40px; }
@@ -504,6 +553,7 @@
       .pricing-grid { grid-template-columns: 1fr; }
       .battle-report-grid { grid-template-columns: 1fr; }
       .war-room-grid { grid-template-columns: 1fr; }
+      .battle-hq-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -690,7 +740,7 @@
         <div class="hero-battle-callout-body">Battle Report Analyzer — <span>find out exactly why you won or lost.</span><br/>No other Last War tool does this.</div>
       </div>
     </div>
-    <div class="hero-tagline">The smarter you play — the smarter it gets</div>
+    <div class="hero-tagline">Stop guessing. Start playing with data.</div>
     <div class="cta-group">
       <div class="cta-box" id="signup-box">
         <div class="cta-box-label">⚡ Now Live</div>
@@ -893,6 +943,27 @@
     </div>
   </section>
 
+  <!-- BATTLE HQ -->
+  <section class="battle-hq-banner" aria-labelledby="battle-hq-heading">
+    <div class="battle-hq-inner">
+      <div>
+        <div class="battle-hq-label">Founding Exclusive</div>
+        <h2 class="battle-hq-title" id="battle-hq-heading">Last War<br/><span>Battle HQ</span></h2>
+        <div class="battle-hq-rank-pill"><span>⚡ Built for R4s and R5s</span></div>
+        <p class="battle-hq-desc">Upload a screenshot of any battle area — Desert Storm, Canyon Storm, SvS, anything. <strong>Annotate it with targets, routes, and assignments.</strong> Write the orders, the brief, the standing intel. Then drop one link in alliance chat.<br/><br/>Your whole squad lands on the same page before the siren. Alliance members join <strong>free</strong> — they don't need to pay to see your plans. You stage your war once; everyone's ready.</p>
+        <a href="https://lwsb.vercel.app/signup" class="battle-hq-cta">⚡ Claim Your Founding Spot &rarr;</a>
+      </div>
+      <div class="battle-hq-grid" role="list" aria-label="Battle HQ features">
+        <div class="battle-hq-tile" role="listitem"><div class="battle-hq-tile-icon" aria-hidden="true">🗺️</div><div class="battle-hq-tile-label">Annotated Maps</div><div class="battle-hq-tile-desc">Upload any battle screenshot. Mark targets, routes, zones, and assignments with arrows, pins, and labels.</div></div>
+        <div class="battle-hq-tile" role="listitem"><div class="battle-hq-tile-icon" aria-hidden="true">📋</div><div class="battle-hq-tile-label">Battle Plans</div><div class="battle-hq-tile-desc">One plan per war. Orders, brief, intel, and map — all in one place. DS, Canyon, SvS, Warzone, whatever.</div></div>
+        <div class="battle-hq-tile" role="listitem"><div class="battle-hq-tile-icon" aria-hidden="true">📡</div><div class="battle-hq-tile-label">Standing Intel</div><div class="battle-hq-tile-desc">Persistent notes and briefs that carry across every battle. Set it once; it shows up on every plan.</div></div>
+        <div class="battle-hq-tile" role="listitem"><div class="battle-hq-tile-icon" aria-hidden="true">✅</div><div class="battle-hq-tile-label">Pre-War Checklist</div><div class="battle-hq-tile-desc">Troops, backups, hospital, teleports, shields, stamina. Every member's own checklist before the siren.</div></div>
+        <div class="battle-hq-tile" role="listitem"><div class="battle-hq-tile-icon" aria-hidden="true">🔗</div><div class="battle-hq-tile-label">Invite by Link</div><div class="battle-hq-tile-desc">One shareable URL for your whole alliance. They sign up free to view — no paywall between them and your plan.</div></div>
+        <div class="battle-hq-tile" role="listitem"><div class="battle-hq-tile-icon" aria-hidden="true">👥</div><div class="battle-hq-tile-label">Viewer / Editor Roles</div><div class="battle-hq-tile-desc">Promote trusted officers to edit plans with you. Revoke members who leave. You stay in command.</div></div>
+      </div>
+    </div>
+  </section>
+
   <!-- FEATURES -->
   <section class="features" aria-labelledby="features-heading">
     <div class="section-label">What It Does</div>
@@ -901,6 +972,7 @@
     <div class="features-grid">
       <div class="feature-card hero-feature"><div class="feature-new-badge">Pro+</div><div class="feature-icon red" aria-hidden="true">⚔️</div><h3 class="feature-title">Battle Report Analyzer</h3><p class="feature-desc">Upload Last War battle screenshots. Get a full expert breakdown — type counter, morale cascade, stat gap, EW analysis, and a rematch verdict. No other Last War tool does this.</p><div class="feature-tags"><span class="feature-tag">Pro+</span><span class="feature-tag">Multi-screenshot</span><span class="feature-tag">Instant coaching</span></div></div>
       <div class="feature-card war-room-feature"><div class="feature-free-badge">Free — All Players</div><div class="feature-icon amber" aria-hidden="true">🗺️</div><h3 class="feature-title">War Room</h3><p class="feature-desc">Desert Storm, Warzone Duel, and Canyon Storm battle plan generator. Assign roles and write your orders, generate a shareable card — post it to alliance chat in 30 seconds. Compass included.</p><div class="feature-tags"><span class="feature-tag amber">Free</span><span class="feature-tag amber">DS + WZ + Canyon</span><span class="feature-tag amber">Shareable card</span></div></div>
+      <div class="feature-card battle-hq-feature"><div class="feature-founding-badge">Founding Exclusive</div><div class="feature-icon purple" aria-hidden="true">⚡</div><h3 class="feature-title">Battle HQ</h3><p class="feature-desc">Built for R4s and R5s. Upload a screenshot of any battle area, annotate it with targets and routes, stage your battle plans and standing intel — then drop one link in alliance chat. Your whole squad joins free.</p><div class="feature-tags"><span class="feature-tag purple">R4/R5</span><span class="feature-tag purple">Annotated Maps</span><span class="feature-tag purple">Invite by Link</span></div></div>
       <div class="feature-card"><div class="feature-icon" aria-hidden="true">📅</div><h3 class="feature-title">Daily Action Plan</h3><p class="feature-desc">Know exactly what to do every day in Last War. Arms Race, Alliance Duel double-dips, event prep — all timed to your server day and your goals. No guesswork.</p></div>
       <div class="feature-card"><div class="feature-icon" aria-hidden="true">⚡</div><h3 class="feature-title">Power Gap Analysis</h3><p class="feature-desc">See exactly how far you are from the next rank. Track your growth week over week and get the single highest-impact investment to close the gap.</p></div>
       <div class="feature-card"><div class="feature-icon" aria-hidden="true">💰</div><h3 class="feature-title">Last War Pack Scanner</h3><p class="feature-desc">Know which Last War packs are worth it and when to buy them. Spend advice matched to your tier, your goals, and what events are coming — not just what's on sale.</p></div>
@@ -932,7 +1004,7 @@
         <div class="price-card" role="listitem"><div class="price-tier-name" style="color:var(--muted2);">Free</div><div class="price-amount" style="color:var(--text);">$0</div><div class="price-cadence">Forever free</div><div class="price-divider" aria-hidden="true"></div><div class="price-feature">✦ <strong>20 questions</strong> / month</div><div class="price-feature">✦ No screenshots</div><div class="price-feature">✦ Daily action plan</div><div class="price-feature">✦ Commander Card</div><div class="price-feature war-room">✦ <strong>🗺️ War Room</strong></div></div>
         <div class="price-card blue-card" role="listitem"><div class="price-header"><div class="price-tier-name" style="color:var(--blue);">Buddy Pro</div><div class="price-badge" style="background:var(--blue);color:#07080a;">Best Value</div></div><div class="price-amount" style="color:var(--blue);">$9.99<span>/mo</span></div><div class="price-cadence">Cancel anytime</div><div class="price-divider" style="background:rgba(96,160,232,0.2);" aria-hidden="true"></div><div class="price-feature">✦ <strong>100 questions</strong> / month</div><div class="price-feature">✦ <strong>10 screenshots</strong> / month</div><div class="price-feature highlight">✦ <strong>⚔️ 8 Battle Reports</strong> / month</div><div class="price-feature">✦ Pack Scanner</div><div class="price-feature">✦ Daily action plan</div><div class="price-feature war-room">✦ <strong>🗺️ War Room</strong></div></div>
         <div class="price-card gold-card" role="listitem"><div class="price-tier-name" style="color:var(--gold);">Buddy Elite</div><div class="price-amount" style="color:var(--gold);">$19.99<span>/mo</span></div><div class="price-cadence">Cancel anytime</div><div class="price-divider" style="background:rgba(232,160,32,0.2);" aria-hidden="true"></div><div class="price-feature">✦ <strong>250 questions</strong> / month</div><div class="price-feature">✦ <strong>20 screenshots</strong> / month</div><div class="price-feature highlight">✦ <strong>⚔️ 16 Battle Reports</strong> / month</div><div class="price-feature">✦ Pack Scanner</div><div class="price-feature">✦ Priority features</div><div class="price-feature war-room">✦ <strong>🗺️ War Room</strong></div></div>
-        <div class="price-card purple-card" role="listitem"><div class="price-header"><div class="price-tier-name" style="color:var(--purple2);">Founding Member</div><div class="price-badge" style="background:var(--purple);color:#fff;">500 Only</div></div><div class="price-amount" style="color:var(--purple2);">$99<span> once</span></div><div class="price-cadence">Pay once. Never again.</div><div class="price-divider" style="background:rgba(160,100,232,0.2);" aria-hidden="true"></div><div class="price-feature">✦ <strong>300 questions</strong> / month</div><div class="price-feature">✦ <strong>25 screenshots</strong> / month</div><div class="price-feature highlight">✦ <strong>⚔️ 16 Battle Reports</strong> / month</div><div class="price-feature">✦ Pack Scanner</div><div class="price-feature" style="color:var(--purple2);">✦ Every future feature</div><div class="price-feature" style="color:var(--purple2);">✦ Founding Member badge</div><div class="price-feature war-room">✦ <strong>🗺️ War Room</strong></div></div>
+        <div class="price-card purple-card" role="listitem"><div class="price-header"><div class="price-tier-name" style="color:var(--purple2);">Founding Member</div><div class="price-badge" style="background:var(--purple);color:#fff;">500 Only</div></div><div class="price-amount" style="color:var(--purple2);">$99<span> once</span></div><div class="price-cadence">Pay once. Never again.</div><div class="price-divider" style="background:rgba(160,100,232,0.2);" aria-hidden="true"></div><div class="price-feature">✦ <strong>300 questions</strong> / month</div><div class="price-feature">✦ <strong>25 screenshots</strong> / month</div><div class="price-feature highlight">✦ <strong>⚔️ 16 Battle Reports</strong> / month</div><div class="price-feature battle-hq">✦ <strong>⚡ Battle HQ</strong> — designed for R4/R5s</div><div class="price-feature">✦ Pack Scanner</div><div class="price-feature" style="color:var(--purple2);">✦ Every future feature</div><div class="price-feature" style="color:var(--purple2);">✦ Founding Member badge</div><div class="price-feature war-room">✦ <strong>🗺️ War Room</strong></div></div>
       </div>
       <div style="margin-top:32px;text-align:center;font-size:12px;color:var(--muted);line-height:1.8;">
         All tiers include the Daily Action Plan, Commander Card, and War Room (Desert Storm + Warzone Duel + Canyon Storm).<br/>
