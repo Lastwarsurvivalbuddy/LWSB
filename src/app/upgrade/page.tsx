@@ -74,6 +74,7 @@ const TIERS = [
       'Desert Storm War Room',
       'Lifetime access — pay once, never again',
       'Founding Member badge',
+      'Battle HQ — private alliance command center (Founding-exclusive)',
       'Every future feature, included',
     ],
   },
@@ -292,7 +293,7 @@ export default function UpgradePage() {
         </div>
 
         {/* ── Desert Storm War Room feature callout ── */}
-        <div className="mb-8 bg-amber-950/20 border border-amber-900/40 rounded-2xl p-5">
+        <div className="mb-6 bg-amber-950/20 border border-amber-900/40 rounded-2xl p-5">
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 rounded-xl bg-amber-900/30 border border-amber-800/40 flex items-center justify-center flex-shrink-0">
               <span className="text-2xl">🏜️</span>
@@ -307,6 +308,41 @@ export default function UpgradePage() {
               <p className="text-sm text-zinc-400 leading-relaxed">
                 Build your Desert Storm battle plan in seconds. Assign roles — Roamers, East/West flanks, Hospital guards, Silo team. Generate a shareable strategy card with a compass and post it straight to alliance chat. Every card has your alliance name and LastWarSurvivalBuddy.com on it.
               </p>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Battle HQ feature callout — Founding-exclusive ── */}
+        <div className="mb-8 bg-purple-950/30 border border-purple-900/50 rounded-2xl p-5">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-purple-900/50 border border-purple-800/50 flex items-center justify-center flex-shrink-0">
+              <span className="text-2xl">⚡</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <h2 className="text-base font-bold text-white">Battle HQ</h2>
+                <span className="text-[10px] font-bold bg-purple-900/60 border border-purple-800/60 text-purple-300 px-2 py-0.5 rounded-full tracking-wider">
+                  FOUNDING EXCLUSIVE
+                </span>
+              </div>
+              <p className="text-sm text-zinc-400 leading-relaxed mb-3">
+                Built for R4s and R5s. Upload a screenshot of any battle area — Canyon, Warzone Duel, Desert Storm mid-war, anything. Annotate it with targets, routes, and role assignments. Write the orders, set the comms channel, and drop one link in alliance chat. Your whole squad sees the plan before the siren goes off. No other Last War tool does this.
+              </p>
+              <div className="grid grid-cols-3 gap-2 text-center">
+                {[
+                  { label: 'Annotated Maps', icon: '🗺️' },
+                  { label: 'Battle Plans', icon: '⚔️' },
+                  { label: 'Standing Intel', icon: '📋' },
+                  { label: 'Pre-War Checklist', icon: '✅' },
+                  { label: 'Invite by Link', icon: '🔗' },
+                  { label: 'Viewer/Editor Roles', icon: '👥' },
+                ].map(({ label, icon }) => (
+                  <div key={label} className="bg-purple-950/40 border border-purple-900/40 rounded-lg px-2 py-2">
+                    <div className="text-base mb-0.5">{icon}</div>
+                    <div className="text-[10px] text-purple-300 font-medium">{label}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -399,7 +435,7 @@ export default function UpgradePage() {
                 <ul className="space-y-2 mb-6 flex-1">
                   {tier.features.map(f => (
                     <li key={f} className="flex items-start gap-2 text-xs text-zinc-400">
-                      <span className={`mt-0.5 flex-shrink-0 ${f.includes('War Room') ? 'text-amber-500' : 'text-green-500'}`}>✓</span>
+                      <span className={`mt-0.5 flex-shrink-0 ${f.includes('Battle HQ') ? 'text-purple-400' : f.includes('War Room') ? 'text-amber-500' : 'text-green-500'}`}>✓</span>
                       {f}
                     </li>
                   ))}
@@ -448,6 +484,7 @@ export default function UpgradePage() {
               { feature: 'Daily Briefing',            free: '✓',     pro: '✓',       elite: '✓',       founding: '✓' },
               { feature: 'Daily Action Plan',         free: '✓',     pro: '✓',       elite: '✓',       founding: '✓' },
               { feature: '🏜️ DS War Room',            free: '✓',     pro: '✓',       elite: '✓',       founding: '✓' },
+              { feature: '⚡ Battle HQ',              free: '—',     pro: '—',       elite: '—',       founding: '✓' },
               { feature: 'Profile Context',           free: '✓',     pro: '✓',       elite: '✓',       founding: '✓' },
               { feature: 'New Features',              free: 'Basic', pro: 'Standard',elite: 'Priority', founding: 'All — forever' },
             ].map(({ feature, free, pro, elite, founding }) => (
