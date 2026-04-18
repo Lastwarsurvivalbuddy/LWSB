@@ -73,15 +73,16 @@ export async function GET(req: NextRequest) {
 
     const { data: subs } = await supabase
       .from('subscriptions')
-      .select('user_id, tier, banned, flagged_for_review')
+      .select('user_id, tier, banned, flagged_for_review, comped_at, revoked_at')
       .in('user_id', profileIds)
 
-    const subMap: Record<string, { tier: string; banned: boolean; flagged: boolean }> = {}
+    const subMap: Record<string, { tier: string; banned: boolean; flagged: boolean; comped: boolean }> = {}
     for (const s of (subs ?? [])) {
       subMap[s.user_id] = {
         tier: s.tier ?? 'free',
         banned: s.banned ?? false,
         flagged: s.flagged_for_review ?? false,
+        comped: !!s.comped_at && !s.revoked_at,
       }
     }
 
@@ -151,7 +152,7 @@ export async function GET(req: NextRequest) {
     }
 
     let users = (profiles ?? []).map(p => {
-      const sub = subMap[p.id] ?? { tier: 'free', banned: false, flagged: false }
+      const sub = subMap[p.id] ?? { tier: 'free', banned: false, flagged: false, comped: false }
       const affiliateId = referralMap[p.id]
       const auth = authMap[p.id] ?? { email: '—', created_at: null }
       return {
@@ -163,6 +164,7 @@ export async function GET(req: NextRequest) {
         tier: sub.tier,
         banned: sub.banned,
         flagged: sub.flagged,
+        comped: sub.comped,
         joined: auth.created_at,
         lastActive: lastActiveMap[p.id] ?? null,
         totalQuestions: questionTotals[p.id] ?? 0,

@@ -80,6 +80,7 @@ interface UserRow {
   tier: string
   banned: boolean
   flagged: boolean
+  comped: boolean
   joined: string
   lastActive: string | null
   totalQuestions: number
@@ -196,6 +197,8 @@ export default function MissionControlPage() {
   const [messageActing, setMessageActing] = useState<string | null>(null)
   const [messageSent, setMessageSent] = useState<Record<string, boolean>>({})
   const [welcomeActing, setWelcomeActing] = useState<string | null>(null)
+  const [grantActing, setGrantActing] = useState<string | null>(null)
+  const [revokeActing, setRevokeActing] = useState<string | null>(null)
 
   const [newsItems, setNewsItems] = useState<NewsItem[]>([])
   const [newsLoading, setNewsLoading] = useState(false)
@@ -590,6 +593,42 @@ export default function MissionControlPage() {
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, welcomed: !current } : u))
     }
     setWelcomeActing(null)
+  }
+
+  async function handleGrantFounding(userId: string, ign: string) {
+    if (!token) return
+    const confirmed = window.confirm(
+      `Grant Founding comp to ${ign}?\n\nThis sets their tier to 'founding' with zero Stripe involvement. They'll have full Founding access until you revoke it.`
+    )
+    if (!confirmed) return
+    setGrantActing(userId)
+    const res = await fetch('/api/admin/grant-founding', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ userId }),
+    })
+    if (res.ok) {
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, tier: 'founding', comped: true } : u))
+    }
+    setGrantActing(null)
+  }
+
+  async function handleRevokeFounding(userId: string, ign: string) {
+    if (!token) return
+    const confirmed = window.confirm(
+      `Revoke Founding comp from ${ign}?\n\nThis drops their tier back to 'free'. They'll lose Battle HQ creation, screenshot analysis, and all Founding-only features immediately.`
+    )
+    if (!confirmed) return
+    setRevokeActing(userId)
+    const res = await fetch('/api/admin/revoke-founding', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ userId }),
+    })
+    if (res.ok) {
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, tier: 'free', comped: false } : u))
+    }
+    setRevokeActing(null)
   }
 
   async function handleNewsPost() {
@@ -1516,9 +1555,19 @@ export default function MissionControlPage() {
                               </div>
                             </td>
                             <td className="px-4 py-3">
-                              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${tierBadgeColor(u.tier)}`}>
-                                {u.tier}
-                              </span>
+                              <div className="flex flex-col gap-1 items-start">
+                                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${tierBadgeColor(u.tier)}`}>
+                                  {u.tier}
+                                </span>
+                                {u.comped && (
+                                  <span
+                                    title="Comped by admin — not a paid subscriber"
+                                    className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-amber-500/10 border-amber-500/30 text-amber-400 uppercase tracking-wider"
+                                  >
+                                    🎁 Comp
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             <td className="px-4 py-3 text-zinc-400 text-xs">{u.hq}</td>
                             <td className="px-4 py-3 text-zinc-500 text-[11px] font-mono whitespace-nowrap">
@@ -1561,7 +1610,7 @@ export default function MissionControlPage() {
                               </button>
                             </td>
                             <td className="px-4 py-3">
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 {(u.flagged || u.banned) && (
                                   <button
                                     onClick={() => handleUnflag(u.id)}
@@ -1569,6 +1618,26 @@ export default function MissionControlPage() {
                                     className="text-[11px] font-bold px-2.5 py-1 rounded-lg border border-green-700/50 text-green-500 hover:text-green-300 hover:border-green-500/60 transition-colors disabled:opacity-40 whitespace-nowrap"
                                   >
                                     {unflagActing === u.id ? '…' : '✓ Unflag'}
+                                  </button>
+                                )}
+                                {/* Grant Founding — only for non-founding tier users */}
+                                {u.tier !== 'founding' && (
+                                  <button
+                                    onClick={() => handleGrantFounding(u.id, u.ign !== '—' ? u.ign : u.email)}
+                                    disabled={grantActing === u.id}
+                                    className="text-[11px] font-bold px-2.5 py-1 rounded-lg border border-violet-700/50 text-violet-400 hover:text-violet-300 hover:border-violet-500/60 transition-colors disabled:opacity-40 whitespace-nowrap"
+                                  >
+                                    {grantActing === u.id ? '…' : '🎁 Grant Founding'}
+                                  </button>
+                                )}
+                                {/* Revoke Comp — only for founding + comped users. Paid Founders have no button (untouchable). */}
+                                {u.tier === 'founding' && u.comped && (
+                                  <button
+                                    onClick={() => handleRevokeFounding(u.id, u.ign !== '—' ? u.ign : u.email)}
+                                    disabled={revokeActing === u.id}
+                                    className="text-[11px] font-bold px-2.5 py-1 rounded-lg border border-red-700/50 text-red-400 hover:text-red-300 hover:border-red-500/60 transition-colors disabled:opacity-40 whitespace-nowrap"
+                                  >
+                                    {revokeActing === u.id ? '…' : '✕ Revoke Comp'}
                                   </button>
                                 )}
                                 <button
