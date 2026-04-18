@@ -12,6 +12,7 @@ import ServerPulse from '@/components/ServerPulse'
 import BattleReportAnalyzer from '@/components/BattleReportAnalyzer'
 import WarfighterBanner from '@/components/WarfighterBanner'
 import ErrorBoundary from '@/components/ErrorBoundary'
+import BattleHQCards from '@/components/BattleHQCards'
 import {
   RANK_BUCKET_LABELS,
   SQUAD_POWER_TIER_LABELS,
@@ -833,15 +834,20 @@ export default function Dashboard() {
                 </span>
               </div>
             </div>
-          </button>
-        </section>
+            </button>
+          </section>
 
-        {/* ── Pack Scanner ── */}
-        <section className="pt-4">
-          <ErrorBoundary label="Pack Scanner">
-            <PackScanner subscriptionTier={subscriptionTier} />
+          {/* ── Battle HQ Cards — Founding feature, progressive disclosure ── */}
+          <ErrorBoundary label="Battle HQ Cards">
+            <BattleHQCards subscriptionTier={subscriptionTier} />
           </ErrorBoundary>
-        </section>
+
+          {/* ── Pack Scanner ── */}
+          <section className="pt-4">
+            <ErrorBoundary label="Pack Scanner">
+              <PackScanner subscriptionTier={subscriptionTier} />
+            </ErrorBoundary>
+          </section>
 
         {/* ── TeachBuddy ── */}
         <section className="pt-4 pb-2">
