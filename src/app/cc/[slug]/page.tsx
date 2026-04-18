@@ -6,7 +6,7 @@
 // Handles the five user states from spec §5.1:
 //   A. Logged out                         → branded landing + signup/login
 //   B. Logged in, not a member            → join preview
-//   C. Logged in, active member           → full HQ view (Phase 1 shell)
+//   C. Logged in, active member           → full HQ view + plans list
 //   D. Logged in, revoked                 → generic revoked page (privacy)
 //   E. Logged in, previously left         → treated as Case B (can rejoin)
 //
@@ -18,7 +18,27 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
-// ─── Response types from /api/battle-hq/by-slug/[slug] ────────────────────
+// ─── Plan + HQ types from /api/battle-hq/by-slug/[slug] ───────────────────
+type PlanStatus = 'published' | 'active' | 'archived';
+type WarType =
+  | 'desert_storm'
+  | 'warzone_duel'
+  | 'canyon_storm'
+  | 'svs'
+  | 'alliance_mobilization'
+  | 'other';
+
+interface PlanSummary {
+  id: string;
+  name: string;
+  war_type: WarType;
+  status: PlanStatus;
+  scheduled_at: string | null;
+  scheduled_label: string | null;
+  published_at: string | null;
+  archived_at: string | null;
+}
+
 type ByslugResponse =
   | {
       state: 'preview';
@@ -36,6 +56,7 @@ type ByslugResponse =
         standing_intel: string | null;
         standing_brief: string | null;
       };
+      plans: PlanSummary[];
     }
   | { state: 'revoked' };
 
@@ -49,6 +70,22 @@ type PageState =
 
 // Thirty-day TTL for affiliate reference cookie.
 const REF_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+// ─── Labels for plan rendering ────────────────────────────────────────────
+const WAR_TYPE_LABEL: Record<WarType, string> = {
+  desert_storm: 'Desert Storm',
+  warzone_duel: 'Warzone Duel',
+  canyon_storm: 'Canyon Storm',
+  svs: 'SvS',
+  alliance_mobilization: 'Alliance Mobilization',
+  other: 'Other',
+};
+
+const STATUS_BADGE_STYLE: Record<PlanStatus, string> = {
+  published: 'bg-sky-500/20 text-sky-400 border-sky-500/40',
+  active: 'bg-amber-500/20 text-amber-400 border-amber-500/40',
+  archived: 'bg-zinc-900 text-zinc-500 border-zinc-800',
+};
 
 export default function BattleHQInvitePage() {
   const params = useParams<{ slug: string }>();
@@ -344,19 +381,27 @@ function PreviewCard({
   );
 }
 
-// Case C — full HQ view (Phase 1 shell).
+// Case C — full HQ view with plans list.
 function MemberCard({
   data,
 }: {
   data: Extract<ByslugResponse, { state: 'member' }>;
 }) {
-  const { hq, membership } = data;
+  const { hq, membership, plans } = data;
   const roleLabel =
     membership.role === 'creator'
       ? 'Battle HQ Commander'
       : membership.role === 'editor'
       ? 'Editor'
       : 'Viewer';
+
+  // Split plans into upcoming/active vs archived. The API already sorts
+  // scheduled_at ASC (NULLs last), then published_at DESC, so we just
+  // partition by status without re-sorting.
+  const upcomingPlans = plans.filter(
+    (p) => p.status === 'published' || p.status === 'active'
+  );
+  const archivedPlans = plans.filter((p) => p.status === 'archived');
 
   return (
     <div className="space-y-4">
@@ -406,16 +451,46 @@ function MemberCard({
         </div>
       )}
 
-      {/* Plans placeholder */}
-      <div className="bg-[#0e1014] border border-dashed border-[#2a3040] rounded-xl p-8 text-center">
-        <p className="text-[#606878] uppercase tracking-widest text-xs mb-2">
+      {/* Battle Plans — upcoming/active */}
+      <div className="bg-[#0e1014] border border-[#2a3040] rounded-xl p-6">
+        <h2 className="text-[#e8a020] font-bold text-sm tracking-widest uppercase mb-4">
           Battle Plans
-        </p>
-        <p className="text-white text-sm">
-          Individual war plans will appear here.
-        </p>
-        <p className="text-[#606878] text-xs mt-2">Coming in the next update.</p>
+        </h2>
+
+        {upcomingPlans.length === 0 && archivedPlans.length === 0 && (
+          <p className="text-[#606878] text-sm">
+            No battle plans yet. Your commander hasn&apos;t posted any war plans.
+          </p>
+        )}
+
+        {upcomingPlans.length === 0 && archivedPlans.length > 0 && (
+          <p className="text-[#606878] text-sm mb-4">
+            No upcoming battles. See archived plans below.
+          </p>
+        )}
+
+        {upcomingPlans.length > 0 && (
+          <div className="space-y-3">
+            {upcomingPlans.map((plan) => (
+              <PlanRow key={plan.id} plan={plan} hqId={hq.id} />
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* Battle Plans — archived (collapsible) */}
+      {archivedPlans.length > 0 && (
+        <details className="bg-[#0e1014] border border-[#2a3040] rounded-xl p-6 group">
+          <summary className="cursor-pointer text-[#e8a020] font-bold text-sm tracking-widest uppercase marker:text-[#e8a020]">
+            Archived Battles ({archivedPlans.length})
+          </summary>
+          <div className="space-y-3 mt-4">
+            {archivedPlans.map((plan) => (
+              <PlanRow key={plan.id} plan={plan} hqId={hq.id} />
+            ))}
+          </div>
+        </details>
+      )}
     </div>
   );
 }
@@ -440,6 +515,36 @@ function RevokedCard() {
         Return to Dashboard
       </a>
     </div>
+  );
+}
+
+// Individual plan row — links to the viewer page.
+function PlanRow({ plan, hqId }: { plan: PlanSummary; hqId: string }) {
+  const warTypeLabel = WAR_TYPE_LABEL[plan.war_type] ?? plan.war_type;
+  const statusStyle = STATUS_BADGE_STYLE[plan.status];
+
+  return (
+    <a
+      href={`/battle-hq/${hqId}/plans/${plan.id}/view`}
+      className="block bg-[#07080a] border border-[#2a3040] rounded-lg p-4 hover:border-[#e8a020] transition-colors"
+    >
+      <div className="flex flex-wrap items-center gap-2 mb-2">
+        <span
+          className={`text-[10px] font-mono tracking-widest uppercase px-2 py-0.5 rounded border ${statusStyle}`}
+        >
+          {plan.status}
+        </span>
+        <span className="text-[10px] font-mono tracking-widest uppercase px-2 py-0.5 rounded border border-[#2a3040] text-[#a0a8b8] bg-[#0e1014]">
+          {warTypeLabel}
+        </span>
+      </div>
+      <div className="text-white font-bold text-base mb-1">
+        {plan.name || 'Untitled Battle Plan'}
+      </div>
+      {plan.scheduled_label && (
+        <div className="text-[#a0a8b8] text-sm">{plan.scheduled_label}</div>
+      )}
+    </a>
   );
 }
 

@@ -20,8 +20,12 @@
 //   200  { state: 'member',
 //          membership: { role, joined_at },
 //          hq: { id, alliance_tag, server, creator_name,
-//                comms_channel, standing_intel, standing_brief } }
-//        → Case C (authed, active member)
+//                comms_channel, standing_intel, standing_brief },
+//          plans: [ { id, name, war_type, status,
+//                     scheduled_at, scheduled_label,
+//                     published_at, archived_at } ] }
+//        → Case C (authed, active member). Plans: published/active/archived.
+//          Drafts and deleted plans excluded. Sorted upcoming-first.
 //
 //   200  { state: 'revoked' }
 //        → Case D (authed, revoked member). No HQ info returned — privacy.
@@ -130,6 +134,30 @@ export async function GET(req: NextRequest, context: RouteContext) {
 
     // Case C — active member (creator, editor, or viewer).
     if (membership && membership.status === 'active') {
+      // ─── 5. Fetch visible plans for this HQ ─────────────────────────────
+      // Exclude drafts (only creator/editor see those via /manage) and
+      // deleted rows. Include published, active, and archived so the member
+      // view can show both upcoming battles and historical record.
+      //
+      // Sort priority: upcoming battles first (scheduled_at ASC, NULLs last),
+      // then most-recently-published, so the section renders with the next
+      // battle at the top and older content below.
+      const { data: plansData, error: plansError } = await supabase
+        .from('battle_plans')
+        .select(
+          'id, name, war_type, status, scheduled_at, scheduled_label, published_at, archived_at'
+        )
+        .eq('battle_hq_id', hq.id)
+        .in('status', ['published', 'active', 'archived'])
+        .order('scheduled_at', { ascending: true, nullsFirst: false })
+        .order('published_at', { ascending: false });
+
+      if (plansError) {
+        console.error('[by-slug] Plans lookup error:', plansError);
+        // Non-fatal — return member state with empty plans array rather
+        // than failing the whole response.
+      }
+
       return NextResponse.json({
         state: 'member',
         membership: {
@@ -145,6 +173,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
           standing_intel: hq.standing_intel,
           standing_brief: hq.standing_brief,
         },
+        plans: plansData ?? [],
       });
     }
 
