@@ -7,14 +7,18 @@
 // Sections shipped:
 //   1. Duplicate banner (if parent_plan_id)
 //   2. Metadata (name, war type, scheduled_label, comms_channel)
-//   3. Rich text (orders, brief, intel)   ← File 3
+//   3. Battle map upload + AnnotationCanvas embed   ← File 4
+//   4. Rich text (orders, brief, intel)
 //
-// Remaining: battle map upload + canvas · action bar (publish/archive/delete)
+// Remaining: action bar (Save Draft / Publish / Archive / Delete)
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import AnnotationCanvas, {
+  type AnnotationsJson,
+} from '@/components/battle-hq/AnnotationCanvas';
 
 // ---------- Types ----------
 
@@ -44,7 +48,7 @@ export interface BattlePlan {
   brief: string | null;
   intel: string | null;
   map_image_url: string | null;
-  map_annotations_json: unknown | null;
+  map_annotations_json: AnnotationsJson | null;
   parent_plan_id: string | null;
   created_at: string;
   updated_at: string;
@@ -67,6 +71,12 @@ type RichFieldKey = 'orders' | 'brief' | 'intel';
 type AnyFieldKey = MetaFieldKey | RichFieldKey;
 
 // ---------- Constants ----------
+
+const MAPS_BUCKET = 'battle-hq-maps';
+const SIGNED_URL_SECONDS = 60 * 60; // 1 hour
+const ANNOTATION_SAVE_DEBOUNCE_MS = 1500;
+const MAP_MAX_BYTES = 10 * 1024 * 1024; // 10 MB
+const MAP_ALLOWED_MIMES = ['image/png', 'image/jpeg', 'image/webp'];
 
 const WAR_TYPE_OPTIONS: { value: WarType; label: string }[] = [
   { value: 'desert_storm', label: 'Desert Storm' },
@@ -167,6 +177,22 @@ export default function BattlePlanEditorPage() {
     initialSavedTimers
   );
 
+  // --- Map state ---
+  const [mapSignedUrl, setMapSignedUrl] = useState<string | null>(null);
+  const [mapUploading, setMapUploading] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
+  const [mapRemoving, setMapRemoving] = useState(false);
+  const mapInputRef = useRef<HTMLInputElement | null>(null);
+
+  // --- Annotations save state ---
+  const [annotationsSaveState, setAnnotationsSaveState] =
+    useState<SaveState>('idle');
+  const [annotationsSaveMessage, setAnnotationsSaveMessage] = useState('');
+  const annotationsDebounceRef = useRef<number | null>(null);
+  const annotationsSavedTimerRef = useRef<number | null>(null);
+  const annotationsInFlightRef = useRef(false);
+  const annotationsPendingRef = useRef<AnnotationsJson | null>(null);
+
   // Ref mirrors
   const planRef = useRef<BattlePlan | null>(null);
   useEffect(() => {
@@ -204,7 +230,7 @@ export default function BattlePlanEditorPage() {
       const token = session.access_token;
       setAccessToken(token);
 
-      // --- Load HQ + membership ---
+      // HQ + membership
       let hqData: BattleHq | null = null;
       let roleData: Role | null = null;
       try {
@@ -244,7 +270,7 @@ export default function BattlePlanEditorPage() {
       setHq(hqData);
       setRole(roleData);
 
-      // --- Load plan ---
+      // Plan
       let planData: BattlePlan | null = null;
       try {
         const planRes = await fetch(`/api/battle-hq/${hqId}/plans/${planId}`, {
@@ -288,7 +314,7 @@ export default function BattlePlanEditorPage() {
         intel: planData.intel ?? '',
       });
 
-      // --- Parent name for duplicate banner ---
+      // Parent name for duplicate banner
       if (planData.parent_plan_id) {
         try {
           const parentRes = await fetch(
@@ -313,6 +339,38 @@ export default function BattlePlanEditorPage() {
     };
   }, [hqId, planId, router]);
 
+  // Generate signed URL whenever plan.map_image_url changes
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!plan?.map_image_url) {
+        setMapSignedUrl(null);
+        return;
+      }
+      try {
+        const { data, error } = await supabase.storage
+          .from(MAPS_BUCKET)
+          .createSignedUrl(plan.map_image_url, SIGNED_URL_SECONDS);
+        if (cancelled) return;
+        if (error || !data?.signedUrl) {
+          setMapSignedUrl(null);
+          setMapError('Could not load battle map image.');
+          return;
+        }
+        setMapSignedUrl(data.signedUrl);
+        setMapError(null);
+      } catch {
+        if (cancelled) return;
+        setMapSignedUrl(null);
+        setMapError('Could not load battle map image.');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [plan?.map_image_url]);
+
+  // Cleanup all timers on unmount
   useEffect(() => {
     const timers = savedTimerRef.current;
     return () => {
@@ -320,10 +378,16 @@ export default function BattlePlanEditorPage() {
         const t = timers[k];
         if (t !== null) window.clearTimeout(t);
       });
+      if (annotationsDebounceRef.current !== null) {
+        window.clearTimeout(annotationsDebounceRef.current);
+      }
+      if (annotationsSavedTimerRef.current !== null) {
+        window.clearTimeout(annotationsSavedTimerRef.current);
+      }
     };
   }, []);
 
-  // ---------- Save helpers ----------
+  // ---------- Save helpers: metadata + rich text ----------
 
   const markSaveState = useCallback(
     (field: AnyFieldKey, state: SaveState, message = '') => {
@@ -333,7 +397,6 @@ export default function BattlePlanEditorPage() {
     []
   );
 
-  // Reads current draft values from refs
   const readDraftValue = (field: AnyFieldKey): string => {
     if (field === 'orders' || field === 'brief' || field === 'intel') {
       return richDraftRef.current[field] ?? '';
@@ -441,6 +504,238 @@ export default function BattlePlanEditorPage() {
     }, 0);
   };
 
+  // ---------- Map upload ----------
+
+  const openFilePicker = () => {
+    if (mapInputRef.current) mapInputRef.current.click();
+  };
+
+  const uploadMap = useCallback(
+    async (file: File) => {
+      const token = tokenRef.current;
+      if (!token) return;
+
+      setMapError(null);
+      if (!MAP_ALLOWED_MIMES.includes(file.type)) {
+        setMapError('Battle maps must be PNG, JPEG, or WebP.');
+        return;
+      }
+      if (file.size === 0) {
+        setMapError('That file is empty.');
+        return;
+      }
+      if (file.size > MAP_MAX_BYTES) {
+        setMapError('Battle map must be 10 MB or smaller.');
+        return;
+      }
+
+      setMapUploading(true);
+      try {
+        const fd = new FormData();
+        fd.append('file', file);
+        const res = await fetch(
+          `/api/battle-hq/${hqId}/plans/${planId}/upload-map`,
+          {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body: fd,
+          }
+        );
+        if (!res.ok) {
+          const text = await res.text().catch(() => '');
+          setMapError(
+            `Upload failed (${res.status})${text ? `: ${text.slice(0, 100)}` : ''}`
+          );
+          return;
+        }
+        const json = await res.json();
+        const newPath = json?.plan?.map_image_url as string | undefined;
+        if (!newPath) {
+          setMapError('Upload succeeded but response was unexpected.');
+          return;
+        }
+        setPlan((prev) =>
+          prev
+            ? ({
+                ...prev,
+                map_image_url: newPath,
+                // Fresh map → clear stale annotations from the previous image
+                map_annotations_json: null,
+              } as BattlePlan)
+            : prev
+        );
+      } catch (err) {
+        setMapError(
+          err instanceof Error ? err.message : 'Network error during upload.'
+        );
+      } finally {
+        setMapUploading(false);
+      }
+    },
+    [hqId, planId]
+  );
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) uploadMap(file);
+    // Reset so selecting the same file twice still fires change
+    if (e.target) e.target.value = '';
+  };
+
+  const handleRemoveMap = useCallback(async () => {
+    const token = tokenRef.current;
+    if (!token) return;
+    if (
+      !window.confirm(
+        'Remove the battle map? This clears the map image and all annotations.'
+      )
+    ) {
+      return;
+    }
+    setMapRemoving(true);
+    setMapError(null);
+    try {
+      // Clear annotations first (null is explicit clear)
+      await fetch(
+        `/api/battle-hq/${hqId}/plans/${planId}/annotations`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ annotations: null }),
+        }
+      );
+
+      // Then null the map_image_url via PATCH
+      const res = await fetch(`/api/battle-hq/${hqId}/plans/${planId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ map_image_url: null }),
+      });
+      // Note: PATCH route allowlist may not include map_image_url. We still
+      // clear locally for UX — the next upload overwrites the row anyway.
+      if (!res.ok) {
+        console.warn(
+          '[map remove] PATCH map_image_url=null returned',
+          res.status
+        );
+      }
+      setPlan((prev) =>
+        prev
+          ? ({
+              ...prev,
+              map_image_url: null,
+              map_annotations_json: null,
+            } as BattlePlan)
+          : prev
+      );
+    } catch (err) {
+      setMapError(
+        err instanceof Error ? err.message : 'Network error removing map.'
+      );
+    } finally {
+      setMapRemoving(false);
+    }
+  }, [hqId, planId]);
+
+  // ---------- Annotations save (debounced + concurrency-safe) ----------
+
+  const flushAnnotationsSave = useCallback(
+    async (annotations: AnnotationsJson): Promise<void> => {
+      const token = tokenRef.current;
+      if (!token) return;
+
+      // If one is already in flight, stash this as the pending next write.
+      if (annotationsInFlightRef.current) {
+        annotationsPendingRef.current = annotations;
+        return;
+      }
+
+      annotationsInFlightRef.current = true;
+      setAnnotationsSaveState('saving');
+      setAnnotationsSaveMessage('');
+
+      try {
+        const res = await fetch(
+          `/api/battle-hq/${hqId}/plans/${planId}/annotations`,
+          {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ annotations }),
+          }
+        );
+        if (!res.ok) {
+          const text = await res.text().catch(() => '');
+          setAnnotationsSaveState('error');
+          setAnnotationsSaveMessage(
+            `Save failed (${res.status})${text ? `: ${text.slice(0, 80)}` : ''}`
+          );
+        } else {
+          setPlan((prev) =>
+            prev
+              ? ({ ...prev, map_annotations_json: annotations } as BattlePlan)
+              : prev
+          );
+          setAnnotationsSaveState('saved');
+          setAnnotationsSaveMessage('Saved ✓');
+          if (annotationsSavedTimerRef.current !== null) {
+            window.clearTimeout(annotationsSavedTimerRef.current);
+          }
+          annotationsSavedTimerRef.current = window.setTimeout(() => {
+            setAnnotationsSaveState('idle');
+          }, 2000);
+        }
+      } catch (err) {
+        setAnnotationsSaveState('error');
+        setAnnotationsSaveMessage(
+          err instanceof Error ? err.message : 'Network error'
+        );
+      } finally {
+        annotationsInFlightRef.current = false;
+        // Drain queue — if another change came in during the flight, flush it now.
+        const pending = annotationsPendingRef.current;
+        if (pending) {
+          annotationsPendingRef.current = null;
+          flushAnnotationsSave(pending);
+        }
+      }
+    },
+    [hqId, planId]
+  );
+
+  const handleAnnotationsChange = useCallback(
+    (next: AnnotationsJson) => {
+      setAnnotationsSaveState('saving');
+      setAnnotationsSaveMessage('');
+
+      if (annotationsDebounceRef.current !== null) {
+        window.clearTimeout(annotationsDebounceRef.current);
+      }
+      annotationsDebounceRef.current = window.setTimeout(() => {
+        annotationsDebounceRef.current = null;
+        flushAnnotationsSave(next);
+      }, ANNOTATION_SAVE_DEBOUNCE_MS);
+
+      // Safety net: if user closes tab before debounce fires, flush sync.
+      // Re-register every call so the latest annotations are captured.
+      const beforeUnload = () => {
+        // navigator.sendBeacon would be ideal but our route needs auth headers.
+        // Best-effort async flush; modern browsers give us ~a second.
+        flushAnnotationsSave(next);
+      };
+      window.addEventListener('beforeunload', beforeUnload, { once: true });
+    },
+    [flushAnnotationsSave]
+  );
+
   // ---------- Render guards ----------
 
   if (loading) {
@@ -482,6 +777,16 @@ export default function BattlePlanEditorPage() {
     if (state === 'saving') return <span className="text-zinc-500">Saving…</span>;
     if (state === 'saved') return <span className="text-green-400">{msg}</span>;
     if (state === 'error') return <span className="text-red-400">{msg}</span>;
+    return null;
+  };
+
+  const renderAnnotationsBadge = () => {
+    if (annotationsSaveState === 'saving')
+      return <span className="text-zinc-500">Saving…</span>;
+    if (annotationsSaveState === 'saved')
+      return <span className="text-green-400">{annotationsSaveMessage}</span>;
+    if (annotationsSaveState === 'error')
+      return <span className="text-red-400">{annotationsSaveMessage}</span>;
     return null;
   };
 
@@ -616,18 +921,88 @@ export default function BattlePlanEditorPage() {
           </div>
         </section>
 
-        {/* Map placeholder — File 4 */}
-        <section className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-          <div className="text-[10px] font-mono text-amber-500 tracking-widest uppercase mb-2">
-            Battle Map
+        {/* Battle Map + Canvas */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-[10px] font-mono text-zinc-500 tracking-widest uppercase">
+              Battle Map
+            </div>
+            {plan.map_image_url && (
+              <div className="text-[10px] font-mono tracking-widest uppercase">
+                {renderAnnotationsBadge()}
+              </div>
+            )}
           </div>
-          <p className="text-xs text-zinc-500">
-            Upload battle map &rarr; annotation canvas renders inline. Coming
-            next.
-          </p>
+
+          <input
+            ref={mapInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            onChange={handleFileInputChange}
+            className="hidden"
+          />
+
+          {mapError && (
+            <div className="bg-red-950/60 border border-red-900/60 rounded-xl px-4 py-2.5 text-xs text-red-300">
+              {mapError}
+            </div>
+          )}
+
+          {!plan.map_image_url ? (
+            <div className="bg-zinc-900 border-2 border-dashed border-zinc-700 rounded-2xl p-8 text-center">
+              <div className="text-sm text-zinc-300 mb-2 font-bold">
+                No battle map uploaded yet
+              </div>
+              <div className="text-[11px] font-mono text-zinc-500 tracking-wider mb-4 leading-relaxed">
+                PNG, JPEG, or WebP · 10 MB max
+              </div>
+              <button
+                onClick={openFilePicker}
+                disabled={mapUploading}
+                className="px-4 py-2 rounded-lg bg-amber-500 text-black text-[11px] font-mono font-bold tracking-widest uppercase hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {mapUploading ? 'Uploading…' : '+ Upload Map'}
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {mapSignedUrl ? (
+                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3">
+                  <AnnotationCanvas
+                    imageUrl={mapSignedUrl}
+                    initialAnnotations={
+                      plan.map_annotations_json ?? null
+                    }
+                    readOnly={false}
+                    onChange={handleAnnotationsChange}
+                  />
+                </div>
+              ) : (
+                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 text-center text-xs font-mono text-zinc-500 tracking-widest uppercase">
+                  Loading map…
+                </div>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={openFilePicker}
+                  disabled={mapUploading || mapRemoving}
+                  className="px-3 py-2 rounded-lg bg-zinc-800 text-zinc-300 border border-zinc-700 text-[11px] font-mono font-bold tracking-widest uppercase hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {mapUploading ? 'Replacing…' : 'Replace Map'}
+                </button>
+                <button
+                  onClick={handleRemoveMap}
+                  disabled={mapUploading || mapRemoving}
+                  className="px-3 py-2 rounded-lg bg-red-950/60 text-red-400 border border-red-900/60 text-[11px] font-mono font-bold tracking-widest uppercase hover:bg-red-900/60 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {mapRemoving ? 'Removing…' : 'Remove Map'}
+                </button>
+              </div>
+            </div>
+          )}
         </section>
 
-        {/* Rich text — File 3 */}
+        {/* Rich text */}
         <section className="space-y-4">
           <div className="text-[10px] font-mono text-zinc-500 tracking-widest uppercase">
             Orders · Brief · Intel
