@@ -1,22 +1,23 @@
 'use client';
-
 // src/app/battle-hq/[id]/manage/page.tsx
 // Battle HQ V1 — Commander Dashboard.
 // Creator: all 5 tabs. Editor: 4 tabs (no Settings). Viewer: 403 → redirect.
 //
-// This file owns: auth gate, HQ + members fetch, tab switcher, layout.
+// This file owns: auth gate, HQ + members fetch, affiliate-code fetch,
+// tab switcher, layout.
 // Each tab is a separate component in src/components/battle-hq/dashboard/.
 //
 // API response normalization:
-//   GET /api/battle-hq/[id]       returns { hq, membership: { role } }
+//   GET /api/battle-hq/[id] returns { hq, membership: { role } }
 //   GET /api/battle-hq/[id]/members returns { members: { active, removed }, counts }
 //     — "editors" are inside members.active with role === 'editor'
+//   GET /api/affiliate/dashboard returns { status, referral_code, ... }
+//     — 404 when user has no affiliate row; any non-approved status → code is null.
 
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-
 import OverviewTab from '@/components/battle-hq/dashboard/OverviewTab';
 import MembersTab from '@/components/battle-hq/dashboard/MembersTab';
 import BattlePlansTab from '@/components/battle-hq/dashboard/BattlePlansTab';
@@ -52,9 +53,9 @@ interface Member {
 }
 
 interface MembersResponse {
-  active: Member[];   // active viewers + creator (tab filters creator out)
-  editors: Member[];  // active editors only
-  removed: Member[];  // revoked + left
+  active: Member[];  // active viewers + creator (tab filters creator out)
+  editors: Member[]; // active editors only
+  removed: Member[]; // revoked + left
 }
 
 // ---------- Tab config ----------
@@ -78,6 +79,7 @@ export default function BattleHqManagePage() {
   const [role, setRole] = useState<Role | null>(null);
   const [hq, setHq] = useState<BattleHq | null>(null);
   const [members, setMembers] = useState<MembersResponse | null>(null);
+  const [affiliateCode, setAffiliateCode] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -102,7 +104,6 @@ export default function BattleHqManagePage() {
         return null;
       }
       const data = await res.json();
-      // API shape: { hq, membership: { role, ... } }
       const hqData = data?.hq as BattleHq | undefined;
       const roleData = data?.membership?.role as Role | undefined;
       if (!hqData || !roleData) {
@@ -121,14 +122,38 @@ export default function BattleHqManagePage() {
       });
       if (!res.ok) return null;
       const data = await res.json();
-      // API shape: { members: { active: Member[], removed: Member[] }, counts }
-      // Editors live inside members.active with role === 'editor'.
       const activeAll: Member[] = data?.members?.active ?? [];
       const removed: Member[] = data?.members?.removed ?? [];
       const editors = activeAll.filter((m) => m.role === 'editor');
       return { active: activeAll, editors, removed };
     },
     [hqId]
+  );
+
+  /**
+   * Fetches the current user's approved affiliate referral code, or
+   * returns null if they are not an approved affiliate.
+   *
+   * Contract: never throws. 404 = no affiliate row. Any status other
+   * than 'approved' = null code. Network errors = null code. The
+   * invite-link UX degrades gracefully to the "no code" nudge.
+   */
+  const fetchAffiliateCode = useCallback(
+    async (token: string): Promise<string | null> => {
+      try {
+        const res = await fetch('/api/affiliate/dashboard', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return null; // 404 = not an affiliate, treat as no code
+        const data = await res.json();
+        if (data?.status !== 'approved') return null;
+        const code = data?.referral_code;
+        return typeof code === 'string' && code.length > 0 ? code : null;
+      } catch {
+        return null;
+      }
+    },
+    []
   );
 
   const refreshMembers = useCallback(async () => {
@@ -156,6 +181,7 @@ export default function BattleHqManagePage() {
         return;
       }
       if (cancelled) return;
+
       setAccessToken(session.access_token);
 
       const hqResult = await fetchHq(session.access_token);
@@ -173,17 +199,22 @@ export default function BattleHqManagePage() {
       setHq(hqResult.hq);
       setRole(hqResult.role);
 
-      const m = await fetchMembers(session.access_token);
+      // Fetch members + affiliate code in parallel — neither blocks the other
+      const [m, code] = await Promise.all([
+        fetchMembers(session.access_token),
+        fetchAffiliateCode(session.access_token),
+      ]);
+
       if (cancelled) return;
       if (m) setMembers(m);
-
+      setAffiliateCode(code);
       setLoading(false);
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [hqId, fetchHq, fetchMembers, router]);
+  }, [hqId, fetchHq, fetchMembers, fetchAffiliateCode, router]);
 
   // ---------- Render guards ----------
 
@@ -279,15 +310,12 @@ export default function BattleHqManagePage() {
             role={role}
             members={members}
             accessToken={accessToken}
+            affiliateCode={affiliateCode}
             onMembersChanged={refreshMembers}
           />
         )}
         {activeTab === 'plans' && (
-          <BattlePlansTab
-            hq={hq}
-            role={role}
-            accessToken={accessToken}
-          />
+          <BattlePlansTab hq={hq} role={role} accessToken={accessToken} />
         )}
         {activeTab === 'standing' && (
           <StandingContentTab

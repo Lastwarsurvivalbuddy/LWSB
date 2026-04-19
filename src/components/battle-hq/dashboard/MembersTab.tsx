@@ -1,17 +1,21 @@
 'use client';
-
 // src/components/battle-hq/dashboard/MembersTab.tsx
 // Members tab for the Commander dashboard.
 //
 // Layout:
-//   1. Invite link card (copy button, affiliate-aware note per Patch 01 §6.3)
+//   1. Invite link card (copy button, affiliate-aware per Spec §5.1, §6.3)
+//      - If user has an approved affiliate code: URL auto-appends ?ref={code}
+//        and renders the "code is attached" note.
+//      - If not: URL is clean (/cc/{slug}) and renders the "set up your
+//        affiliate link" nudge with a link to /affiliate.
 //   2. Sub-tab switcher: Active · Editors · Removed
 //   3. Member list for selected sub-tab, with per-row actions:
 //        Active viewer → Promote (creator), Revoke (creator/editor)
-//        Editor        → Demote  (creator), Revoke (creator/editor)
-//        Removed       → Restore (creator/editor)
+//        Editor       → Demote (creator), Revoke (creator/editor)
+//        Removed      → Restore (creator/editor)
 
 import { useCallback, useMemo, useState } from 'react';
+import Link from 'next/link';
 
 // ---------- Types ----------
 
@@ -44,14 +48,23 @@ export interface MembersTabProps {
   role: Role; // viewer is filtered out in the shell; this is creator | editor
   members: MembersResponse | null;
   accessToken: string;
+  /**
+   * Current user's approved affiliate referral code, or null if they
+   * are not an approved affiliate. Fetched once by the dashboard shell
+   * and passed down so tab switches don't re-fetch.
+   */
+  affiliateCode: string | null;
   onMembersChanged: () => void | Promise<void>;
 }
 
 // ---------- Helpers ----------
 
-function getInviteUrl(slug: string): string {
-  if (typeof window === 'undefined') return `/cc/${slug}`;
-  return `${window.location.origin}/cc/${slug}`;
+function getInviteUrl(slug: string, affiliateCode: string | null): string {
+  const path = affiliateCode
+    ? `/cc/${slug}?ref=${encodeURIComponent(affiliateCode)}`
+    : `/cc/${slug}`;
+  if (typeof window === 'undefined') return path;
+  return `${window.location.origin}${path}`;
 }
 
 function formatDate(iso: string): string {
@@ -82,6 +95,7 @@ export default function MembersTab({
   role,
   members,
   accessToken,
+  affiliateCode,
   onMembersChanged,
 }: MembersTabProps) {
   const [subTab, setSubTab] = useState<SubTab>('active');
@@ -89,7 +103,10 @@ export default function MembersTab({
   const [actionError, setActionError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const inviteUrl = useMemo(() => getInviteUrl(hq.slug), [hq.slug]);
+  const inviteUrl = useMemo(
+    () => getInviteUrl(hq.slug, affiliateCode),
+    [hq.slug, affiliateCode]
+  );
 
   const setPending = useCallback((userId: string, pending: boolean) => {
     setPendingIds((prev) => {
@@ -202,10 +219,25 @@ export default function MembersTab({
             {copied ? 'Copied ✓' : 'Copy'}
           </button>
         </div>
-        <div className="text-[11px] font-mono text-zinc-500 tracking-wider mt-3 leading-relaxed">
-          Share this with your alliance. New signups count toward your affiliate
-          conversions if you have a referral code set.
-        </div>
+
+        {/* Affiliate-aware nudge (Spec §6.3) */}
+        {affiliateCode ? (
+          <div className="text-[11px] font-mono text-amber-400/80 tracking-wider mt-3 leading-relaxed">
+            Your affiliate code is attached to this link — you earn commission
+            on upgrades.
+          </div>
+        ) : (
+          <div className="text-[11px] font-mono text-zinc-500 tracking-wider mt-3 leading-relaxed">
+            Set up your affiliate link to earn commission on signups through
+            this invite.{' '}
+            <Link
+              href="/affiliate"
+              className="text-amber-400 hover:text-amber-300 underline underline-offset-2"
+            >
+              Set up now
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Error surface */}
