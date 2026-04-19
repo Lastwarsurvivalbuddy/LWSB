@@ -18,6 +18,30 @@ function getToken(req: NextRequest): string | null {
   return null
 }
 
+// Referral code rules: alphanumeric + dash, 3-30 chars
+const REFERRAL_CODE_REGEX = /^[A-Za-z0-9-]{3,30}$/
+
+function validateReferralCode(raw: unknown): { code: string } | { error: string } {
+  if (typeof raw !== 'string') return { error: 'referral_code must be a string' }
+  const trimmed = raw.trim()
+  if (!REFERRAL_CODE_REGEX.test(trimmed)) {
+    return { error: 'referral_code must be 3–30 chars, letters / numbers / dashes only' }
+  }
+  return { code: trimmed }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function isCodeTaken(supabase: any, code: string, excludeId?: string): Promise<boolean> {
+  const query = supabase
+    .from('affiliates')
+    .select('id')
+    .ilike('referral_code', code)
+  const { data } = excludeId
+    ? await query.neq('id', excludeId)
+    : await query
+  return (data ?? []).length > 0
+}
+
 // ── GET ──────────────────────────────────────────────────────────────────────
 // ?mode=list         → all affiliates (existing behaviour)
 // ?mode=payouts&id=X → payout history + unpaid balance for one affiliate
@@ -106,8 +130,9 @@ export async function GET(req: NextRequest) {
 }
 
 // ── PATCH ─────────────────────────────────────────────────────────────────────
-// action: 'approve' | 'reject'         → existing approve/reject
-// action: 'mark_paid'                  → log a payout, reduce unpaid balance
+// action: 'approve' | 'reject'  → approve/reject (approve accepts optional referral_code override)
+// action: 'update_code'         → change referral_code on an existing affiliate
+// action: 'mark_paid'           → log a payout, reduce unpaid balance
 export async function PATCH(req: NextRequest) {
   const token = getToken(req)
   if (!token || !(await verifyBoyd(token))) {
@@ -148,9 +173,28 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ success: true, payout })
   }
 
+  // ── Update referral code (post-approval edits) ──
+  if (action === 'update_code') {
+    const result = validateReferralCode(body.referral_code)
+    if ('error' in result) {
+      return NextResponse.json({ error: result.error }, { status: 400 })
+    }
+    if (await isCodeTaken(supabase, result.code, affiliate_id)) {
+      return NextResponse.json({ error: 'referral_code already in use' }, { status: 409 })
+    }
+    const { data, error } = await supabase
+      .from('affiliates')
+      .update({ referral_code: result.code })
+      .eq('id', affiliate_id)
+      .select()
+      .single()
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ success: true, affiliate: data })
+  }
+
   // ── Approve / reject ──
   if (!['approve', 'reject'].includes(action)) {
-    return NextResponse.json({ error: 'action must be approve, reject, or mark_paid' }, { status: 400 })
+    return NextResponse.json({ error: 'action must be approve, reject, update_code, or mark_paid' }, { status: 400 })
   }
 
   const updates: Record<string, unknown> = {
@@ -169,6 +213,17 @@ export async function PATCH(req: NextRequest) {
         )
       }
       updates.payout_rate = rate
+    }
+    // Optional custom referral code override at approval time
+    if (body.referral_code !== undefined && body.referral_code !== null && body.referral_code !== '') {
+      const result = validateReferralCode(body.referral_code)
+      if ('error' in result) {
+        return NextResponse.json({ error: result.error }, { status: 400 })
+      }
+      if (await isCodeTaken(supabase, result.code, affiliate_id)) {
+        return NextResponse.json({ error: 'referral_code already in use' }, { status: 409 })
+      }
+      updates.referral_code = result.code
     }
   } else {
     updates.rejected_at = new Date().toISOString()

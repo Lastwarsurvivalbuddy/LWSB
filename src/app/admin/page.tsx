@@ -176,6 +176,9 @@ export default function MissionControlPage() {
   const [affiliateActing, setAffiliateActing] = useState<string | null>(null)
   const [payoutInputs, setPayoutInputs] = useState<Record<string, string>>({})
   const [notesInputs, setNotesInputs] = useState<Record<string, string>>({})
+  const [codeInputs, setCodeInputs] = useState<Record<string, string>>({})
+  const [codeActing, setCodeActing] = useState<string | null>(null)
+  const [codeError, setCodeError] = useState<Record<string, string>>({})
   const [affiliateFilter, setAffiliateFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending')
   const [payoutPanelId, setPayoutPanelId] = useState<string | null>(null)
   const [payoutData, setPayoutData] = useState<Record<string, AffiliatePayoutData>>({})
@@ -280,12 +283,15 @@ export default function MissionControlPage() {
       setAffiliates(list)
       const inputs: Record<string, string> = {}
       const notes: Record<string, string> = {}
+      const codes: Record<string, string> = {}
       for (const a of list) {
         inputs[a.id] = String(Math.round(a.payout_rate * 100))
         notes[a.id] = a.notes ?? ''
+        codes[a.id] = a.referral_code ?? ''
       }
       setPayoutInputs(inputs)
       setNotesInputs(notes)
+      setCodeInputs(codes)
 
       const approved = list.filter(a => a.status === 'approved')
       if (approved.length > 0) {
@@ -499,20 +505,57 @@ export default function MissionControlPage() {
   async function handleAffiliateAction(affiliateId: string, action: 'approve' | 'reject') {
     if (!token) return
     setAffiliateActing(affiliateId)
+    setCodeError(prev => ({ ...prev, [affiliateId]: '' }))
     const payoutRaw = payoutInputs[affiliateId]
     const payout_rate = payoutRaw ? parseFloat(payoutRaw) / 100 : 0.15
     const notes = notesInputs[affiliateId] ?? null
+    const customCode = action === 'approve' ? (codeInputs[affiliateId]?.trim() || null) : null
 
     const res = await fetch('/api/admin/affiliates', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ affiliate_id: affiliateId, action, payout_rate, notes }),
+      body: JSON.stringify({
+        affiliate_id: affiliateId,
+        action,
+        payout_rate,
+        notes,
+        ...(customCode ? { referral_code: customCode } : {}),
+      }),
     })
     if (res.ok) {
       const data = await res.json()
       setAffiliates(prev => prev.map(a => a.id === affiliateId ? { ...a, ...data.affiliate } : a))
+    } else {
+      const err = await res.json().catch(() => ({ error: 'Request failed' }))
+      setCodeError(prev => ({ ...prev, [affiliateId]: err.error ?? 'Request failed' }))
     }
     setAffiliateActing(null)
+  }
+
+  async function handleUpdateCode(affiliateId: string) {
+    if (!token) return
+    const raw = codeInputs[affiliateId]?.trim()
+    if (!raw) return
+    setCodeActing(affiliateId)
+    setCodeError(prev => ({ ...prev, [affiliateId]: '' }))
+    const res = await fetch('/api/admin/affiliates', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        affiliate_id: affiliateId,
+        action: 'update_code',
+        referral_code: raw,
+      }),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      setAffiliates(prev => prev.map(a => a.id === affiliateId ? { ...a, ...data.affiliate } : a))
+      setCodeInputs(prev => ({ ...prev, [affiliateId]: data.affiliate.referral_code }))
+    } else {
+      const err = await res.json().catch(() => ({ error: 'Request failed' }))
+      setCodeError(prev => ({ ...prev, [affiliateId]: err.error ?? 'Request failed' }))
+    }
+    setCodeActing(null)
   }
 
   async function handleMarkPaid(affiliateId: string) {
@@ -1242,16 +1285,38 @@ export default function MissionControlPage() {
 
                   {aff.status === 'approved' && (
                     <>
-                      <div className="flex items-center gap-3 mb-3 bg-zinc-950/40 rounded-xl p-3">
-                        <div>
-                          <p className="text-[10px] text-zinc-600 font-mono uppercase tracking-wide mb-0.5">Referral Code</p>
-                          <p className="text-sm font-mono text-amber-400">{aff.referral_code}</p>
+                      <div className="flex items-end gap-3 mb-1 bg-zinc-950/40 rounded-xl p-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] text-zinc-600 font-mono uppercase tracking-wide mb-1">Referral Code</p>
+                          <div className="flex gap-2 items-center">
+                            <input
+                              type="text"
+                              value={codeInputs[aff.id] ?? aff.referral_code}
+                              onChange={e => setCodeInputs(prev => ({ ...prev, [aff.id]: e.target.value }))}
+                              className="flex-1 bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1.5 text-amber-400 text-sm font-mono focus:outline-none focus:border-amber-500/60"
+                              placeholder="alphanumeric + dash, 3–30"
+                            />
+                            <button
+                              onClick={() => handleUpdateCode(aff.id)}
+                              disabled={
+                                codeActing === aff.id ||
+                                !codeInputs[aff.id]?.trim() ||
+                                codeInputs[aff.id]?.trim() === aff.referral_code
+                              }
+                              className="text-[11px] font-bold px-3 py-1.5 rounded-lg border border-amber-500/40 text-amber-400 hover:border-amber-500 transition-colors disabled:opacity-40 whitespace-nowrap"
+                            >
+                              {codeActing === aff.id ? '…' : '💾 Save'}
+                            </button>
+                          </div>
                         </div>
-                        <div className="ml-auto text-right">
+                        <div className="text-right flex-shrink-0">
                           <p className="text-[10px] text-zinc-600 font-mono uppercase tracking-wide mb-0.5">Payout Rate</p>
                           <p className="text-sm font-bold text-green-400">{Math.round(aff.payout_rate * 100)}%</p>
                         </div>
                       </div>
+                      {codeError[aff.id] && (
+                        <p className="text-[11px] text-red-400 mb-3 px-1">⚠ {codeError[aff.id]}</p>
+                      )}
 
                       <button
                         onClick={() => togglePayoutPanel(aff.id)}
@@ -1386,6 +1451,24 @@ export default function MissionControlPage() {
 
                   {aff.status === 'pending' && (
                     <div className="border-t border-zinc-800 pt-4 mt-2">
+                      <div className="mb-3">
+                        <label className="text-[10px] text-zinc-500 font-mono uppercase tracking-wide block mb-1.5">
+                          Referral Code <span className="text-zinc-600 normal-case font-sans">(optional — leave blank to keep auto-generated)</span>
+                        </label>
+                        <input
+                          type="text"
+                          placeholder={aff.referral_code}
+                          value={codeInputs[aff.id] ?? ''}
+                          onChange={e => setCodeInputs(prev => ({ ...prev, [aff.id]: e.target.value }))}
+                          className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-amber-400 text-sm font-mono focus:outline-none focus:border-amber-500/60 placeholder:text-zinc-700"
+                        />
+                        <p className="text-[10px] text-zinc-600 mt-1">
+                          Auto-generated: <span className="text-zinc-500 font-mono">{aff.referral_code}</span> · alphanumeric + dash, 3–30 chars, case-insensitive unique
+                        </p>
+                        {codeError[aff.id] && (
+                          <p className="text-[11px] text-red-400 mt-1.5">⚠ {codeError[aff.id]}</p>
+                        )}
+                      </div>
                       <div className="grid grid-cols-2 gap-3 mb-3">
                         <div>
                           <label className="text-[10px] text-zinc-500 font-mono uppercase tracking-wide block mb-1.5">
