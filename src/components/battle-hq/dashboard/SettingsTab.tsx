@@ -4,20 +4,19 @@
 // Settings tab for the Commander dashboard. CREATOR ONLY.
 //
 // Sections:
-//   1. Slug — read-only reference + Copy
+//   1. Your Battle HQ URL — read-only full invite URL + Copy
 //   2. Alliance identity — read-only V1 (tag + server immutable once created)
 //   3. Transfer ownership — modal, requires typed-confirm
-//   4. Delete HQ — modal, requires typed-confirm of slug
+//   4. Delete HQ — modal, requires typed-confirm of URL ending
 //
 // V1 scope note: changing alliance tag / server mid-cycle is deliberately
 // deferred — it has cross-cutting implications (affiliate attribution,
 // plan name references). Creators who made a typo can delete + recreate.
 
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 // ---------- Types ----------
-
 interface BattleHq {
   id: string;
   slug: string;
@@ -35,16 +34,14 @@ export interface SettingsTabProps {
 type Modal = 'none' | 'transfer' | 'delete';
 
 // ---------- Main ----------
-
 export default function SettingsTab({
   hq,
   accessToken,
   onHqChanged,
 }: SettingsTabProps) {
   const router = useRouter();
-
   const [modal, setModal] = useState<Modal>('none');
-  const [slugCopied, setSlugCopied] = useState(false);
+  const [urlCopied, setUrlCopied] = useState(false);
 
   // Transfer state
   const [transferEmail, setTransferEmail] = useState('');
@@ -57,20 +54,25 @@ export default function SettingsTab({
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  // ---------- Copy slug ----------
+  // ---------- Invite URL ----------
+  // Built from current origin at render time so shareable links always match
+  // the user's current host (splash vs vercel vs subdomain migration).
+  const inviteUrl = useMemo(() => {
+    if (typeof window === 'undefined') return `/cc/${hq.slug}`;
+    return `${window.location.origin}/cc/${hq.slug}`;
+  }, [hq.slug]);
 
-  const handleCopySlug = useCallback(async () => {
+  const handleCopyUrl = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(hq.slug);
-      setSlugCopied(true);
-      setTimeout(() => setSlugCopied(false), 2000);
+      await navigator.clipboard.writeText(inviteUrl);
+      setUrlCopied(true);
+      setTimeout(() => setUrlCopied(false), 2000);
     } catch {
       /* no-op */
     }
-  }, [hq.slug]);
+  }, [inviteUrl]);
 
   // ---------- Transfer ----------
-
   const openTransfer = () => {
     setTransferEmail('');
     setTransferConfirm('');
@@ -88,7 +90,6 @@ export default function SettingsTab({
       setTransferError('Type TRANSFER to confirm.');
       return;
     }
-
     setTransferBusy(true);
     try {
       const res = await fetch(`/api/battle-hq/${hq.id}/transfer`, {
@@ -127,7 +128,6 @@ export default function SettingsTab({
   ]);
 
   // ---------- Delete ----------
-
   const openDelete = () => {
     setDeleteConfirm('');
     setDeleteError(null);
@@ -137,10 +137,9 @@ export default function SettingsTab({
   const handleDelete = useCallback(async () => {
     setDeleteError(null);
     if (deleteConfirm !== hq.slug) {
-      setDeleteError(`Type the slug "${hq.slug}" exactly to confirm.`);
+      setDeleteError(`Type "${hq.slug}" exactly to confirm.`);
       return;
     }
-
     setDeleteBusy(true);
     try {
       const res = await fetch(`/api/battle-hq/${hq.id}`, {
@@ -166,32 +165,31 @@ export default function SettingsTab({
   }, [deleteConfirm, hq.id, hq.slug, accessToken, router]);
 
   // ---------- Render ----------
-
   return (
     <div className="space-y-6">
-      {/* Slug */}
+      {/* Your Battle HQ URL */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
         <div className="text-[10px] font-mono text-amber-500 tracking-widest uppercase mb-2">
-          Slug
+          Your Battle HQ URL
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
           <input
             type="text"
-            value={hq.slug}
+            value={inviteUrl}
             readOnly
             onFocus={(e) => e.currentTarget.select()}
             className="flex-1 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs font-mono text-zinc-300 focus:outline-none"
           />
           <button
-            onClick={handleCopySlug}
+            onClick={handleCopyUrl}
             className="px-4 py-2 rounded-lg bg-zinc-800 text-zinc-300 border border-zinc-700 text-[11px] font-mono font-bold tracking-widest uppercase hover:bg-zinc-700 transition-colors"
           >
-            {slugCopied ? 'Copied ✓' : 'Copy'}
+            {urlCopied ? 'Copied ✓' : 'Copy'}
           </button>
         </div>
         <div className="text-[11px] font-mono text-zinc-500 tracking-wider mt-3 leading-relaxed">
-          The slug is permanent for the lifetime of this HQ and can’t be
-          changed. It’s the ID in your invite link.
+          Share this link with your alliance — anyone with the link can join.
+          Permanent for the life of this HQ, can&apos;t be changed.
         </div>
       </div>
 
@@ -229,15 +227,14 @@ export default function SettingsTab({
         <div className="text-[10px] font-mono text-red-400 tracking-widest uppercase mb-1">
           Danger Zone
         </div>
-
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="min-w-0">
             <div className="text-sm font-bold text-white">
               Transfer Ownership
             </div>
             <div className="text-[11px] font-mono text-zinc-400 tracking-wider mt-0.5 leading-relaxed">
-              Hand the HQ to another Founding-tier commander. You’ll be demoted
-              to editor automatically.
+              Hand the HQ to another Founding-tier commander. You&rsquo;ll be
+              demoted to editor automatically.
             </div>
           </div>
           <button
@@ -247,9 +244,7 @@ export default function SettingsTab({
             Transfer
           </button>
         </div>
-
         <div className="border-t border-red-900/40" />
-
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="min-w-0">
             <div className="text-sm font-bold text-white">Delete HQ</div>
@@ -279,7 +274,8 @@ export default function SettingsTab({
             </h2>
             <p className="text-xs text-zinc-400 leading-relaxed mb-4">
               The new owner must already have a Founding-tier account and be an
-              active member of this HQ. You’ll become an editor after transfer.
+              active member of this HQ. You&rsquo;ll become an editor after
+              transfer.
             </p>
 
             <div className="space-y-3">
@@ -351,8 +347,8 @@ export default function SettingsTab({
             </p>
 
             <label className="text-[10px] font-mono text-zinc-500 tracking-widest uppercase block mb-1">
-              Type the slug{' '}
-              <span className="text-white font-mono">{hq.slug}</span> to confirm
+              To confirm, type{' '}
+              <span className="text-white font-mono">{hq.slug}</span>
             </label>
             <input
               type="text"
