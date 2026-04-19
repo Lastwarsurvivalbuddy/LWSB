@@ -600,6 +600,21 @@ You are Buddy — the personal AI commander coach for Last War: Survival. The pl
       ? getTacticCardSummary()
       : '## Tactic Cards\n\nTactic Cards unlock in Season 4. NOT YET AVAILABLE TO THIS COMMANDER — do not recommend Core Card picks, Regular Card setups, or any Tactic Card strategy. If asked, tell the commander Tactic Cards unlock in Season 4 and are not yet available.';
 
+  // T11 (Armored Trooper / Assault Raider + Armament Institute) unlocks during
+  // the back half of regular Season 4 as one of the final Season 4 events that
+  // basically starts the S4 offseason. Gate at S4+ so pre-S4 commanders don't
+  // see T11 mechanics. Season 4 covers both T10-working-toward-T11 prep AND
+  // newly-unlocked T11 commanders.
+  const t11Data =
+    seasonNumber >= 4
+      ? getT11DataSummary()
+      : '## T11 Troops System\n\nT11 (Armored Trooper / Assault Raider) unlocks in the back half of regular Season 4 via the Armament Institute. NOT YET AVAILABLE TO THIS COMMANDER — do not describe T11 mechanics, Armament Institute, branch progression, or recommend T11-related actions. If asked, tell the commander T11 unlocks in Season 4 and is not yet available on their server.';
+
+  const hedgeT11ArmamentData =
+    seasonNumber >= 4
+      ? getT11ArmamentSummary()
+      : '## T11 Armament Upgrade Costs\n\nNOT YET AVAILABLE — T11 unlocks in the back half of regular Season 4. Do not reference T11 armament upgrade costs for this commander.';
+
   const tricksData = getTricksDataSummary();
   const radarMissionData = getRadarMissionDataSummary();
   const storesData = getStoresDataSummary();
@@ -612,7 +627,6 @@ You are Buddy — the personal AI commander coach for Last War: Survival. The pl
   const skyBattlefront = getSkyBattlefrontSummary();
   const meteoriteData = getMeteoriteSummary();
   const lwtVIPData = getLWTVIPSummary();
-  const t11Data = getT11DataSummary();
   const decorationTierData = getDecorationTierSummary();
   const heroTierData = getHeroTierSummary();
   const professionData = getProfessionDataSummary();
@@ -626,7 +640,6 @@ You are Buddy — the personal AI commander coach for Last War: Survival. The pl
   const hedgePackData = getPackDataSummary();
   const hedgeStoreItemData = getStoreItemData();
   const hedgeDroneData = getHedgeDroneDataSummary();
-  const hedgeT11ArmamentData = getT11ArmamentSummary();
   const hedgeBuildingCostData = getHedgeBuildingCostSummary();
   const hedgeHeroCostData = getHeroCostDataSummary();
 
@@ -873,10 +886,8 @@ ${getArmamentSummary()}
 ## T10 Research
 ${getT10Summary()}
 
-## T11 Troops System
 ${t11Data}
 
-## T11 Armament Upgrade Costs (Powered by cpt-hedge.com)
 ${hedgeT11ArmamentData}
 
 ## Hero Cost Data (Powered by cpt-hedge.com)
@@ -918,7 +929,7 @@ ${communityIntel}
 - When asked about Sky Battlefront, check if they are in an alliance and emphasize donation phase — a weak Airship tanks battle performance.
 - When asked about Meteorite Iron War, lead with troop tier and march capacity — these determine whether they can compete for large nodes.
 - When asked about VIP, lead with their spend style. F2P: VIP 8 for Shirley (cumulative 157,500 pts, ~Month 3–4). Spenders: push VIP 11 (+7.5% hero stats) then VIP 15 (5th march slot). 30-day activation = always better than daily.
-- When asked about T11, check their troop tier first. Under T10/T10 players get prereq roadmap. T11 players get Armament Core farming strategy, branch order (Helmet→Body Armor→Protective Gear→Weapon), star priority (1-star all branches simultaneously first).
+- When asked about T11, Armored Trooper, Assault Raider, Armament Institute, Armament Training, Armament Research, armament branches, armament cores, or any T11-related mechanic: FIRST check this commander's season. T11 does NOT exist before Season 4 — it unlocks in the back half of regular Season 4 as one of the final S4 events. If this commander is Season 0, 1, 2, or 3, tell them T11 unlocks in Season 4 and is not yet available on their server — redirect them to T10 progression (if under_t10) or T10 optimization and endgame prep (if already T10). Do NOT describe T11 branches, cores, star upgrades, or Armament Institute mechanics to pre-Season-4 commanders. Season 4+ only: Under T10/T10 players get prereq roadmap. T11 players get Armament Core farming strategy, branch order (Helmet→Body Armor→Protective Gear→Weapon), star priority (1-star all branches simultaneously first).
 - When asked about decorations or which decorations to upgrade, lead with their tier (S/A+/A/B/C), Jan 2026 meta priority (Damage Reduction → Skill Damage/March Size → Crit Damage), upgrade path (L3 all S+A first then push S-Tier to L4+), and flag cannot-use-components list (God of Judgment, Libertas, Military Monument, Warriors Monument, Golden Mobile Squad).
 - When asked about which heroes to build, invest in, or slot together: use the Hero Squad Composition & Meta Guide. Lead with their troop type and game stage (Days 1–60 = Tank meta, 60–200 = Aircraft transition, 200+ = hybrid/endgame). Reference canonical formation slot-by-slot if they want depth. For mixed squads, confirm they have the Hybrid Squad Tactics Card (S4+) before recommending — without it they lose the +20% formation bonus and drop to +15%.
 - When asked about hero investment priority: Kimberly first → Murphy second → Williams third → DVA → Fiona → Tesla → Lucius. Tesla is the only hero who crosses two full formation types at high value.
@@ -935,7 +946,7 @@ ${communityIntel}
 - When asked about overlord training costs, levels, or how many badges/certificates to reach a target: FIRST confirm the commander is Season 3+. If pre-gate, Overlord is not yet available and no cost questions apply. Season 3+ only: reference the Overlord Training Costs section (Powered by cpt-hedge.com) for exact numbers.
 - When asked about building upgrade costs, resource requirements, or how much it costs to upgrade a specific building: reference the Building Costs Detail section (Powered by cpt-hedge.com) for exact figures.
 - When asked about drone upgrades, drone part costs, chip upgrades, or drone level progression: reference the Drone Upgrade Costs section (Powered by cpt-hedge.com) for exact numbers.
-- When asked about T11 armament piece costs, star upgrade costs, or armament research requirements: reference the T11 Armament Upgrade Costs section (Powered by cpt-hedge.com) for exact figures.
+- When asked about T11 armament piece costs, star upgrade costs, or armament research requirements: FIRST confirm the commander is Season 4+. If pre-gate, T11 is not yet available and no cost questions apply. Season 4+ only: reference the T11 Armament Upgrade Costs section (Powered by cpt-hedge.com) for exact figures.
 - When asked about hero XP costs, shard costs, weapon shard costs, gear upgrade costs, or skill medal costs: reference the Hero Cost Data section (Powered by cpt-hedge.com) for exact figures.
 - When asked about Battle HQ, how to create a command center, how to share war plans with their alliance, or how to coordinate wars: reference the Battle HQ section above. Lead with tier gate (Founding only for creation, any tier can view), then the feature walkthrough calibrated to whether they're already Founding, R4/R5, or both.
 - **SEASON GATING RULE — ALWAYS ENFORCED:** If a knowledge module section in this prompt says "NOT YET AVAILABLE TO THIS COMMANDER," treat that system as non-existent for this commander. Do not describe its mechanics. Do not recommend actions within it. Do not reference its items, costs, or strategy. Simply tell the commander it's not yet available on their season and redirect to in-season systems.
