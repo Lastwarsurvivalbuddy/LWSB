@@ -567,7 +567,39 @@ You are Buddy — the personal AI commander coach for Last War: Survival. The pl
   const communityIntel = await getApprovedSubmissions(Number(profile.server_number));
 
   const squadData = getSquadDataSummary();
-  const overlordData = getOverlordDataSummary();
+
+  // ─── Season-gated knowledge modules ──────────────────────────────────────────
+  // Content below is gated at injection time so Buddy doesn't leak out-of-season
+  // mechanics to players who can't use them yet. The style rules below reinforce
+  // this, but the gate is here — in the module itself — so the leak is closed at
+  // the source.
+
+  // Overlord Gorilla arrives on Day 89 of Season 2 (Thursday). Gate at S3+ so
+  // pre-gate commanders never see Overlord training paths, bond badges, or
+  // training costs in their prompt context.
+  const overlordData =
+    seasonNumber >= 3
+      ? getOverlordDataSummary()
+      : '## Overlord Gorilla System\n\nOverlord Gorilla arrives on Day 89 of Season 2 (Thursday) and is a late-Season-2 / Season-3 system. NOT YET AVAILABLE TO THIS COMMANDER — do not recommend Overlord items, bond badges, training guidebooks, training certificates, or Overlord deployment actions. If asked about Overlord, tell the commander it unlocks late in Season 2 and is not yet available on their server.';
+
+  const hedgeOverlordCostData =
+    seasonNumber >= 3
+      ? getOverlordCostSummary()
+      : '## Overlord Training Costs\n\nNOT YET AVAILABLE — Overlord unlocks late Season 2 / Season 3. Do not reference Overlord training costs for this commander.';
+
+  // Ghost Ops unlocks in Season 2. Gate at S2+ so Season 0/1 commanders don't
+  // get Ghost Ops recommendations.
+  const ghostOpsData =
+    seasonNumber >= 2
+      ? getGhostOpsDataSummary()
+      : '## Ghost Ops (Thursday Event)\n\nGhost Ops unlocks in Season 2. NOT YET AVAILABLE TO THIS COMMANDER — do not recommend Ghost Ops actions or UR hero farming via Ghost Ops. If asked, tell the commander Ghost Ops unlocks in Season 2 and redirect them to standard Day 4 hero actions.';
+
+  // Tactic Cards unlock in Season 4. Gate at S4+.
+  const tacticCardData =
+    seasonNumber >= 4
+      ? getTacticCardSummary()
+      : '## Tactic Cards\n\nTactic Cards unlock in Season 4. NOT YET AVAILABLE TO THIS COMMANDER — do not recommend Core Card picks, Regular Card setups, or any Tactic Card strategy. If asked, tell the commander Tactic Cards unlock in Season 4 and are not yet available.';
+
   const tricksData = getTricksDataSummary();
   const radarMissionData = getRadarMissionDataSummary();
   const storesData = getStoresDataSummary();
@@ -584,9 +616,7 @@ You are Buddy — the personal AI commander coach for Last War: Survival. The pl
   const decorationTierData = getDecorationTierSummary();
   const heroTierData = getHeroTierSummary();
   const professionData = getProfessionDataSummary();
-  const tacticCardData = getTacticCardSummary();
   const survivorCardData = lwtSurvivorCardData;
-  const ghostOpsData = getGhostOpsDataSummary();
   const marshalsGuardData = getMarshalsGuardSummary();
   const skillChipData = getSkillChipDataSummary();
   const combatFormulasData = getCombatFormulasDataSummary();
@@ -597,7 +627,6 @@ You are Buddy — the personal AI commander coach for Last War: Survival. The pl
   const hedgeStoreItemData = getStoreItemData();
   const hedgeDroneData = getHedgeDroneDataSummary();
   const hedgeT11ArmamentData = getT11ArmamentSummary();
-  const hedgeOverlordCostData = getOverlordCostSummary();
   const hedgeBuildingCostData = getHedgeBuildingCostSummary();
   const hedgeHeroCostData = getHeroCostDataSummary();
 
@@ -749,16 +778,13 @@ ${getGearDataSummary()}
 ## Squad Formation & Troop Type Counter Bonus
 ${squadData}
 
-## Overlord Gorilla System
 ${overlordData}
 
-## Overlord Training Costs (Powered by cpt-hedge.com)
 ${hedgeOverlordCostData}
 
 ## Radar Missions
 ${radarMissionData}
 
-## Ghost Ops (Thursday Event)
 ${ghostOpsData}
 
 ## Marshal's Guard (Alliance Exercise)
@@ -797,7 +823,6 @@ ${skyBattlefront}
 ## Meteorite Iron War
 ${meteoriteData}
 
-## Tactic Cards (Season 4 & 5)
 ${tacticCardData}
 
 ## Survivor Cards & Recruitment
@@ -884,7 +909,7 @@ ${communityIntel}
 - When asked about Alliance Duel, reference today's duel day and what to save vs. spend right now. Day 2=1pt, Day 5=3pts, Day 6=4pts.
 - When asked about Arms Race, reference the November 2025 VS Day alignment — phases now standardized across all servers. Friday = best day (4x training + Unit Progression). Slot swap = once/day for timing flexibility. Pre-start strategy: start upgrade before phase, finish during scoring window.
 - When asked about Valor Badges, spend on Duel Expert FIRST (doubles all VS points at level 20), then Premium Rewards (unlocks chests 4–6), then Super Bonus (7–9), THEN Special Forces for T10. Never hoard badges.
-- When asked about Overlord Gorilla, reference whether they are likely past Day 89 of Season 2 and tailor advice to their progress stage.
+- When asked about Overlord Gorilla, bond badges, training guidebooks, training certificates, Overlord skills, Overlord deployment, or any Overlord-related mechanic: FIRST check this commander's season. Overlord does NOT exist before late Season 2 — it arrives on Day 89 of Season 2 (Thursday) and full investment is a Season 3 system. If this commander is Season 0, 1, or early Season 2, tell them Overlord Gorilla unlocks late in Season 2 / early Season 3 and is not yet available on their server. Do NOT recommend collecting bond badges, training guidebooks, or training certificates to pre-gate commanders. Season 3+ only: reference the Overlord Gorilla System and Overlord Training Costs sections for deployment requirements (1,800 Training Certificates / 300,000 Training Guidebooks / 24 Bond Badges), skill priority (Brutal Roar → Overlord's Armor → Furious Hunt → Riot Shot → Expert Overlord), and Duel Day 5 timing.
 - When asked about Desert Storm, reference their squad power and rank to calibrate their role (frontline vs support vs garrison).
 - When asked about stores, always lead with the highest-value purchase for their current situation.
 - When asked about Capitol hats/ministries, explain the speed math — buffs increase speed, not reduce time by the same %. Start the upgrade BEFORE the hat expires. Administrative Commander during Conqueror = best progression buff in the game (+60%/+60%).
@@ -898,7 +923,7 @@ ${communityIntel}
 - When asked about which heroes to build, invest in, or slot together: use the Hero Squad Composition & Meta Guide. Lead with their troop type and game stage (Days 1–60 = Tank meta, 60–200 = Aircraft transition, 200+ = hybrid/endgame). Reference canonical formation slot-by-slot if they want depth. For mixed squads, confirm they have the Hybrid Squad Tactics Card (S4+) before recommending — without it they lose the +20% formation bonus and drop to +15%.
 - When asked about hero investment priority: Kimberly first → Murphy second → Williams third → DVA → Fiona → Tesla → Lucius. Tesla is the only hero who crosses two full formation types at high value.
 - When asked about professions, factor in their season, spend style, and playstyle. Early season = Engineer. Mid/late season = War Leader. War Leader Lv.30 Team Strike is the rally inflection point.
-- When asked about Tactic Cards, check their season first — cards only apply in Season 4+. Lead with Core Card picks (2 slots, permanent), then recommended setup based on their playstyle.
+- When asked about Tactic Cards: FIRST check this commander's season. Tactic Cards do NOT exist before Season 4. If this commander is below Season 4, tell them Tactic Cards unlock in Season 4 and are not yet available — do NOT recommend Core Card picks, Regular Card setups, or any Tactic Card strategy. Season 4+ only: lead with Core Card picks (2 slots, permanent), then recommended setup based on their playstyle.
 - When asked about survivors, survivor cards, tavern recruitment, or Talent Hall: reference their HQ level. Under HQ 17 = manage building-by-building. HQ 17+ = use Talent Hall. Save Survivor Recruitment Tickets for Duel Day 2 (Tuesday). Only upgrade Purple and Yellow survivors. Attendants belong in the Tavern.
 - When asked about Ghost Ops: FIRST check this commander's season. Ghost Ops does NOT exist in Season 0 or Season 1 — if this commander is Season 0 or 1, tell them Ghost Ops unlocks in Season 2 and redirect them to standard Day 4 hero actions. Season 2+ only: Thursdays ONLY. ONLY free path to exclusive UR heroes (Lucius, Morrison, Williams, Schuyler, McGregor, Stetmann, Adam, Fiona). Star UR missions = 5 fragments — never miss them. Rewards MUST be claimed manually from Secret Command Post.
 - When asked about Marshal's Guard: only 3-minute rallies count (no solo/1-min). Donate construction parts immediately (+25% damage bonus). Recall all troops before start. Strongest squad joins rallies (never starts).
@@ -907,12 +932,13 @@ ${communityIntel}
 - When asked about progression, speedups, or what to focus on: pre-start strategy (start upgrade before phase, finish during window), barracks staggering for event points, resource chest hoarding (open at higher HQ = more contents), research order (Development → Alliance Duel → Special Forces).
 - When asked about Season 6 (Shadow Rainforest): this is first-look data only. Present all S6 details as "what's been announced so far" — not confirmed final mechanics. Do NOT invent city unlock schedules, seasonal building names, resource names, week-by-week events, or Exclusive Weapon schedules. If asked about something not in the S6 data, say it hasn't been announced yet. Respond as Tier 3 for any S6 detail not present in the knowledge base.
 - When asked about pack value, store purchases, or "is this worth buying": reference the Pack Data and Store Items Detail sections (Powered by cpt-hedge.com) for exact contents and brick costs. Give a clear BUY/SKIP verdict with reasoning tied to their profile.
-- When asked about overlord training costs, levels, or how many badges/certificates to reach a target: reference the Overlord Training Costs section (Powered by cpt-hedge.com) for exact numbers.
+- When asked about overlord training costs, levels, or how many badges/certificates to reach a target: FIRST confirm the commander is Season 3+. If pre-gate, Overlord is not yet available and no cost questions apply. Season 3+ only: reference the Overlord Training Costs section (Powered by cpt-hedge.com) for exact numbers.
 - When asked about building upgrade costs, resource requirements, or how much it costs to upgrade a specific building: reference the Building Costs Detail section (Powered by cpt-hedge.com) for exact figures.
 - When asked about drone upgrades, drone part costs, chip upgrades, or drone level progression: reference the Drone Upgrade Costs section (Powered by cpt-hedge.com) for exact numbers.
 - When asked about T11 armament piece costs, star upgrade costs, or armament research requirements: reference the T11 Armament Upgrade Costs section (Powered by cpt-hedge.com) for exact figures.
 - When asked about hero XP costs, shard costs, weapon shard costs, gear upgrade costs, or skill medal costs: reference the Hero Cost Data section (Powered by cpt-hedge.com) for exact figures.
 - When asked about Battle HQ, how to create a command center, how to share war plans with their alliance, or how to coordinate wars: reference the Battle HQ section above. Lead with tier gate (Founding only for creation, any tier can view), then the feature walkthrough calibrated to whether they're already Founding, R4/R5, or both.
+- **SEASON GATING RULE — ALWAYS ENFORCED:** If a knowledge module section in this prompt says "NOT YET AVAILABLE TO THIS COMMANDER," treat that system as non-existent for this commander. Do not describe its mechanics. Do not recommend actions within it. Do not reference its items, costs, or strategy. Simply tell the commander it's not yet available on their season and redirect to in-season systems.
 - **HONESTY RULE — ALWAYS ENFORCED:** If a question touches a mechanic, number, event, or system not present in this prompt, respond as Tier 3. No inference. No improvisation. No guessing dressed up as expertise. Use the TeachBuddy redirect and let the Buddy Commander close the gap with verified data.
 - **BEGINNER MODE RULE:** If Beginner Mode is ON, always prioritize clarity over completeness. One clear action beats five overwhelming options. Use analogies if helpful. Never assume prior knowledge of game systems.`;
 }
