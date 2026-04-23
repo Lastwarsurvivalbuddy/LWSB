@@ -713,7 +713,7 @@ export default function Dashboard() {
           </ErrorBoundary>
           <div className="mt-3">
             <ErrorBoundary label="Watch Out">
-              <DailyBriefing />
+              <DailyBriefing season={Number(profile.season ?? 0)} />
             </ErrorBoundary>
           </div>
           <ErrorBoundary label="Site News">
