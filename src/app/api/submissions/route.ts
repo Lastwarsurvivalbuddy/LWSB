@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { incrementStreak } from '@/lib/streak'
+import { touchLastActive } from '@/lib/touchLastActive'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,8 +17,16 @@ const SCREENSHOT_LIMITS: Record<string, number> = {
   alliance: 20,
 }
 
+// Monthly usage key — matches buddy route and pack-scanner route exactly.
+// daily_usage.usage_date is a `date` type: requires full YYYY-MM-DD,
+// anchored to the 1st of the month for one row per user per month.
+//
+// Previous version returned 'YYYY-MM' (7 chars) and queried a column named
+// 'date' that does not exist — TeachBuddy screenshot quota was silently
+// failing (currentCount always 0, users could submit past their limit).
 function getCurrentMonthKey(): string {
-  return new Date().toISOString().slice(0, 7) // YYYY-MM
+  const d = new Date()
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-01`
 }
 
 export async function GET(req: NextRequest) {
@@ -34,7 +43,7 @@ export async function GET(req: NextRequest) {
       .from('daily_usage')
       .select('submission_screenshot_count')
       .eq('user_id', user.id)
-      .eq('date', monthKey)
+      .eq('usage_date', monthKey)
       .single()
 
     return NextResponse.json({ count: data?.submission_screenshot_count ?? 0 })
@@ -84,7 +93,7 @@ export async function POST(req: NextRequest) {
         .from('daily_usage')
         .select('submission_screenshot_count')
         .eq('user_id', user.id)
-        .eq('date', monthKey)
+        .eq('usage_date', monthKey)
         .single()
 
       const currentCount = usage?.submission_screenshot_count ?? 0
@@ -98,10 +107,10 @@ export async function POST(req: NextRequest) {
         .upsert(
           {
             user_id: user.id,
-            date: monthKey,
+            usage_date: monthKey,
             submission_screenshot_count: currentCount + 1,
           },
-          { onConflict: 'user_id,date' }
+          { onConflict: 'user_id,usage_date' }
         )
     }
 
@@ -122,6 +131,10 @@ export async function POST(req: NextRequest) {
 
     // ─── Increment streak ───
     await incrementStreak(supabase, user.id)
+
+    // Stamp real activity timestamp for Mission Control "Last Active" column.
+    // Independent from daily_usage quota bucket — see src/lib/touchLastActive.ts.
+    await touchLastActive(supabase, user.id)
 
     return NextResponse.json({ success: true })
   } catch (err) {

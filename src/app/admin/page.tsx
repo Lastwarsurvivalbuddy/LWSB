@@ -1656,9 +1656,12 @@ export default function MissionControlPage() {
                             <td className="px-4 py-3 text-zinc-500 text-[11px] font-mono whitespace-nowrap">
                               {new Date(u.joined).toLocaleDateString()}
                             </td>
-                            <td className="px-4 py-3 text-[11px] font-mono whitespace-nowrap">
+                            <td
+                              className="px-4 py-3 text-[11px] font-mono whitespace-nowrap"
+                              title={u.lastActive ? new Date(u.lastActive).toLocaleString() : undefined}
+                            >
                               {u.lastActive
-                                ? <span className="text-zinc-400">{new Date(u.lastActive + 'T12:00:00').toLocaleDateString()}</span>
+                                ? <span className="text-zinc-400">{new Date(u.lastActive).toLocaleDateString()}</span>
                                 : <span className="text-zinc-700">—</span>
                               }
                             </td>

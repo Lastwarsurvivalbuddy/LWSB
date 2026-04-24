@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { buildPackScannerPrompt } from '@/lib/packScannerPrompt';
+import { touchLastActive } from '@/lib/touchLastActive';
 
 const ALLOWED_TIERS = ['pro', 'elite', 'founding', 'alliance'];
 
@@ -190,6 +191,10 @@ export async function POST(req: NextRequest) {
         },
         { onConflict: 'user_id,usage_date' }
       );
+
+    // Stamp real activity timestamp for Mission Control "Last Active" column.
+    // Independent from daily_usage quota bucket — see src/lib/touchLastActive.ts.
+    await touchLastActive(supabase, user.id);
 
     return NextResponse.json({
       verdict,

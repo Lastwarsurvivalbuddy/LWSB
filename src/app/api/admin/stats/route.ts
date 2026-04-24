@@ -86,29 +86,25 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // Pull welcomed flag AND last_active_at from profiles in a single query.
+    // last_active_at is the real "when did this user last do something" timestamp,
+    // stamped by every Buddy/PackScanner/TeachBuddy call via touchLastActive().
+    // Independent from daily_usage.usage_date (which is the monthly quota bucket,
+    // stored as YYYY-MM-01 — do NOT use for activity reporting).
     const { data: profilesBase } = await supabase
       .from('profiles')
-      .select('id, welcomed')
+      .select('id, welcomed, last_active_at')
       .in('id', profileIds)
 
     const welcomedMap: Record<string, boolean> = {}
+    const lastActiveMap: Record<string, string> = {}
     for (const p of (profilesBase ?? [])) {
       welcomedMap[p.id] = p.welcomed ?? false
+      if (p.last_active_at) lastActiveMap[p.id] = p.last_active_at
     }
 
-    // FIX: column is usage_date, not date
-    const { data: usageDates } = await supabase
-      .from('daily_usage')
-      .select('user_id, usage_date')
-      .in('user_id', profileIds)
-      .order('usage_date', { ascending: false })
-
-    const lastActiveMap: Record<string, string> = {}
-    for (const u of (usageDates ?? [])) {
-      if (!lastActiveMap[u.user_id]) lastActiveMap[u.user_id] = u.usage_date
-    }
-
-    // FIX: column is usage_date, not date
+    // Question totals still come from daily_usage — that's the legitimate
+    // source of "how many questions has this user asked." Column is usage_date.
     const { data: usageTotals } = await supabase
       .from('daily_usage')
       .select('user_id, question_count')
@@ -224,7 +220,10 @@ export async function GET(req: NextRequest) {
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
   const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0]
 
-  // FIX: column is usage_date, not date
+  // DAU overview still uses daily_usage.usage_date — that's the monthly bucket,
+  // but it's the best proxy we have for "who did something this month" on the
+  // overview chart. For accurate daily granularity we'd need to read from
+  // profiles.last_active_at and bucket by day — future improvement.
   const { data: dauRows } = await supabase
     .from('daily_usage')
     .select('user_id, usage_date')
@@ -248,7 +247,6 @@ export async function GET(req: NextRequest) {
   thisMonthStart.setHours(0, 0, 0, 0)
   const thisMonthStartStr = thisMonthStart.toISOString().split('T')[0]
 
-  // FIX: column is usage_date, not date
   const { data: usageRows } = await supabase
     .from('daily_usage')
     .select('question_count, screenshot_count, battle_report_count')

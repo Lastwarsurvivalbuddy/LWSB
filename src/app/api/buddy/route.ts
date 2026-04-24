@@ -15,6 +15,7 @@ import { getHQSummary } from '@/lib/hqRequirementsData';
 import { getHealingSummary } from '@/lib/healingData';
 import { getApprovedSubmissions } from '@/lib/submissionData';
 import { incrementStreak } from '@/lib/streak';
+import { touchLastActive } from '@/lib/touchLastActive';
 import { getEventDataSummary } from '@/lib/lwtEventData';
 import { getHotDealsSummary } from '@/lib/lwtHotDealsData';
 import { getSeasonDataSummary } from '@/lib/lwtSeasonData';
@@ -355,6 +356,10 @@ export async function POST(req: NextRequest) {
         },
         { onConflict: 'user_id,usage_date' }
       );
+
+    // Stamp real activity timestamp for Mission Control "Last Active" column.
+    // Independent from daily_usage quota bucket — see src/lib/touchLastActive.ts.
+    await touchLastActive(supabase, user.id);
 
     await incrementStreak(supabase, user.id);
 
