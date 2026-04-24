@@ -11,14 +11,15 @@ const features = [
     icon: '🤖',
     color: '#4ade80',
     description:
-      "Ask Buddy anything about Last War and get answers tailored to your exact profile — your HQ level, server day, troop type, spend tier, and goals. Buddy knows your game, not some random player's.",
+      "Ask Buddy anything about Last War and get answers tailored to your exact profile — your HQ level, server day, troop type, spend tier, and goals. Buddy knows your game, not some random player's. The more specific your question, the sharper the answer.",
     steps: [
       'Tap the Buddy AI tab from the dashboard.',
       'Use the prompt chips for quick common questions, or type your own.',
       'Ask about build order, troop counters, pack value, event strategy — anything.',
-      'Buddy responds using your profile data. No generic answers.',
+      'Give Buddy the details that matter: for squad questions, hero positions and Exclusive Weapon levels; for event questions, your season and HQ level; for pack questions, your current priorities. Screenshots work too.',
+      'Buddy responds using your profile plus everything you shared. No generic answers.',
     ],
-    tip: "The more complete your profile, the sharper Buddy's advice. Keep it updated.",
+    tip: 'The more detail, the sharper the answer. A great squad question looks like this: "In a Tank + Adam squad, which exclusive weapon should I upgrade? Kim (front right): 30 · Scarlet (front left): 0 · Marshall (back right): 21 · Adam (back center): 10 · Murphy (back left): 21. Using 4+1 tactics card in season 5." Screenshots showing positions work too — just list the EW levels.',
     quota: 'Free: 20/month · Pro: 100/month · Elite: 250/month · Founding: 300/month',
   },
   {

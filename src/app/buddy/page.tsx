@@ -37,6 +37,7 @@ export default function BuddyPage() {
   const [feedback, setFeedback] = useState<FeedbackState>({});
   const [feedbackSending, setFeedbackSending] = useState<Record<string, boolean>>({});
   const [accessToken, setAccessToken] = useState<string>('');
+  const [exampleOpen, setExampleOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -314,6 +315,47 @@ export default function BuddyPage() {
                   {prompt}
                 </button>
               ))}
+            </div>
+
+            {/* ── Detail-matters nudge ── */}
+            <div className="detail-nudge">
+              <div className="detail-nudge-header">
+                <span className="detail-nudge-label">// MORE DETAIL = BETTER ANSWERS</span>
+              </div>
+              <p className="detail-nudge-body">
+                The more specific your question, the sharper Buddy&apos;s answer. For squad questions, include hero positions and Exclusive Weapon levels. For event questions, include your season and HQ level. For pack questions, include your current priorities.
+              </p>
+              <button
+                className="detail-nudge-toggle"
+                onClick={() => setExampleOpen(v => !v)}
+                aria-expanded={exampleOpen}
+              >
+                {exampleOpen ? 'Hide example ↑' : 'See an example →'}
+              </button>
+              {exampleOpen && (
+                <div className="detail-nudge-example">
+                  <div className="example-label">Example of a great squad question:</div>
+                  <div className="example-text">
+                    <em>&ldquo;In a Tank + Adam squad, which exclusive weapon should I upgrade? Current members with exclusive weapon level:</em>
+                    <br />
+                    <em>Kim (front right): 30</em>
+                    <br />
+                    <em>Scarlet (front left): 0 (no exclusive weapon)</em>
+                    <br />
+                    <em>Marshall (back right): 21</em>
+                    <br />
+                    <em>Adam (back, center): 10</em>
+                    <br />
+                    <em>Murphy (back left): 21</em>
+                    <br />
+                    <br />
+                    <em>I am using the 4+1 tactics card in season 5.&rdquo;</em>
+                  </div>
+                  <div className="example-footer">
+                    Or — upload a screenshot showing their positions and just list their EW levels. Buddy reads the screenshot.
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         ) : (
@@ -627,6 +669,78 @@ export default function BuddyPage() {
           color: #c9b87a;
           background: #0f1420;
         }
+        /* ── Detail-matters nudge ── */
+        .detail-nudge {
+          margin-top: 32px;
+          width: 100%;
+          max-width: 480px;
+          background: #0d1017;
+          border: 1px solid #1e2535;
+          border-left: 3px solid #c9b87a;
+          border-radius: 6px;
+          padding: 14px 16px;
+          text-align: left;
+        }
+        .detail-nudge-header { margin-bottom: 8px; }
+        .detail-nudge-label {
+          font-family: 'Courier New', monospace;
+          font-size: 10px;
+          letter-spacing: 0.12em;
+          color: #c9b87a;
+          font-weight: bold;
+        }
+        .detail-nudge-body {
+          font-size: 13px;
+          color: #a0acc0;
+          line-height: 1.65;
+          margin: 0 0 10px;
+        }
+        .detail-nudge-toggle {
+          background: none;
+          border: none;
+          color: #c9b87a;
+          font-family: 'Courier New', monospace;
+          font-size: 11px;
+          letter-spacing: 0.04em;
+          cursor: pointer;
+          padding: 2px 0;
+          transition: color 0.2s;
+        }
+        .detail-nudge-toggle:hover { color: #d9cc8e; }
+        .detail-nudge-example {
+          margin-top: 12px;
+          padding-top: 12px;
+          border-top: 1px solid #1e2535;
+        }
+        .example-label {
+          font-family: 'Courier New', monospace;
+          font-size: 10px;
+          letter-spacing: 0.08em;
+          color: #5a6880;
+          margin-bottom: 8px;
+          text-transform: uppercase;
+        }
+        .example-text {
+          font-size: 13px;
+          color: #c0cadc;
+          line-height: 1.7;
+          background: #0a0e18;
+          border: 1px solid #1e2535;
+          border-radius: 4px;
+          padding: 12px 14px;
+          font-family: inherit;
+        }
+        .example-text em {
+          font-style: italic;
+          color: #c0cadc;
+        }
+        .example-footer {
+          font-size: 12px;
+          color: #8a9ab5;
+          line-height: 1.6;
+          margin-top: 10px;
+          font-style: italic;
+        }
         .messages-list {
           display: flex;
           flex-direction: column;
@@ -939,6 +1053,9 @@ export default function BuddyPage() {
           .empty-heading { font-size: 18px; }
           .suggested-prompts { gap: 6px; }
           .prompt-chip { font-size: 12px; padding: 8px 14px; }
+          .detail-nudge { padding: 12px 14px; }
+          .detail-nudge-body { font-size: 12px; }
+          .example-text { font-size: 12px; padding: 10px 12px; }
         }
       `}</style>
     </div>

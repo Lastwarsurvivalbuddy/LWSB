@@ -207,6 +207,53 @@ function ShareStrip() {
 }
 
 // ─────────────────────────────────────────────────────────────
+// DETAIL NUDGE COMPONENT — "More detail = better answers"
+// ─────────────────────────────────────────────────────────────
+function DetailNudge() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div style={s.detailNudge}>
+      <div style={s.detailNudgeLabel}>// MORE DETAIL = BETTER ANSWERS</div>
+      <p style={s.detailNudgeBody}>
+        When you Ask Buddy a question, the more specific you are, the sharper the answer. For squad questions, include hero positions and Exclusive Weapon levels. For event questions, include your season and HQ level. For pack questions, mention your current priorities.
+      </p>
+      <button
+        style={s.detailNudgeToggle}
+        onClick={() => setOpen(v => !v)}
+        aria-expanded={open}
+      >
+        {open ? 'Hide example ↑' : 'See an example →'}
+      </button>
+      {open && (
+        <div style={s.detailNudgeExample}>
+          <div style={s.exampleLabel}>Example of a great squad question:</div>
+          <div style={s.exampleText}>
+            <em>&ldquo;In a Tank + Adam squad, which exclusive weapon should I upgrade? Current members with exclusive weapon level:</em>
+            <br />
+            <em>Kim (front right): 30</em>
+            <br />
+            <em>Scarlet (front left): 0 (no exclusive weapon)</em>
+            <br />
+            <em>Marshall (back right): 21</em>
+            <br />
+            <em>Adam (back, center): 10</em>
+            <br />
+            <em>Murphy (back left): 21</em>
+            <br />
+            <br />
+            <em>I am using the 4+1 tactics card in season 5.&rdquo;</em>
+          </div>
+          <div style={s.exampleFooter}>
+            Or — upload a screenshot showing their positions and just list their EW levels. Buddy reads the screenshot.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
 // COMPONENT
 // ─────────────────────────────────────────────────────────────
 export default function GuidePage() {
@@ -325,10 +372,11 @@ export default function GuidePage() {
     );
   }
 
-  // Renders CTA + share strip together — share always below CTA
+  // Renders detail nudge + CTA + share strip together — nudge above CTA, share below
   function renderTabFooter() {
     return (
       <div style={{ marginTop: '1.5rem' }}>
+        <DetailNudge />
         {renderCTA()}
         <ShareStrip />
       </div>
@@ -1093,6 +1141,68 @@ const s: Record<string, React.CSSProperties> = {
     borderRadius: '6px',
     padding: '10px 20px',
     cursor: 'pointer',
+  },
+  // ── DETAIL NUDGE — "More detail = better answers" ──
+  detailNudge: {
+    backgroundColor: '#161c24',
+    border: '1px solid #2a3442',
+    borderLeft: '3px solid #f0a500',
+    borderRadius: '4px',
+    padding: '13px 16px',
+    marginBottom: '12px',
+  },
+  detailNudgeLabel: {
+    fontFamily: 'monospace',
+    fontSize: '10px',
+    letterSpacing: '0.12em',
+    color: '#f0a500',
+    marginBottom: '7px',
+    fontWeight: 500,
+  },
+  detailNudgeBody: {
+    fontSize: '13px',
+    color: '#c8d6e5',
+    lineHeight: '1.65',
+    margin: '0 0 10px',
+  },
+  detailNudgeToggle: {
+    background: 'none',
+    border: 'none',
+    color: '#f0a500',
+    fontFamily: 'monospace',
+    fontSize: '11px',
+    letterSpacing: '0.04em',
+    cursor: 'pointer',
+    padding: '2px 0',
+  },
+  detailNudgeExample: {
+    marginTop: '12px',
+    paddingTop: '12px',
+    borderTop: '1px solid #2a3442',
+  },
+  exampleLabel: {
+    fontFamily: 'monospace',
+    fontSize: '10px',
+    letterSpacing: '0.08em',
+    color: '#6b7f94',
+    marginBottom: '8px',
+    textTransform: 'uppercase' as const,
+  },
+  exampleText: {
+    fontSize: '13px',
+    color: '#c8d6e5',
+    lineHeight: '1.7',
+    backgroundColor: '#0d1117',
+    border: '1px solid #2a3442',
+    borderRadius: '4px',
+    padding: '12px 14px',
+  },
+  exampleFooter: {
+    fontSize: '12px',
+    color: '#8a9ab0',
+    lineHeight: '1.6',
+    marginTop: '10px',
+    fontStyle: 'italic' as const,
   },
   // ── SHARE STRIP ──
   shareStrip: {
