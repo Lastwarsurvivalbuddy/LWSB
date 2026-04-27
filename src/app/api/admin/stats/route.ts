@@ -86,21 +86,25 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Pull welcomed flag AND last_active_at from profiles in a single query.
+    // Pull welcomed flag, last_active_at, AND rank from profiles in a single query.
+    // rank is set by the user on their profile edit page (R1-R5 or NULL per
+    // BattleHQ V1 Spec §3.1). NULL means user hasn't selected one.
     // last_active_at is the real "when did this user last do something" timestamp,
     // stamped by every Buddy/PackScanner/TeachBuddy call via touchLastActive().
     // Independent from daily_usage.usage_date (which is the monthly quota bucket,
     // stored as YYYY-MM-01 — do NOT use for activity reporting).
     const { data: profilesBase } = await supabase
       .from('profiles')
-      .select('id, welcomed, last_active_at')
+      .select('id, welcomed, last_active_at, rank')
       .in('id', profileIds)
 
     const welcomedMap: Record<string, boolean> = {}
     const lastActiveMap: Record<string, string> = {}
+    const rankMap: Record<string, string> = {}
     for (const p of (profilesBase ?? [])) {
       welcomedMap[p.id] = p.welcomed ?? false
       if (p.last_active_at) lastActiveMap[p.id] = p.last_active_at
+      if (p.rank) rankMap[p.id] = p.rank
     }
 
     // Question totals still come from daily_usage — that's the legitimate
@@ -158,6 +162,7 @@ export async function GET(req: NextRequest) {
         server: p.server_number ?? '—',
         hq: p.hq_level ?? '—',
         tier: sub.tier,
+        rank: rankMap[p.id] ?? null,
         banned: sub.banned,
         flagged: sub.flagged,
         comped: sub.comped,

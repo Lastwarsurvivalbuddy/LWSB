@@ -78,6 +78,7 @@ interface UserRow {
   server: string | number
   hq: string | number
   tier: string
+  rank: string | null
   banned: boolean
   flagged: boolean
   comped: boolean
@@ -154,6 +155,26 @@ const categoryLabel: Record<string, string> = {
   feedback: '💬 Feedback',
   billing: '💳 Billing',
   other: '📡 Other',
+}
+
+// Rank sort priority — higher number = higher rank.
+// Used by sortedUsers() to put R5 first when sorting desc, R1 first when asc,
+// with NULL (unset) always pushed to the bottom regardless of direction.
+const RANK_PRIORITY: Record<string, number> = {
+  R5: 5,
+  R4: 4,
+  R3: 3,
+  R2: 2,
+  R1: 1,
+}
+
+const rankBadgeColor = (rank: string | null) => {
+  if (rank === 'R5') return 'text-amber-400 bg-amber-500/10 border-amber-500/30'
+  if (rank === 'R4') return 'text-violet-400 bg-violet-500/10 border-violet-500/30'
+  if (rank === 'R3') return 'text-sky-400 bg-sky-500/10 border-sky-500/30'
+  if (rank === 'R2') return 'text-green-400 bg-green-500/10 border-green-500/30'
+  if (rank === 'R1') return 'text-zinc-400 bg-zinc-700/30 border-zinc-600/40'
+  return 'text-zinc-700 bg-transparent border-zinc-800'
 }
 
 export default function MissionControlPage() {
@@ -722,6 +743,18 @@ export default function MissionControlPage() {
 
   function sortedUsers() {
     return [...users].sort((a, b) => {
+      // Special-case rank: use RANK_PRIORITY map (R5=5...R1=1, NULL=0) and
+      // ALWAYS push NULL/unset to the bottom regardless of sort direction.
+      // Desc puts R5 first, asc puts R1 first; in both cases unset is last.
+      if (usersSort.col === 'rank') {
+        const av = a.rank ? (RANK_PRIORITY[a.rank] ?? 0) : 0
+        const bv = b.rank ? (RANK_PRIORITY[b.rank] ?? 0) : 0
+        if (av === 0 && bv === 0) return 0
+        if (av === 0) return 1   // unset always after ranked
+        if (bv === 0) return -1  // ranked always before unset
+        return usersSort.dir === 'asc' ? av - bv : bv - av
+      }
+
       const av = a[usersSort.col] ?? ''
       const bv = b[usersSort.col] ?? ''
       if (av < bv) return usersSort.dir === 'asc' ? -1 : 1
@@ -1593,6 +1626,7 @@ export default function MissionControlPage() {
                         {[
                           { label: 'IGN / Email', col: 'ign' as keyof UserRow },
                           { label: 'Tier', col: 'tier' as keyof UserRow },
+                          { label: 'Rank', col: 'rank' as keyof UserRow },
                           { label: 'HQ', col: 'hq' as keyof UserRow },
                           { label: 'Joined', col: 'joined' as keyof UserRow },
                           { label: 'Last Active', col: 'lastActive' as keyof UserRow },
@@ -1651,6 +1685,12 @@ export default function MissionControlPage() {
                                   </span>
                                 )}
                               </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              {u.rank
+                                ? <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${rankBadgeColor(u.rank)}`}>{u.rank}</span>
+                                : <span className="text-zinc-700 text-xs">—</span>
+                              }
                             </td>
                             <td className="px-4 py-3 text-zinc-400 text-xs">{u.hq}</td>
                             <td className="px-4 py-3 text-zinc-500 text-[11px] font-mono whitespace-nowrap">
@@ -1741,7 +1781,7 @@ export default function MissionControlPage() {
                           </tr>
                           {messagePanelId === u.id && (
                             <tr key={`${u.id}-msg`} className="border-b border-zinc-800/50 bg-zinc-900/40">
-                              <td colSpan={10} className="px-4 py-3">
+                              <td colSpan={11} className="px-4 py-3">
                                 <div className="flex gap-2 items-start">
                                   <textarea
                                     value={messageInputs[u.id] ?? ''}
