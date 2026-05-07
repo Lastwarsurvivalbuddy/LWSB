@@ -53,48 +53,10 @@ export async function GET(req: NextRequest) {
     const page = Math.max(0, parseInt(searchParams.get('page') ?? '0'))
     const pageSize = 50
 
-    // If a tier filter or flagged filter is active, resolve matching user_ids
-    // from `subscriptions` FIRST, then paginate profiles within that set.
-    // Without this, filters were applied to the post-paginated 50-profile
-    // slice, so users on later pages were invisible to filters even when
-    // they matched. (Session 158 bug: new Elite signup didn't show under
-    // the Elite filter because his profile was on a later page.)
-    let restrictToUserIds: string[] | null = null
-
-    if (tierFilter !== 'all' || flaggedOnly) {
-      let subQuery = supabase
-        .from('subscriptions')
-        .select('user_id, tier, banned, flagged_for_review')
-
-      if (tierFilter !== 'all') {
-        subQuery = subQuery.eq('tier', tierFilter.toLowerCase())
-      }
-      if (flaggedOnly) {
-        subQuery = subQuery.or('flagged_for_review.eq.true,banned.eq.true')
-      }
-
-      const { data: filterSubs, error: filterErr } = await subQuery
-      if (filterErr) {
-        return NextResponse.json({ error: filterErr.message }, { status: 500 })
-      }
-      restrictToUserIds = (filterSubs ?? []).map(s => s.user_id)
-
-      if (restrictToUserIds.length === 0) {
-        return NextResponse.json({ users: [], page, pageSize, total: 0 })
-      }
-    }
-
-    let profileQuery = supabase
+    const { data: profiles, error: profileErr } = await supabase
       .from('commander_profile')
-      .select('id, commander_name, server_number, hq_level, created_at', { count: 'exact' })
-      .order('created_at', { ascending: false })
+      .select('id, commander_name, server_number, hq_level')
       .range(page * pageSize, (page + 1) * pageSize - 1)
-
-    if (restrictToUserIds) {
-      profileQuery = profileQuery.in('id', restrictToUserIds)
-    }
-
-    const { data: profiles, count: filteredTotal, error: profileErr } = await profileQuery
 
     if (profileErr) {
       return NextResponse.json({ error: profileErr.message }, { status: 500 })
@@ -125,12 +87,6 @@ export async function GET(req: NextRequest) {
     }
 
     // Pull welcomed flag, last_active_at, AND rank from profiles in a single query.
-    // rank is set by the user on their profile edit page (R1-R5 or NULL per
-    // BattleHQ V1 Spec §3.1). NULL means user hasn't selected one.
-    // last_active_at is the real "when did this user last do something" timestamp,
-    // stamped by every Buddy/PackScanner/TeachBuddy call via touchLastActive().
-    // Independent from daily_usage.usage_date (which is the monthly quota bucket,
-    // stored as YYYY-MM-01 — do NOT use for activity reporting).
     const { data: profilesBase } = await supabase
       .from('profiles')
       .select('id, welcomed, last_active_at, rank')
@@ -145,8 +101,6 @@ export async function GET(req: NextRequest) {
       if (p.rank) rankMap[p.id] = p.rank
     }
 
-    // Question totals still come from daily_usage — that's the legitimate
-    // source of "how many questions has this user asked." Column is usage_date.
     const { data: usageTotals } = await supabase
       .from('daily_usage')
       .select('user_id, question_count')
@@ -189,7 +143,7 @@ export async function GET(req: NextRequest) {
       revenueMap[p.user_id] = (revenueMap[p.user_id] ?? 0) + Number(p.amount_usd)
     }
 
-    const users = (profiles ?? []).map(p => {
+    let users = (profiles ?? []).map(p => {
       const sub = subMap[p.id] ?? { tier: 'free', banned: false, flagged: false, comped: false }
       const affiliateId = referralMap[p.id]
       const auth = authMap[p.id] ?? { email: '—', created_at: null }
@@ -213,17 +167,18 @@ export async function GET(req: NextRequest) {
       }
     })
 
-    // Total reflects the FILTERED set when filters are active so pagination
-    // shows the right page count. When unfiltered, fall back to total profiles.
-    let total = filteredTotal ?? 0
-    if (!restrictToUserIds) {
-      const { count: totalCount } = await supabase
-        .from('commander_profile')
-        .select('*', { count: 'exact', head: true })
-      total = totalCount ?? 0
+    if (tierFilter !== 'all') {
+      users = users.filter(u => u.tier.toLowerCase() === tierFilter.toLowerCase())
+    }
+    if (flaggedOnly) {
+      users = users.filter(u => u.flagged || u.banned)
     }
 
-    return NextResponse.json({ users, page, pageSize, total })
+    const { count: totalCount } = await supabase
+      .from('commander_profile')
+      .select('*', { count: 'exact', head: true })
+
+    return NextResponse.json({ users, page, pageSize, total: totalCount ?? 0 })
   }
 
   // ── OVERVIEW MODE ─────────────────────────────────────────────────────────
@@ -235,7 +190,6 @@ export async function GET(req: NextRequest) {
   const thirtyDaysAgo = new Date()
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-  // Pull signup dates from auth for overview chart
   const { data: authDataOverview } = await supabase.auth.admin.listUsers({ perPage: 1000 })
   const allAuthUsers = authDataOverview?.users ?? []
 
@@ -262,10 +216,6 @@ export async function GET(req: NextRequest) {
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
   const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0]
 
-  // DAU overview still uses daily_usage.usage_date — that's the monthly bucket,
-  // but it's the best proxy we have for "who did something this month" on the
-  // overview chart. For accurate daily granularity we'd need to read from
-  // profiles.last_active_at and bucket by day — future improvement.
   const { data: dauRows } = await supabase
     .from('daily_usage')
     .select('user_id, usage_date')
@@ -306,7 +256,6 @@ export async function GET(req: NextRequest) {
   const COST_PER_BR = 0.012
   const apiCost = (totalQuestions * COST_PER_Q) + (totalScreenshots * COST_PER_SS) + (totalBattleReports * COST_PER_BR)
 
-  // Build signup series from auth.users created_at
   const signupsByDay: Record<string, number> = {}
   const thirtyDaysAgoStr = thirtyDaysAgo.toISOString()
   for (const u of allAuthUsers) {
@@ -326,7 +275,6 @@ export async function GET(req: NextRequest) {
 
   const signupsThisWeek = signupSeries.slice(-7).reduce((s, r) => s + r.count, 0)
 
-  // ── Submissions — pending only, with submitter IGN ──
   const { data: submissions } = await supabase
     .from('community_submissions')
     .select('*')
