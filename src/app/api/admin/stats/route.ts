@@ -53,10 +53,48 @@ export async function GET(req: NextRequest) {
     const page = Math.max(0, parseInt(searchParams.get('page') ?? '0'))
     const pageSize = 50
 
-    const { data: profiles, error: profileErr } = await supabase
+    // If a tier filter or flagged filter is active, resolve matching user_ids
+    // from `subscriptions` FIRST, then paginate profiles within that set.
+    // Without this, filters were applied to the post-paginated 50-profile
+    // slice, so users on later pages were invisible to filters even when
+    // they matched. (Session 158 bug: new Elite signup didn't show under
+    // the Elite filter because his profile was on a later page.)
+    let restrictToUserIds: string[] | null = null
+
+    if (tierFilter !== 'all' || flaggedOnly) {
+      let subQuery = supabase
+        .from('subscriptions')
+        .select('user_id, tier, banned, flagged_for_review')
+
+      if (tierFilter !== 'all') {
+        subQuery = subQuery.eq('tier', tierFilter.toLowerCase())
+      }
+      if (flaggedOnly) {
+        subQuery = subQuery.or('flagged_for_review.eq.true,banned.eq.true')
+      }
+
+      const { data: filterSubs, error: filterErr } = await subQuery
+      if (filterErr) {
+        return NextResponse.json({ error: filterErr.message }, { status: 500 })
+      }
+      restrictToUserIds = (filterSubs ?? []).map(s => s.user_id)
+
+      if (restrictToUserIds.length === 0) {
+        return NextResponse.json({ users: [], page, pageSize, total: 0 })
+      }
+    }
+
+    let profileQuery = supabase
       .from('commander_profile')
-      .select('id, commander_name, server_number, hq_level')
+      .select('id, commander_name, server_number, hq_level, created_at', { count: 'exact' })
+      .order('created_at', { ascending: false })
       .range(page * pageSize, (page + 1) * pageSize - 1)
+
+    if (restrictToUserIds) {
+      profileQuery = profileQuery.in('id', restrictToUserIds)
+    }
+
+    const { data: profiles, count: filteredTotal, error: profileErr } = await profileQuery
 
     if (profileErr) {
       return NextResponse.json({ error: profileErr.message }, { status: 500 })
@@ -151,7 +189,7 @@ export async function GET(req: NextRequest) {
       revenueMap[p.user_id] = (revenueMap[p.user_id] ?? 0) + Number(p.amount_usd)
     }
 
-    let users = (profiles ?? []).map(p => {
+    const users = (profiles ?? []).map(p => {
       const sub = subMap[p.id] ?? { tier: 'free', banned: false, flagged: false, comped: false }
       const affiliateId = referralMap[p.id]
       const auth = authMap[p.id] ?? { email: '—', created_at: null }
@@ -175,18 +213,17 @@ export async function GET(req: NextRequest) {
       }
     })
 
-    if (tierFilter !== 'all') {
-      users = users.filter(u => u.tier.toLowerCase() === tierFilter.toLowerCase())
-    }
-    if (flaggedOnly) {
-      users = users.filter(u => u.flagged || u.banned)
+    // Total reflects the FILTERED set when filters are active so pagination
+    // shows the right page count. When unfiltered, fall back to total profiles.
+    let total = filteredTotal ?? 0
+    if (!restrictToUserIds) {
+      const { count: totalCount } = await supabase
+        .from('commander_profile')
+        .select('*', { count: 'exact', head: true })
+      total = totalCount ?? 0
     }
 
-    const { count: totalCount } = await supabase
-      .from('commander_profile')
-      .select('*', { count: 'exact', head: true })
-
-    return NextResponse.json({ users, page, pageSize, total: totalCount ?? 0 })
+    return NextResponse.json({ users, page, pageSize, total })
   }
 
   // ── OVERVIEW MODE ─────────────────────────────────────────────────────────
