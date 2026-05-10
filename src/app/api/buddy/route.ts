@@ -25,6 +25,7 @@ import { getHeroDataSummary } from '@/lib/lwtHeroData';
 import { getBuildingPrioritySummary } from '@/lib/lwtBuildingData';
 import { getTroopDataSummary } from '@/lib/lwtTroopData';
 import { getGearDataSummary } from '@/lib/lwtGearData';
+import { getMythicGearPrioritySummary } from '@/lib/lwtMythicGearData';
 import { getAllianceDuelDetailSummary } from '@/lib/lwtAllianceDuelData';
 import { getSquadDataSummary } from '@/lib/lwtSquadData';
 import { getOverlordDataSummary } from '@/lib/lwtOverlordData';
@@ -647,6 +648,7 @@ You are Buddy — the personal AI commander coach for Last War: Survival. The pl
   const hedgeDroneData = getHedgeDroneDataSummary();
   const hedgeBuildingCostData = getHedgeBuildingCostSummary();
   const hedgeHeroCostData = getHeroCostDataSummary();
+  const mythicGearData = getMythicGearPrioritySummary();
 
   return `## About This App
 Last War: Survival Buddy (LastWarSurvivalBuddy.com) is a personalized AI coaching app for Last War: Survival players. It is a fan-built community tool — not affiliated with or endorsed by FUNFLY PTE. LTD.
@@ -793,6 +795,9 @@ ${getTroopDataSummary()}
 ## Gear Strategy Guide
 ${getGearDataSummary()}
 
+## Mythic Gear Priority (Current Meta)
+${mythicGearData}
+
 ## Squad Formation & Troop Type Counter Bonus
 ${squadData}
 
@@ -922,6 +927,7 @@ ${communityIntel}
 - When asked about troop type matchups, use the counter triangle. Reference the ~40% effective power swing. Recommend specific troop/hero pairings.
 - When asked about combat power or why they lost a fight, reference the combat formulas — type advantage (44% swing), morale (up to 3x damage), lineup bonus (+20% all stats for 5 same-type), effective power vs displayed power.
 - When asked about gear, reference the player's playstyle and troop type to give specific slot priorities.
+- When asked about Mythic Gear, gear priority, what to upgrade first, "which gear piece matters most", or "should I level my radar/armor/gun/chip": reference the Mythic Gear Priority section. Lead with the universal doctrine — Radars to Lv. 5 first across all heroes (30% less crit damage taken), then Armors (-15% crit hit chance taken), then Guns (+10% damage when countering), then Chips (-5% damage taken when countering, overrated). Reference the per-troop chart (Tank/Missile/Air) when the commander has specified their primary squad. If their lineup includes heroes outside the chart's top-5, apply the same Radar > Armor > Gun > Chip priority to whoever they actually field. The defensive-first doctrine holds across all troop types — guns and chips only fire when countering, so their effective uptime is much lower than radars/armors.
 - When asked about Alliance Duel, reference today's duel day and what to save vs. spend right now. Day 2=1pt, Day 5=3pts, Day 6=4pts.
 - When asked about Arms Race, reference the November 2025 VS Day alignment — phases now standardized across all servers. Friday = best day (4x training + Unit Progression). Slot swap = once/day for timing flexibility. Pre-start strategy: start upgrade before phase, finish during scoring window.
 - When asked about Valor Badges, spend on Duel Expert FIRST (doubles all VS points at level 20), then Premium Rewards (unlocks chests 4–6), then Super Bonus (7–9), THEN Special Forces for T10. Never hoard badges.
