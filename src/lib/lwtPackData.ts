@@ -4,16 +4,16 @@
 // Source: /api/data/stores/packs + /api/data/stores/passes + /api/data/stores/currencies
 // Re-run sync script after game patches to refresh data.
 //
-// ⚠️ HAND-EDIT May 5, 2026 (session 158): Hedge's rendered store pages now show
-// rotating Daily Packs (Mon–Sun) at Tier 1 + Tier 2 ONLY. Tiers 3, 4, 5 (2K/5K/10K
-// bricks) have been removed from all 7 daily packs in-game. Hedge's API endpoint
-// (/api/data/stores/packs) is stale on this — confirmed by Flynn. He's working on
-// updating it. When the next sync runs against the updated endpoint, this file
-// will be regenerated and this hand-edit will be replaced. Until then, this file
-// reflects what's actually purchasable in-game per Hedge's rendered guide:
+// Last verified against cpt-hedge.com rendered store guide: May 5, 2026 (session 158, later pass)
 //   https://cpt-hedge.com/guides/stores/tiered-packs
-// Drone Combat Boost EXP Pack (every-day), both Overlord one-time packs, the
-// Mega Express Contract, and all 7 Battle Passes are unchanged.
+//   https://cpt-hedge.com/guides/stores/other-packs
+//   https://cpt-hedge.com/guides/stores/passes
+// Verified matches: 7 daily packs at Tier 1+2 only, Drone Combat Boost EXP full 5 tiers,
+// both Overlord one-time packs full 5 tiers, Mega Express Contract unchanged.
+// Delta from prior session: LW removed Special Training Pass and Custom Weekly Pass entirely
+// (both were on Hedge's /passes page pre-May-5, gone now). Tuesday's daily renamed to
+// "Armament Research Special." Drone Combat Boost EXP re-typed as "every-day" (was "weekly").
+// Battle Pass tier labels updated to "Advanced Battle Pass" / "Premium Battle Pass" per Hedge.
 
 // lwtPackData.ts
 // Tiered daily packs, one-time packs, battle passes, brick-to-fiat currency table.
@@ -81,7 +81,7 @@ export const TIERED_PACKS: TieredPack[] = [
   },
   {
     "id": "tuesday-armament-research",
-    "name": "Armament Research Pack",
+    "name": "Armament Research Special",
     "availability": "Tuesday",
     "availabilityType": "daily",
     "tiers": [
@@ -157,7 +157,7 @@ export const TIERED_PACKS: TieredPack[] = [
   },
   {
     "id": "thursday-hero-shard-choice",
-    "name": "Hero Shard / Exclusive Weapon Shard Choice Pack",
+    "name": "Hero Shard/Exclusive Weapon Shard Choice Pack",
     "availability": "Thursday",
     "availabilityType": "daily",
     "tiers": [
@@ -308,10 +308,10 @@ export const TIERED_PACKS: TieredPack[] = [
     ]
   },
   {
-    "id": "weekly-drone-combat-boost-exp",
+    "id": "drone-combat-boost-exp",
     "name": "Drone Combat Boost EXP Pack",
-    "availability": "Weekly",
-    "availabilityType": "weekly",
+    "availability": "Every Day",
+    "availabilityType": "every-day",
     "tiers": [
       {
         "priceInBricks": 500,
@@ -550,7 +550,7 @@ export const BATTLE_PASSES: BattlePass[] = [
     "rotation": "event",
     "tiers": [
       {
-        "name": "Advanced Pass",
+        "name": "Advanced Battle Pass",
         "priceInBricks": 500,
         "items": [
           {
@@ -568,7 +568,7 @@ export const BATTLE_PASSES: BattlePass[] = [
         ]
       },
       {
-        "name": "Premium Pass",
+        "name": "Premium Battle Pass",
         "priceInBricks": 2000,
         "items": [
           {
@@ -597,7 +597,7 @@ export const BATTLE_PASSES: BattlePass[] = [
     "rotation": "event",
     "tiers": [
       {
-        "name": "Advanced Pass",
+        "name": "Advanced Battle Pass",
         "priceInBricks": 500,
         "items": [
           {
@@ -623,7 +623,7 @@ export const BATTLE_PASSES: BattlePass[] = [
         ]
       },
       {
-        "name": "Premium Pass",
+        "name": "Premium Battle Pass",
         "priceInBricks": 2000,
         "items": [
           {
@@ -656,7 +656,7 @@ export const BATTLE_PASSES: BattlePass[] = [
     "rotation": "event",
     "tiers": [
       {
-        "name": "Advanced Pass",
+        "name": "Advanced Battle Pass",
         "priceInBricks": 500,
         "items": [
           {
@@ -678,7 +678,7 @@ export const BATTLE_PASSES: BattlePass[] = [
         ]
       },
       {
-        "name": "Premium Pass",
+        "name": "Premium Battle Pass",
         "priceInBricks": 2000,
         "items": [
           {
@@ -692,49 +692,6 @@ export const BATTLE_PASSES: BattlePass[] = [
           {
             "name": "Training Guidebook Chest",
             "amount": 600
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "id": "special-training-pass",
-    "name": "Special Training Pass",
-    "rotation": "event",
-    "tiers": [
-      {
-        "name": "Advanced Pass",
-        "priceInBricks": 500,
-        "items": [
-          {
-            "name": "Dielectric Ceramic",
-            "amount": 130
-          },
-          {
-            "name": "Resource Choice Chest (SSR)",
-            "amount": 30
-          },
-          {
-            "name": "Upgrade Ore",
-            "amount": 12000
-          }
-        ]
-      },
-      {
-        "name": "Premium Pass",
-        "priceInBricks": 2000,
-        "items": [
-          {
-            "name": "Dielectric Ceramic",
-            "amount": 300
-          },
-          {
-            "name": "Resource Choice Chest (SSR)",
-            "amount": 75
-          },
-          {
-            "name": "Upgrade Ore",
-            "amount": 37500
           }
         ]
       }
@@ -761,102 +718,6 @@ export const BATTLE_PASSES: BattlePass[] = [
           {
             "name": "Overlord Skill Badge",
             "amount": 11000
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "id": "custom-weekly-pass",
-    "name": "Custom Weekly Pass",
-    "rotation": "weekly",
-    "_note": "Choose items from the list each week. The top item (Hero Shard and Exclusive Weapon Choice Chest) is always included.",
-    "tiers": [
-      {
-        "name": "Premium Subscription",
-        "priceInBricks": 500,
-        "_note": "Includes the top item plus 2 items of your choice.",
-        "items": [
-          {
-            "name": "Hero Shard and Exclusive Weapon Choice Chest",
-            "amount": 8,
-            "alwaysIncluded": true
-          },
-          {
-            "name": "Universal Exclusive Weapon Shard",
-            "amount": 14
-          },
-          {
-            "name": "Drone Parts",
-            "amount": 70
-          },
-          {
-            "name": "Dielectric Ceramic",
-            "amount": 280
-          },
-          {
-            "name": "Resource Choice Chest (UR)",
-            "amount": 14
-          },
-          {
-            "name": "Hero EXP Chest (SSR)",
-            "amount": 42
-          },
-          {
-            "name": "Stamina (50)",
-            "amount": 14
-          },
-          {
-            "name": "5m Speed-up",
-            "amount": 700
-          },
-          {
-            "name": "Upgrade Ore",
-            "amount": 7000
-          }
-        ]
-      },
-      {
-        "name": "Elite Subscription",
-        "priceInBricks": 1000,
-        "_note": "Includes the top item plus 4 items of your choice.",
-        "items": [
-          {
-            "name": "Hero Shard and Exclusive Weapon Choice Chest",
-            "amount": 8,
-            "alwaysIncluded": true
-          },
-          {
-            "name": "Universal Exclusive Weapon Shard",
-            "amount": 14
-          },
-          {
-            "name": "Drone Parts",
-            "amount": 70
-          },
-          {
-            "name": "Dielectric Ceramic",
-            "amount": 280
-          },
-          {
-            "name": "Resource Choice Chest (UR)",
-            "amount": 14
-          },
-          {
-            "name": "Hero EXP Chest (SSR)",
-            "amount": 42
-          },
-          {
-            "name": "Stamina (50)",
-            "amount": 14
-          },
-          {
-            "name": "5m Speed-up",
-            "amount": 700
-          },
-          {
-            "name": "Upgrade Ore",
-            "amount": 7000
           }
         ]
       }
