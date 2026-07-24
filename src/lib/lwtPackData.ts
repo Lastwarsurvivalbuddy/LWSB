@@ -4,6 +4,13 @@
 // Source: /api/data/stores/packs + /api/data/stores/passes + /api/data/stores/currencies
 // Re-run sync script after game patches to refresh data.
 //
+// ⚠️ HAND-EDIT (July 24, 2026, session 163): Added "Daily Sale Ammo Pack" to FLAT_PACKS — the
+//   Bullseye Loot / Ammo Bonanza event store's only remaining ammo pack (500 bricks, 1x/day, 10 Ammo).
+//   Source: https://cpt-hedge.com/guides/stores/bullseye-loot (verified via Chrome, July 24, 2026).
+//   Bullseye Loot store is NOT in the sync feed today (/api/data/stores/packs omits the event store).
+//   Session-163 follow-up: run scripts/sync-hedge-data.mjs dry-run. If it still omits this pack,
+//   Flynn to ping Hedge re: event-store API coverage — otherwise this hand-add reverts on next sync.
+//
 // Last verified against cpt-hedge.com rendered store guide: May 5, 2026 (session 158, later pass)
 //   https://cpt-hedge.com/guides/stores/tiered-packs
 //   https://cpt-hedge.com/guides/stores/other-packs
@@ -538,6 +545,19 @@ export const FLAT_PACKS: FlatPack[] = [
         "amount": 40
       }
     ]
+  },
+  {
+    "id": "bullseye-daily-sale-ammo",
+    "name": "Daily Sale Ammo Pack",
+    "availability": 1,
+    "priceInBricks": 500,
+    "items": [
+      {
+        "name": "Ammo",
+        "amount": 10
+      }
+    ],
+    "_note": "Bullseye Loot / Ammo Bonanza event store (store currency = Ammo). Event runs 5 days on the ~4-week Hot Deals rotation. Only remaining dedicated ammo pack; 1x/day. Colloquially the '500 Bricks Pack' in Hedge's event guide (named for its 500-brick price). Source: cpt-hedge.com/guides/stores/bullseye-loot (verified July 24, 2026)."
   }
 ];
 
