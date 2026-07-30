@@ -61,7 +61,7 @@ const PLAYSTYLE_OPTIONS = [
 const TROOP_TYPES = [
   { value: 'aircraft', label: '✈️ Aircraft' },
   { value: 'tank', label: '🛡️ Tank' },
-  { value: 'missile vehicle', label: '🚀 Missile Vehicle' },
+  { value: 'missile', label: '🚀 Missile Vehicle' },
   { value: 'mixed', label: '⚖️ Mixed' },
 ]
 
