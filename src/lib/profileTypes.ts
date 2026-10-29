@@ -121,6 +121,7 @@ export const SEASON_LABELS: Record<number, string> = {
   4: 'Season 4 — Evernight Isle',
   5: 'Season 5 — Wild West',
   6: 'Season 6 — Shadow Rainforest',
+  7: 'Season 7 — Return to the Golden Realm',
 };
 
 // Beginner Mode — plain English toggle
