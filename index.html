@@ -795,9 +795,9 @@
     <div class="stat"><span class="stat-number">2000+</span><span class="stat-label">Active Servers</span></div>
     <div class="stat-divider" aria-hidden="true"></div>
     <div class="stat" style="display:flex;flex-direction:column;align-items:center;gap:2px;">
-      <span class="stat-number">S1–S5</span>
+      <span class="stat-number">S1–S6</span>
       <span class="stat-label">All Seasons Covered</span>
-      <span class="stat-label" style="color:#facc15;font-size:0.75em;">S6 Coming Soon!</span>
+      <button type="button" class="s7-open" id="s7-open" aria-haspopup="dialog" aria-controls="s7-dialog" aria-expanded="false">S7: WHAT WE KNOW SO FAR</button>
     </div>
     <div class="stat-divider" aria-hidden="true"></div>
     <div class="stat"><span class="stat-number" aria-label="Battle Report Analyzer">⚔️</span><span class="stat-label">Battle Report Analyzer</span></div>
@@ -980,134 +980,6 @@
     </div>
   </section>
 
-  <!-- SEASON 7 — early official info. Added as its own block; existing sections are unchanged. -->
-  <style>
-    .s7-section { position: relative; z-index: 1; padding: 72px 5%;
-      background: linear-gradient(180deg, rgba(232,160,32,0.05), rgba(14,16,20,0.65) 28%, transparent);
-      border-top: 1px solid rgba(232,160,32,0.22); border-bottom: 1px solid var(--border); }
-    .s7-inner { max-width: 960px; margin: 0 auto; }
-    .s7-flag { display: inline-flex; align-items: center; gap: 8px;
-      font-family: 'Rajdhani', sans-serif; font-size: 11px; font-weight: 700;
-      letter-spacing: 0.22em; text-transform: uppercase; color: var(--gold);
-      background: rgba(232,160,32,0.08); border: 1px solid rgba(232,160,32,0.28);
-      border-radius: 100px; padding: 6px 14px; margin-bottom: 16px; }
-    .s7-flag::before { content: ''; width: 6px; height: 6px; border-radius: 50%;
-      background: var(--gold); box-shadow: 0 0 8px var(--gold); }
-    .s7-title { font-family: 'Oswald', sans-serif; font-size: clamp(28px, 4vw, 44px);
-      font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
-      color: var(--text); line-height: 1.05; margin-bottom: 8px; }
-    .s7-title span { color: var(--gold); }
-    .s7-kicker { font-family: 'Rajdhani', sans-serif; font-size: 13px; font-weight: 600;
-      letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted2); margin-bottom: 18px; }
-    .s7-caveat { background: rgba(232,160,32,0.08); border: 1px solid rgba(232,160,32,0.28);
-      border-radius: 12px; padding: 14px 16px; margin-bottom: 22px; }
-    .s7-caveat strong { display: block; font-family: 'Rajdhani', sans-serif; font-size: 13px;
-      font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold); margin-bottom: 4px; }
-    .s7-caveat p { font-size: 13px; color: var(--muted2); line-height: 1.65; font-weight: 300; margin: 0; }
-    .s7-lead { font-size: 15px; color: var(--muted2); line-height: 1.75; font-weight: 300;
-      max-width: 720px; margin-bottom: 28px; }
-    .s7-lead strong { color: var(--text); font-weight: 600; }
-    .s7-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-bottom: 28px; }
-    .s7-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px 16px 14px; }
-    .s7-card h3 { font-family: 'Oswald', sans-serif; font-size: 15px; font-weight: 600;
-      letter-spacing: 0.06em; text-transform: uppercase; color: var(--text); margin-bottom: 8px; }
-    .s7-card p { font-size: 13px; color: var(--muted2); line-height: 1.65; font-weight: 300; margin: 0; }
-    .s7-card strong { color: var(--text); font-weight: 600; }
-    .s7-label { font-family: 'Rajdhani', sans-serif; font-size: 11px; font-weight: 700;
-      letter-spacing: 0.22em; text-transform: uppercase; color: var(--gold); margin: 8px 0 12px; }
-    .s7-weeks { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 22px; }
-    .s7-week { background: rgba(14,16,20,0.85); border: 1px solid rgba(232,160,32,0.15); border-radius: 10px; padding: 12px 14px; }
-    .s7-week b { display: block; font-family: 'Oswald', sans-serif; font-size: 13px; font-weight: 600;
-      letter-spacing: 0.06em; text-transform: uppercase; color: var(--gold); margin-bottom: 4px; }
-    .s7-week span { display: block; font-size: 12px; color: var(--muted2); line-height: 1.55; font-weight: 300; }
-    .s7-days { display: flex; flex-direction: column; gap: 6px; margin-bottom: 22px; }
-    .s7-day { display: flex; gap: 12px; align-items: baseline; background: var(--card);
-      border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; }
-    .s7-when { flex: 0 0 4.6rem; font-family: 'Share Tech Mono', monospace; font-size: 12px; color: var(--gold); }
-    .s7-what { font-size: 13px; color: var(--muted2); line-height: 1.45; font-weight: 300; }
-    .s7-unknown { background: rgba(192,40,26,0.08); border: 1px solid rgba(192,40,26,0.28);
-      border-radius: 12px; padding: 16px; margin-bottom: 18px; }
-    .s7-unknown h3 { font-family: 'Oswald', sans-serif; font-size: 15px; letter-spacing: 0.06em;
-      text-transform: uppercase; color: #e07060; margin-bottom: 8px; }
-    .s7-unknown ul { margin: 0; padding-left: 18px; }
-    .s7-unknown li { font-size: 13px; color: var(--muted2); line-height: 1.6; font-weight: 300; margin-bottom: 2px; }
-    .s7-foot { font-size: 12px; color: var(--muted); line-height: 1.7; font-weight: 300; }
-    .s7-foot a { color: var(--gold); text-decoration: none; }
-    .s7-foot a:hover { text-decoration: underline; }
-    @media (max-width: 768px) {
-      .s7-section { padding: 56px 4%; }
-      .s7-grid, .s7-weeks { grid-template-columns: 1fr; }
-      .s7-day { flex-direction: column; gap: 2px; }
-      .s7-when { flex-basis: auto; }
-    }
-  </style>
-  <section class="s7-section" id="season-7" aria-labelledby="season-7-heading">
-    <div class="s7-inner">
-      <div class="s7-flag">Season 7 · Official so far</div>
-      <h2 class="s7-title" id="season-7-heading">Return to the <span>Golden Realm</span></h2>
-      <p class="s7-kicker">Season 7 · Eight weeks · No official start date yet</p>
-      <div class="s7-caveat">
-        <strong>Early info — updated as official details drop</strong>
-        <p>Last updated Oct 29, 2026. The publisher says some of this is still in development and may change. If your in-game calendar disagrees, trust the game. Nothing below is a guess.</p>
-      </div>
-      <p class="s7-lead">The official name is <strong>Season 7: Return to the Golden Realm</strong>. Some community posts call it the Golden Empire. That is a nickname. Warzones go back to the golden sands and the pyramids. Old rivalries restart, and the rules of the fight are changing. No start date and no server list have been posted.</p>
-      <div class="s7-grid">
-        <article class="s7-card">
-          <h3>Hero Awakening</h3>
-          <p><strong>Carlie, McGregor, and Murphy</strong> can all be awakened at the same time. Pick one to focus. Red stars unlock the Awakened Skill. The schedule highlights this in weeks 1, 3, and 5.</p>
-        </article>
-        <article class="s7-card">
-          <h3>Global Expedition</h3>
-          <p>It returns, with all three heroes available each round. Phases run season days <strong>4–17</strong>, <strong>18–31</strong>, and <strong>32–49</strong>. The official note is not to miss one. Community posts sometimes call this World Expedition.</p>
-        </article>
-        <article class="s7-card">
-          <h3>Alliance Skills</h3>
-          <p>Temple Conquest hands them out, from level 1 on day 15 up to levels 1–4 on day 36. The latest official image lists returning skills <strong>Tranquil Rewind, Thunder Feathers, and Warlord Missile</strong>, plus new skills that are not named yet. Sources differ: other write-ups list Tesla Coil instead of Thunder Feathers.</p>
-        </article>
-        <article class="s7-card">
-          <h3>Combat Plans</h3>
-          <p>New. Pair a plan with Tactics Cards. The same cards play differently under different plans. Development-focused options on quiet days, combat-focused options on battle days. Plan names and numbers are not published.</p>
-        </article>
-        <article class="s7-card">
-          <h3>Desert Storm</h3>
-          <p>A tighter map, faster rallies and support, a way to rescue wounded units, and battlefield achievements. Roles shown: lead the charge, garrison, move to the next objective, rescue or reinforce.</p>
-        </article>
-        <article class="s7-card">
-          <h3>Rewards</h3>
-          <p>Week 8 is the summary. Rewards follow <strong>Alliance Goldust rankings</strong>. The actual reward list is not published. Goldust Conquest is the mid-season war — some posts call it Battle for the Golden Empire.</p>
-        </article>
-      </div>
-      <div class="s7-label">Eight-week shape</div>
-      <div class="s7-weeks">
-        <div class="s7-week"><b>Week 1</b><span>Purge Action for 7 days: zombie first kills, Resistance, rankings. Stronghold Conquest starts (14 days, into week 2): occupy digging sites. War Merit Shop opens and refreshes weekly through week 8.</span></div>
-        <div class="s7-week"><b>Week 2</b><span>Stronghold Conquest continues. The schedule does not name a separate week-2 event.</span></div>
-        <div class="s7-week"><b>Week 3</b><span>Worm Slayer begins and runs through week 7: kill sandworms for mission rewards. Faction Awards — choose a Faction and duel for the right to fight over Goldust.</span></div>
-        <div class="s7-week"><b>Weeks 4–7</b><span>Goldust Conquest every Wednesday and Saturday. The sides switch each battle. Attackers declare war on the other Faction’s Alliance Center. Listed season days: 24, 27, 31, 34, 38, 41, 45, and 48.</span></div>
-        <div class="s7-week"><b>Week 4 Sunday</b><span>Capitol Conquest on season day 28, called the Capitol War on Sunday of the fourth week.</span></div>
-        <div class="s7-week"><b>Week 8</b><span>Season Summary. Rewards from Alliance Goldust rankings. Amounts are not listed.</span></div>
-      </div>
-      <div class="s7-label">Season days that are already on the official calendar</div>
-      <div class="s7-days">
-        <div class="s7-day"><span class="s7-when">Day 3</span><span class="s7-what">City Clash, level 1 cities. Levels 2 through 6 follow on days 6, 10, 13, 17, and 20.</span></div>
-        <div class="s7-day"><span class="s7-when">Day 4</span><span class="s7-what">Global Expedition phase 1 opens (through day 17). Phase 2 is days 18–31. Phase 3 is days 32–49.</span></div>
-        <div class="s7-day"><span class="s7-when">Six days</span><span class="s7-what">Return of the Dead. Mummy attacks on the Alliance Center on days 9, 12, 16, 19, 23, and 26. A reward for each successful defense.</span></div>
-        <div class="s7-day"><span class="s7-when">Day 14</span><span class="s7-what">Trade Posts level 1–2 start opening weekly (days 14, 21, 28, 35, 42). Levels 3–4 open on days 18, 25, 32, 39, and 46.</span></div>
-        <div class="s7-day"><span class="s7-when">Day 15</span><span class="s7-what">Temple Conquest level 1. Levels widen on days 22, 29, and 36, up to levels 1–4.</span></div>
-        <div class="s7-day"><span class="s7-when">Day 49</span><span class="s7-what">Faction Duel battle day. The schedule calls it the fight that decides the fate of the Golden Realm.</span></div>
-      </div>
-      <div class="s7-unknown">
-        <h3>Not posted yet — Buddy will not guess these</h3>
-        <ul>
-          <li>Official start date</li>
-          <li>Which servers get Season 7, and when</li>
-          <li>Reward details beyond “by Alliance Goldust ranking”</li>
-          <li>Building and tech changes</li>
-        </ul>
-      </div>
-      <p class="s7-foot">Official sources: <a href="https://wiki.lastwar.com/en/show/620">wiki 620</a> (Oct 18, 2026; image revised Oct 27), <a href="https://wiki.lastwar.com/en/show/623">the Season VII schedule</a> (Oct 26, 2026), and the <a href="https://x.com/lastwarsurvival/status/2113169065615523921">@lastwarsurvival post</a> (Oct 22, 2026). Awakening heroes were first named in the August 3 progression preview; the October schedule is the one that says all three are available together. When your server is on Season 7, set that season in your Buddy profile and ask there — Buddy answers from this list and says when it does not know.</p>
-    </div>
-  </section>
-
   <!-- SOCIAL PROOF -->
   <section class="social-proof" aria-labelledby="testimonials-heading">
     <div class="social-proof-inner">
@@ -1240,6 +1112,212 @@
       </a>
     </div>
   </footer>
+
+  <!-- SEASON 7 — same early-info copy, opened from the stats row -->
+  <style>
+    .s7-open { appearance: none; -webkit-appearance: none; margin-top: 8px;
+      background: rgba(232,160,32,0.08); border: 1px solid rgba(232,160,32,0.35);
+      border-radius: 100px; padding: 5px 12px; color: var(--gold);
+      font-family: 'Rajdhani', sans-serif; font-size: 11px; font-weight: 700;
+      letter-spacing: 0.12em; line-height: 1.35; white-space: nowrap; cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, box-shadow 0.2s; }
+    .s7-open:hover { background: rgba(232,160,32,0.16); border-color: var(--gold);
+      box-shadow: 0 0 14px rgba(232,160,32,0.28); }
+    .s7-open:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+    .s7-modal { display: none; position: fixed; inset: 0; z-index: 400;
+      align-items: center; justify-content: center; padding: 16px; }
+    .s7-modal.is-open { display: flex; }
+    html.s7-lock, body.s7-lock { overflow: hidden; }
+    .s7-backdrop { position: absolute; inset: 0; background: rgba(7,8,10,0.82);
+      backdrop-filter: blur(6px); }
+    .s7-dialog { position: relative; z-index: 1; width: min(960px, 100%);
+      max-height: calc(100dvh - 32px); overflow-y: auto; -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      background: linear-gradient(180deg, rgba(232,160,32,0.08), var(--card) 120px);
+      border: 1px solid rgba(232,160,32,0.28); border-radius: 16px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.55), 0 0 32px rgba(232,160,32,0.08); }
+    .s7-dialog-bar { position: sticky; top: 0; z-index: 2; display: flex; justify-content: flex-end;
+      padding: 10px 10px 6px;
+      background: linear-gradient(180deg, rgba(14,16,20,0.98) 0%, rgba(14,16,20,0.94) 68%, rgba(14,16,20,0)); }
+    .s7-close { appearance: none; width: 36px; height: 36px; border-radius: 8px;
+      border: 1px solid rgba(232,160,32,0.35); background: rgba(14,16,20,0.94);
+      color: var(--gold); font-family: 'Oswald', sans-serif; font-size: 22px; line-height: 1;
+      cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+    .s7-close:hover { background: rgba(232,160,32,0.16); border-color: var(--gold); }
+    .s7-close:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+    .s7-inner { max-width: 960px; margin: 0 auto; padding: 0 28px 28px; }
+    .s7-flag { display: inline-flex; align-items: center; gap: 8px;
+      font-family: 'Rajdhani', sans-serif; font-size: 11px; font-weight: 700;
+      letter-spacing: 0.22em; text-transform: uppercase; color: var(--gold);
+      background: rgba(232,160,32,0.08); border: 1px solid rgba(232,160,32,0.28);
+      border-radius: 100px; padding: 6px 14px; margin-bottom: 16px; }
+    .s7-flag::before { content: ''; width: 6px; height: 6px; border-radius: 50%;
+      background: var(--gold); box-shadow: 0 0 8px var(--gold); }
+    .s7-title { font-family: 'Oswald', sans-serif; font-size: clamp(28px, 4vw, 44px);
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+      color: var(--text); line-height: 1.05; margin-bottom: 8px; }
+    .s7-title span { color: var(--gold); }
+    .s7-kicker { font-family: 'Rajdhani', sans-serif; font-size: 13px; font-weight: 600;
+      letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted2); margin-bottom: 18px; }
+    .s7-caveat { background: rgba(232,160,32,0.08); border: 1px solid rgba(232,160,32,0.28);
+      border-radius: 12px; padding: 14px 16px; margin-bottom: 22px; }
+    .s7-caveat strong { display: block; font-family: 'Rajdhani', sans-serif; font-size: 13px;
+      font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold); margin-bottom: 4px; }
+    .s7-caveat p { font-size: 13px; color: var(--muted2); line-height: 1.65; font-weight: 300; margin: 0; }
+    .s7-lead { font-size: 15px; color: var(--muted2); line-height: 1.75; font-weight: 300;
+      max-width: 720px; margin-bottom: 28px; }
+    .s7-lead strong { color: var(--text); font-weight: 600; }
+    .s7-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-bottom: 28px; }
+    .s7-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px 16px 14px; }
+    .s7-card h3 { font-family: 'Oswald', sans-serif; font-size: 15px; font-weight: 600;
+      letter-spacing: 0.06em; text-transform: uppercase; color: var(--text); margin-bottom: 8px; }
+    .s7-card p { font-size: 13px; color: var(--muted2); line-height: 1.65; font-weight: 300; margin: 0; }
+    .s7-card strong { color: var(--text); font-weight: 600; }
+    .s7-label { font-family: 'Rajdhani', sans-serif; font-size: 11px; font-weight: 700;
+      letter-spacing: 0.22em; text-transform: uppercase; color: var(--gold); margin: 8px 0 12px; }
+    .s7-weeks { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 22px; }
+    .s7-week { background: rgba(14,16,20,0.85); border: 1px solid rgba(232,160,32,0.15); border-radius: 10px; padding: 12px 14px; }
+    .s7-week b { display: block; font-family: 'Oswald', sans-serif; font-size: 13px; font-weight: 600;
+      letter-spacing: 0.06em; text-transform: uppercase; color: var(--gold); margin-bottom: 4px; }
+    .s7-week span { display: block; font-size: 12px; color: var(--muted2); line-height: 1.55; font-weight: 300; }
+    .s7-days { display: flex; flex-direction: column; gap: 6px; margin-bottom: 22px; }
+    .s7-day { display: flex; gap: 12px; align-items: baseline; background: var(--card);
+      border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; }
+    .s7-when { flex: 0 0 4.6rem; font-family: 'Share Tech Mono', monospace; font-size: 12px; color: var(--gold); }
+    .s7-what { font-size: 13px; color: var(--muted2); line-height: 1.45; font-weight: 300; }
+    .s7-unknown { background: rgba(192,40,26,0.08); border: 1px solid rgba(192,40,26,0.28);
+      border-radius: 12px; padding: 16px; margin-bottom: 18px; }
+    .s7-unknown h3 { font-family: 'Oswald', sans-serif; font-size: 15px; letter-spacing: 0.06em;
+      text-transform: uppercase; color: #e07060; margin-bottom: 8px; }
+    .s7-unknown ul { margin: 0; padding-left: 18px; }
+    .s7-unknown li { font-size: 13px; color: var(--muted2); line-height: 1.6; font-weight: 300; margin-bottom: 2px; }
+    .s7-foot { font-size: 12px; color: var(--muted); line-height: 1.7; font-weight: 300; }
+    .s7-foot a { color: var(--gold); text-decoration: none; }
+    .s7-foot a:hover { text-decoration: underline; }
+    @media (max-width: 768px) {
+      .s7-modal { padding: 8px; }
+      .s7-dialog { max-height: calc(100dvh - 16px); border-radius: 14px; }
+      .s7-inner { padding: 0 16px 20px; }
+      .s7-open { white-space: normal; text-align: center; }
+      .s7-grid, .s7-weeks { grid-template-columns: 1fr; }
+      .s7-day { flex-direction: column; gap: 2px; }
+      .s7-when { flex-basis: auto; }
+    }
+  </style>
+  <div class="s7-modal" id="s7-modal">
+    <div class="s7-backdrop" data-s7-close></div>
+    <div class="s7-dialog" id="s7-dialog" role="dialog" aria-modal="true" aria-labelledby="season-7-heading" aria-hidden="true">
+      <div class="s7-dialog-bar">
+        <button type="button" class="s7-close" data-s7-close aria-label="Close">&times;</button>
+      </div>
+      <div class="s7-inner">
+      <div class="s7-flag">Season 7 · Official so far</div>
+      <h2 class="s7-title" id="season-7-heading">Return to the <span>Golden Realm</span></h2>
+      <p class="s7-kicker">Season 7 · Eight weeks · No official start date yet</p>
+      <div class="s7-caveat">
+        <strong>Early info — updated as official details drop</strong>
+        <p>Last updated Oct 29, 2026. The publisher says some of this is still in development and may change. If your in-game calendar disagrees, trust the game. Nothing below is a guess.</p>
+      </div>
+      <p class="s7-lead">The official name is <strong>Season 7: Return to the Golden Realm</strong>. Some community posts call it the Golden Empire. That is a nickname. Warzones go back to the golden sands and the pyramids. Old rivalries restart, and the rules of the fight are changing. No start date and no server list have been posted.</p>
+      <div class="s7-grid">
+        <article class="s7-card">
+          <h3>Hero Awakening</h3>
+          <p><strong>Carlie, McGregor, and Murphy</strong> can all be awakened at the same time. Pick one to focus. Red stars unlock the Awakened Skill. The schedule highlights this in weeks 1, 3, and 5.</p>
+        </article>
+        <article class="s7-card">
+          <h3>Global Expedition</h3>
+          <p>It returns, with all three heroes available each round. Phases run season days <strong>4–17</strong>, <strong>18–31</strong>, and <strong>32–49</strong>. The official note is not to miss one. Community posts sometimes call this World Expedition.</p>
+        </article>
+        <article class="s7-card">
+          <h3>Alliance Skills</h3>
+          <p>Temple Conquest hands them out, from level 1 on day 15 up to levels 1–4 on day 36. The latest official image lists returning skills <strong>Tranquil Rewind, Thunder Feathers, and Warlord Missile</strong>, plus new skills that are not named yet. Sources differ: other write-ups list Tesla Coil instead of Thunder Feathers.</p>
+        </article>
+        <article class="s7-card">
+          <h3>Combat Plans</h3>
+          <p>New. Pair a plan with Tactics Cards. The same cards play differently under different plans. Development-focused options on quiet days, combat-focused options on battle days. Plan names and numbers are not published.</p>
+        </article>
+        <article class="s7-card">
+          <h3>Desert Storm</h3>
+          <p>A tighter map, faster rallies and support, a way to rescue wounded units, and battlefield achievements. Roles shown: lead the charge, garrison, move to the next objective, rescue or reinforce.</p>
+        </article>
+        <article class="s7-card">
+          <h3>Rewards</h3>
+          <p>Week 8 is the summary. Rewards follow <strong>Alliance Goldust rankings</strong>. The actual reward list is not published. Goldust Conquest is the mid-season war — some posts call it Battle for the Golden Empire.</p>
+        </article>
+      </div>
+      <div class="s7-label">Eight-week shape</div>
+      <div class="s7-weeks">
+        <div class="s7-week"><b>Week 1</b><span>Purge Action for 7 days: zombie first kills, Resistance, rankings. Stronghold Conquest starts (14 days, into week 2): occupy digging sites. War Merit Shop opens and refreshes weekly through week 8.</span></div>
+        <div class="s7-week"><b>Week 2</b><span>Stronghold Conquest continues. The schedule does not name a separate week-2 event.</span></div>
+        <div class="s7-week"><b>Week 3</b><span>Worm Slayer begins and runs through week 7: kill sandworms for mission rewards. Faction Awards — choose a Faction and duel for the right to fight over Goldust.</span></div>
+        <div class="s7-week"><b>Weeks 4–7</b><span>Goldust Conquest every Wednesday and Saturday. The sides switch each battle. Attackers declare war on the other Faction’s Alliance Center. Listed season days: 24, 27, 31, 34, 38, 41, 45, and 48.</span></div>
+        <div class="s7-week"><b>Week 4 Sunday</b><span>Capitol Conquest on season day 28, called the Capitol War on Sunday of the fourth week.</span></div>
+        <div class="s7-week"><b>Week 8</b><span>Season Summary. Rewards from Alliance Goldust rankings. Amounts are not listed.</span></div>
+      </div>
+      <div class="s7-label">Season days that are already on the official calendar</div>
+      <div class="s7-days">
+        <div class="s7-day"><span class="s7-when">Day 3</span><span class="s7-what">City Clash, level 1 cities. Levels 2 through 6 follow on days 6, 10, 13, 17, and 20.</span></div>
+        <div class="s7-day"><span class="s7-when">Day 4</span><span class="s7-what">Global Expedition phase 1 opens (through day 17). Phase 2 is days 18–31. Phase 3 is days 32–49.</span></div>
+        <div class="s7-day"><span class="s7-when">Six days</span><span class="s7-what">Return of the Dead. Mummy attacks on the Alliance Center on days 9, 12, 16, 19, 23, and 26. A reward for each successful defense.</span></div>
+        <div class="s7-day"><span class="s7-when">Day 14</span><span class="s7-what">Trade Posts level 1–2 start opening weekly (days 14, 21, 28, 35, 42). Levels 3–4 open on days 18, 25, 32, 39, and 46.</span></div>
+        <div class="s7-day"><span class="s7-when">Day 15</span><span class="s7-what">Temple Conquest level 1. Levels widen on days 22, 29, and 36, up to levels 1–4.</span></div>
+        <div class="s7-day"><span class="s7-when">Day 49</span><span class="s7-what">Faction Duel battle day. The schedule calls it the fight that decides the fate of the Golden Realm.</span></div>
+      </div>
+      <div class="s7-unknown">
+        <h3>Not posted yet — Buddy will not guess these</h3>
+        <ul>
+          <li>Official start date</li>
+          <li>Which servers get Season 7, and when</li>
+          <li>Reward details beyond “by Alliance Goldust ranking”</li>
+          <li>Building and tech changes</li>
+        </ul>
+      </div>
+      <p class="s7-foot">Official sources: <a href="https://wiki.lastwar.com/en/show/620">wiki 620</a> (Oct 18, 2026; image revised Oct 27), <a href="https://wiki.lastwar.com/en/show/623">the Season VII schedule</a> (Oct 26, 2026), and the <a href="https://x.com/lastwarsurvival/status/2113169065615523921">@lastwarsurvival post</a> (Oct 22, 2026). Awakening heroes were first named in the August 3 progression preview; the October schedule is the one that says all three are available together. When your server is on Season 7, set that season in your Buddy profile and ask there — Buddy answers from this list and says when it does not know.</p>
+      </div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      var modal = document.getElementById('s7-modal');
+      var dialog = document.getElementById('s7-dialog');
+      var openBtn = document.getElementById('s7-open');
+      var closeBtn = modal.querySelector('.s7-close');
+      var lastFocus = null;
+
+      function openModal() {
+        lastFocus = document.activeElement;
+        modal.classList.add('is-open');
+        dialog.setAttribute('aria-hidden', 'false');
+        openBtn.setAttribute('aria-expanded', 'true');
+        document.documentElement.classList.add('s7-lock');
+        document.body.classList.add('s7-lock');
+        dialog.scrollTop = 0;
+        closeBtn.focus();
+      }
+
+      function closeModal() {
+        if (!modal.classList.contains('is-open')) return;
+        modal.classList.remove('is-open');
+        dialog.setAttribute('aria-hidden', 'true');
+        openBtn.setAttribute('aria-expanded', 'false');
+        document.documentElement.classList.remove('s7-lock');
+        document.body.classList.remove('s7-lock');
+        if (lastFocus && typeof lastFocus.focus === 'function') lastFocus.focus();
+      }
+
+      openBtn.addEventListener('click', openModal);
+      modal.addEventListener('click', function (e) {
+        var closer = e.target.closest('[data-s7-close]');
+        if (closer) closeModal();
+      });
+      document.addEventListener('keydown', function (e) {
+        if ((e.key === 'Escape' || e.key === 'Esc') && modal.classList.contains('is-open')) {
+          e.preventDefault();
+          closeModal();
+        }
+      });
+    })();
+  </script>
 
   <!-- ── Referral capture — must be last ── -->
   <script>
