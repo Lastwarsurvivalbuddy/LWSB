@@ -505,7 +505,9 @@ function Step4_ServerDay({ data, setData, onNext, onBack, step }: StepProps) {
 
 function Step5_Season({ data, setData, onNext, onBack, step }: StepProps) {
   const seasons = [0, 1, 2, 3, 4, 5, 6];
+  seasons.push(7);
   const seasonIcons: Record<number, string> = { 0: '🌱', 1: '☣️', 2: '❄️', 3: '🏆', 4: '🌑', 5: '🤠', 6: '🌿' };
+  seasonIcons[7] = '👑';
   return (
     <div>
       <StepTitle title="What season is your server on?" subtitle="Check your Season Progress tab or alliance announcements." />
