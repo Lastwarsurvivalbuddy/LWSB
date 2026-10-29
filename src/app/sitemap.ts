@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next'
 
-const BASE = 'https://www.lastwarsurvivalbuddy.com'
+const BASE = 'https://lwsb.vercel.app'
 
 const PATHS = [
   '/',

@@ -6,6 +6,6 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: '*',
       allow: '/',
     },
-    sitemap: 'https://www.lastwarsurvivalbuddy.com/sitemap.xml',
+    sitemap: 'https://lwsb.vercel.app/sitemap.xml',
   }
 }
