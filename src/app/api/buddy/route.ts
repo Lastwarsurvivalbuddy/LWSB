@@ -21,7 +21,7 @@ import { getHotDealsSummary } from '@/lib/lwtHotDealsData';
 import { getSeasonDataSummary } from '@/lib/lwtSeasonData';
 import { getSeasonDataSummary45 } from '@/lib/lwtSeason45Data';
 import { getSeasonDataSummary6 } from '@/lib/lwtSeason6Data';
-import { getSeasonDataSummary7 } from '@/lib/lwtSeason7Data';
+import { getSeason7UpcomingBlock } from '@/lib/lwtSeason7Data';
 import { getHeroDataSummary } from '@/lib/lwtHeroData';
 import { getBuildingPrioritySummary } from '@/lib/lwtBuildingData';
 import { getTroopDataSummary } from '@/lib/lwtTroopData';
@@ -566,11 +566,6 @@ You are Buddy — the personal AI commander coach for Last War: Survival. The pl
 
   const seasonNumber = typeof profile.season === 'number' ? profile.season : 0;
   const seasonGuide =
-    // Season 7 is checked first so a Season 7 profile gets the Season 7 guide
-    // instead of falling through to an earlier season.
-    seasonNumber === 7
-      ? getSeasonDataSummary7(seasonNumber)
-      :
     seasonNumber === 6
       ? getSeasonDataSummary6(seasonNumber)
       : seasonNumber >= 4
@@ -784,6 +779,7 @@ ${hedgePackData}
 
 ## Season Guide — ${seasonDisplay}
 ${seasonGuide}
+${getSeason7UpcomingBlock()}
 
 ## Hero System
 ${getHeroDataSummary()}
@@ -963,7 +959,7 @@ ${communityIntel}
 - When asked about diamonds: F2P priority = VIP points → 30-day activation → shields. Never instant completions. 90 free diamonds/day from 3v3 Arena likes. 24-hr shield = 5,000 diamonds for Enemy Buster protection.
 - When asked about progression, speedups, or what to focus on: pre-start strategy (start upgrade before phase, finish during window), barracks staggering for event points, resource chest hoarding (open at higher HQ = more contents), research order (Development → Alliance Duel → Special Forces).
 - When asked about Season 6 (Shadow Rainforest): this is first-look data only. Present all S6 details as "what's been announced so far" — not confirmed final mechanics. Do NOT invent city unlock schedules, seasonal building names, resource names, week-by-week events, or Exclusive Weapon schedules. If asked about something not in the S6 data, say it hasn't been announced yet. Respond as Tier 3 for any S6 detail not present in the knowledge base.
-- When asked about Season 7 (Return to the Golden Realm): answer only from the Season 7 knowledge module. This is early official info, last updated Oct 29, 2026, and the publisher says some of it can still change. Use the official name "Return to the Golden Realm." If the player says "Golden Empire," that is the community alias for this season. "Battle for the Golden Empire" is the alias for Goldust Conquest. "World Expedition" is the alias for Global Expedition. If the question is on the Not yet confirmed list, or the fact is not in the module, say you don't know. Do not guess, and do not invent a start date, a server list, reward amounts, buildings, tech, or skill numbers. Where sources differ on Thunder Feathers versus Tesla Coil, say the sources differ. If the in-game event screen disagrees with this guide, the in-game screen wins.
+- When asked about Season 7 (Return to the Golden Realm): answer only from the "Upcoming season (Season 7), early info" block. That block is included for every commander and is not their current season — do not replace or rewrite the current-season guide with it. This is early official info, last updated Oct 29, 2026, and the publisher says some of it can still change. Use the official name "Return to the Golden Realm." If the player says "Golden Empire," that is the community alias for this season. "Battle for the Golden Empire" is the alias for Goldust Conquest. "World Expedition" is the alias for Global Expedition. If the question is on the Not yet confirmed list, or the fact is not in the block, say you don't know. Do not guess, and do not invent a start date, a server list, reward amounts, buildings, tech, or skill numbers. Where sources differ on Thunder Feathers versus Tesla Coil, say the sources differ. If the in-game event screen disagrees with this guide, the in-game screen wins.
 - When asked about pack value, store purchases, or "is this worth buying": reference the Pack Data and Store Items Detail sections (Powered by cpt-hedge.com) for exact contents and brick costs. Give a clear BUY/SKIP verdict with reasoning tied to their profile.
 - When asked about overlord training costs, levels, or how many badges/certificates to reach a target: FIRST confirm the commander is Season 3+. If pre-gate, Overlord is not yet available and no cost questions apply. Season 3+ only: reference the Overlord Training Costs section (Powered by cpt-hedge.com) for exact numbers.
 - When asked about building upgrade costs, resource requirements, or how much it costs to upgrade a specific building: reference the Building Costs Detail section (Powered by cpt-hedge.com) for exact figures.

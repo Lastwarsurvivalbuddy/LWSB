@@ -1,6 +1,8 @@
 // src/lib/lwtSeason7Data.ts
 // Season 7 (Return to the Golden Realm) — early official guide
-// Injected into buildSystemPrompt() via getSeason7Summary() when player.season === 7
+// The Buddy prompt appends getSeason7UpcomingBlock() for every player, labeled
+// "Upcoming season (Season 7), early info". It does not replace the current-season guide.
+// getSeason7Summary() is the longer reference and is not injected (prompt size).
 //
 // EARLY INFO, updated as official details are released. Last updated Oct 29, 2026.
 //
@@ -326,6 +328,57 @@ ${SEASON7_OTHER_CONFIRMED}
 }
 
 // Returns the Season 7 summary when season === 7, otherwise an empty string.
+// Not used by the Buddy prompt. The prompt appends getSeason7UpcomingBlock() for every player.
 export function getSeasonDataSummary7(season: number): string {
   return season === 7 ? getSeason7Summary() : '';
+}
+
+// Compact block appended to every commander's prompt. Current-season guide is separate.
+export function getSeason7UpcomingBlock(): string {
+  return `## Upcoming season (Season 7), early info
+
+Early info, updated as official details are released. Last updated Oct 29, 2026.
+This block is for every commander. It is not their current season. Do not replace the current-season guide above with it. Use it only for Season 7 questions.
+Official name: Season 7: Return to the Golden Realm (also Season VII: Return to the Golden Realm). Community alias: Return to the Golden Empire. Use the official name, and mention the alias if the player says it.
+No official start date or server list. Season days (D3, D28, and the rest) count from that server's season start. Do not turn them into a calendar date. If the in-game calendar disagrees, the game wins. The publisher says some of this is still in development and may change.
+If a fact is not in this block, say you do not know. Do not guess.
+
+NOT YET CONFIRMED — say you do not know: official start date; server rollout; reward items, amounts, and rank cutoffs (the only rule is week 8 rewards follow Alliance Goldust rankings); building and tech changes; pre-season length and tasks; names and numbers of the new Alliance Skills; Combat Plan names and numbers; awakening shard counts and any prerequisite beyond red stars and Global Expedition; base skin; map layout; migration groups and Faction matchmaking; troop type for Carlie, McGregor, or Murphy.
+
+Length: 8 weeks, WK1–WK8. WK8 is the Season Summary. Theme: return to the golden sands and pyramids. Official lines: warzones return to the golden sands; old rivalries reignite while new battlefield rules reshape the land; deep beneath the pyramids, something seems to be watching.
+
+BY WEEK
+WK1: Purge Action for 7 days (zombie first kills, Resistance, rankings). Stronghold Conquest starts, 14 days through WK2 (occupy digging sites; higher-level sites faster pay Ranking Rewards). War Merit Shop opens, WK1–WK8, refreshes weekly. Hero Awakening is highlighted.
+WK2: Stronghold Conquest continues. No separate week-2 event is named.
+WK3: Worm Slayer starts and runs through WK7 (kill sandworms for mission rewards). Faction Awards: choose a Faction and duel for the right to invade and fight for Goldust. Hero Awakening highlighted again.
+WK4–WK7: Goldust Conquest every Wednesday and Saturday; the two Factions switch attack and defense. Attackers declare war on the other Faction's Alliance Center. Days: D24, D27, D31, D34, D38, D41, D45, D48. Worm Slayer continues through WK7. Hero Awakening is highlighted in WK5. Capitol Conquest is D28, "Sunday of the fourth week."
+WK8: Season Summary. Rewards by Alliance Goldust rankings. The reward list is not published.
+
+BY SEASON DAY
+City Clash (capture cities in this warzone): Lv1 D3, Lv2 D6, Lv3 D10, Lv4 D13, Lv5 D17, Lv6 D20.
+Global Expedition (community alias World Expedition): Phase 1 D4–17, Phase 2 D18–31, Phase 3 D32–49. All three heroes are available each round; pick one to focus. Train that hero, meet the requirements, and earn that hero's Awakening Shards. Official note: don't miss a single Global Expedition.
+Return of the Dead: defend the Alliance Center from mummy attacks on D9, D12, D16, D19, D23, D26. A reward for each successful defense.
+Trade Posts: levels 1–2 on D14, D21, D28, D35, D42. Levels 3–4 on D18, D25, D32, D39, D46.
+Temple Conquest, which grants Alliance Skills: D15 level 1; D22 levels 1–2; D29 levels 1–3; D36 levels 1–4.
+Faction Duel battle day is D49, to decide the fate of the Golden Realm. Global Expedition phase 3 also ends that day.
+
+HEROES
+Carlie, McGregor, and Murphy can all be awakened at the same time. The player chooses one focus. Red stars unlock the Awakened Skill. The schedule highlights weeks 1, 3, and 5; that highlight is not a limit. Named in the August 3, 2026 preview, which said order and timing would come later. The October 26, 2026 schedule is that announcement: all three at once.
+
+ALLIANCE SKILLS AND GOLDUST
+New skills join three returning ones. Timing and follow-up matter. The latest official image (revised October 27, 2026) lists Tranquil Rewind, Thunder Feathers, and Warlord Missile. Sources differ: other write-ups list Tesla Coil instead of Thunder Feathers. Say the sources differ. Do not treat Tesla Coil as the settled name. New skill names and effects are not published.
+Goldust Conquest (the schedule image spells GOLDDUST; community alias Battle for the Golden Empire) returns, now with the new Alliance Skills and Combat Plans.
+
+COMBAT PLANS (new)
+Choose a plan for your role and the alliance, and pair it with Tactics Cards. The same cards play differently under different plans. Development-focused options on non-combat days; combat-focused options on battle days. The announcement describes holding the line versus chaining offensive options, and does not name them. No plan names or numbers are published.
+
+DESERT STORM
+More compact map, faster rallies and support, a rescue for wounded units, and battlefield achievements. Roles shown: lead the charge, garrison, move to the next objective, rescue or reinforce. No point values are published.
+
+CURRENCY
+War Merit is the season currency on the official schedule. The shop's item list is not published.
+An October 21, 2026 notice added a Crystal Shop tab and a check-in for October 26–November 1 (server time). That notice is not a Season 7 feature. Do not describe it as part of Season 7.
+
+Sources: wiki.lastwar.com/en/show/620 (October 18, 2026; image revised October 27), the Season VII schedule at wiki.lastwar.com/en/show/623 (October 26, 2026), the August 3, 2026 progression preview (wiki 575), and the @lastwarsurvival post on October 22, 2026.
+`;
 }

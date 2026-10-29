@@ -72,7 +72,6 @@ const TROOP_TIERS = [
 ]
 
 const SEASONS = [0, 1, 2, 3, 4, 5, 6]
-SEASONS.push(7)
 const HQ_SHORTCUTS = [5, 10, 15, 20, 25, 30, 35]
 
 const REMINDER_OPTIONS = [
