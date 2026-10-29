@@ -20,7 +20,7 @@ export async function GET() {
   return NextResponse.json({ news: data ?? [] })
 }
 
-// ── Auth helper — Boyd only ──────────────────────────────────────
+// ── Auth helper — admin only ─────────────────────────────────────
 async function requireAdmin(req: NextRequest): Promise<string | null> {
   const auth = req.headers.get('Authorization')
   if (!auth) return null

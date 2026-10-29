@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const ADMIN_EMAIL = 'myersboyd@gmail.com'
+const ADMIN_EMAIL = process.env.BOYD_EMAIL
 const LAST_VISIT_KEY = 'admin_last_visit'
 
 export async function GET(req: NextRequest) {

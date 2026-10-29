@@ -5,7 +5,7 @@
 // off-season store windows — none of that exists in the source).
 // NOTE: LWT article was written as a first-pass live playthrough and is explicitly incomplete.
 // Specific reward amounts and chest thresholds are NOT documented in the source — not included here.
-// Boyd's firsthand knowledge overrides any data here if conflicts arise.
+// The owner's firsthand knowledge overrides any data here if conflicts arise.
 
 // ── Event Overview ───────────────────────────────────────────────────
 export const SKY_BATTLEFRONT_OVERVIEW = {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const ADMIN_EMAIL = 'myersboyd@gmail.com'
+const ADMIN_EMAIL = process.env.BOYD_EMAIL
 
 export async function POST(req: NextRequest) {
   const authHeader = req.headers.get('Authorization')

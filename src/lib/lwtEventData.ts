@@ -214,7 +214,7 @@ export const DUEL_DAYS = [
     alliancePoints: 1,
     victoryPoints: 1,
     // ⚠️ Note: previous data had alliancePoints=2. Corrected to 1 per lastwarhandbook Jan 2026.
-    // Verify in-game — Boyd to confirm.
+    // Verify in-game — the owner to confirm.
     armsRaceOverlap: ['City Building'],
     tasks: [
       { action: 'Use 1-min Construction Speedup', points: 120, tip: 'Generic speedups work' },
@@ -268,7 +268,7 @@ export const DUEL_DAYS = [
     alliancePoints: 3,
     victoryPoints: 3,
     // ⚠️ Note: previous data had alliancePoints=2. Corrected to 3 per lastwarhandbook Jan 2026.
-    // Verify in-game — Boyd to confirm.
+    // Verify in-game — the owner to confirm.
     armsRaceOverlap: ['City Building', 'Tech Research', 'Unit Progression'],
     tasks: [
       { action: 'Complete 1 radar mission', points: 23000, tip: 'Stack missions the day before' },

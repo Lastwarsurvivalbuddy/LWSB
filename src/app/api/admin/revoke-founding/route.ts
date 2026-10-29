@@ -4,7 +4,7 @@
 // POST /api/admin/revoke-founding
 // Body: { userId: string }
 //
-// Admin-only (myersboyd@gmail.com). Revokes a user's Founding comp by
+// Admin-only. Revokes a user's Founding comp by
 // setting tier='free' and stamping revoked_at. comped_at is preserved
 // for audit trail — so the history is always retrievable.
 //
@@ -23,7 +23,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const ADMIN_EMAIL = 'myersboyd@gmail.com'
+const ADMIN_EMAIL = process.env.BOYD_EMAIL
 
 export async function POST(req: NextRequest) {
   const authHeader = req.headers.get('Authorization')

@@ -2,7 +2,7 @@
 // General's Trial — recurring 4-day map-based PvE challenge event
 // Source: lastwartutorial.com/generals-trial — verified March 25, 2026
 // Replaces prior hallucinated version (wave-based PvE, daily resets, Trial Coins store — none of that is real).
-// Boyd's firsthand knowledge overrides any data here if conflicts arise.
+// The owner's firsthand knowledge overrides any data here if conflicts arise.
 // Cross-reference: lwtOverlordData.ts already documents that Advanced L4-5 drops
 // Overlord Skill Badges + Universal Overlord Shards. Not duplicated here.
 

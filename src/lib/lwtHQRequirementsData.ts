@@ -1,5 +1,5 @@
 // src/lib/hqRequirementsData.ts
-// HQ upgrade requirements — verified by Boyd (HQ 35, Server 1032)
+// HQ upgrade requirements — verified by the owner (HQ 35, Server 1032)
 
 export interface HQRequirement {
   hq: number;

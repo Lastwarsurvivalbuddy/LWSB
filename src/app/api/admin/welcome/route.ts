@@ -5,13 +5,13 @@ import { NextRequest, NextResponse } from 'next/server'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-const BOYD_EMAIL = process.env.BOYD_EMAIL!
+const ADMIN_EMAIL = process.env.BOYD_EMAIL!
 
 async function verifyAdmin(token: string): Promise<boolean> {
   const anonClient = createClient(supabaseUrl, supabaseAnonKey)
   const { data: { user }, error } = await anonClient.auth.getUser(token)
   if (error || !user) return false
-  return user.email === BOYD_EMAIL
+  return user.email === ADMIN_EMAIL
 }
 
 export async function PATCH(req: NextRequest) {
