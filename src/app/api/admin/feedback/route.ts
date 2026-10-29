@@ -3,11 +3,11 @@
 //
 // GET /api/admin/feedback[?rating=up|down]
 //
-// Admin-only (BOYD_EMAIL). Returns up to 200 most-recent feedback rows,
+// Admin-only. Returns up to 200 most-recent feedback rows,
 // optionally filtered by rating.
 //
 // Build fix: this file previously initialized the Supabase client AND read
-// BOYD_EMAIL at module scope using `!` non-null assertions. On Next.js
+// the admin email at module scope using `!` non-null assertions. On Next.js
 // "collect page data" at build time, the module is loaded before runtime
 // env is fully available, and any missing env var with `!` throws during
 // collection. Moved both reads inside the handler.
@@ -24,9 +24,9 @@ export async function GET(req: NextRequest) {
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const boydEmail = process.env.BOYD_EMAIL;
+    const adminEmail = process.env.BOYD_EMAIL;
 
-    if (!supabaseUrl || !serviceKey || !boydEmail) {
+    if (!supabaseUrl || !serviceKey || !adminEmail) {
       console.error('[admin/feedback] Missing required env vars');
       return NextResponse.json(
         { error: 'Internal server error' },
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    if (user.email !== boydEmail) {
+    if (user.email !== adminEmail) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

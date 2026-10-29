@@ -28,7 +28,7 @@ export const STRIPE_PRICE_PRO        = requireEnv('STRIPE_PRICE_PRO')
 export const STRIPE_PRICE_ELITE      = requireEnv('STRIPE_PRICE_ELITE')
 export const STRIPE_PRICE_FOUNDING   = requireEnv('STRIPE_PRICE_FOUNDING')
 export const STRIPE_PRICE_ALLIANCE   = requireEnv('STRIPE_PRICE_ALLIANCE')
-export const BOYD_EMAIL              = requireEnv('BOYD_EMAIL')
+export const ADMIN_EMAIL             = requireEnv('BOYD_EMAIL')
 export const ADMIN_USER_ID           = requireEnv('ADMIN_USER_ID')
 
 // ── Public vars (NEXT_PUBLIC — safe to expose to client) ──────────────────────

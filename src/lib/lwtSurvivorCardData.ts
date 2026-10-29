@@ -1,7 +1,7 @@
 // lwtSurvivorCardData.ts
 // Survivor recruitment, assignment, upgrade, and Alliance Duel timing data
 // Source: lastwartutorial.com, lastwarhandbook.com, medievalfun.com, in-game research
-// Do not modify confirmed data without Boyd confirming against live game
+// Do not modify confirmed data without the owner confirming against live game
 // Updated: March 21, 2026 (session 55) — Adventurer Taylor corrected from in-game screenshot (Aethernis guide)
 
 export const lwtSurvivorCardData = `

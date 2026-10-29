@@ -4,12 +4,12 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-const BOYD_EMAIL = process.env.BOYD_EMAIL!
+const ADMIN_EMAIL = process.env.BOYD_EMAIL!
 
-async function verifyBoyd(token: string): Promise<boolean> {
+async function verifyAdmin(token: string): Promise<boolean> {
   const supabase = createClient(supabaseUrl, supabaseServiceKey)
   const { data: { user } } = await supabase.auth.getUser(token)
-  return user?.email === BOYD_EMAIL
+  return user?.email === ADMIN_EMAIL
 }
 
 function getToken(req: NextRequest): string | null {
@@ -47,7 +47,7 @@ async function isCodeTaken(supabase: any, code: string, excludeId?: string): Pro
 // ?mode=payouts&id=X → payout history + unpaid balance for one affiliate
 export async function GET(req: NextRequest) {
   const token = getToken(req)
-  if (!token || !(await verifyBoyd(token))) {
+  if (!token || !(await verifyAdmin(token))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
   }
 
@@ -135,7 +135,7 @@ export async function GET(req: NextRequest) {
 // action: 'mark_paid'           → log a payout, reduce unpaid balance
 export async function PATCH(req: NextRequest) {
   const token = getToken(req)
-  if (!token || !(await verifyBoyd(token))) {
+  if (!token || !(await verifyAdmin(token))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
   }
 

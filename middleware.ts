@@ -57,7 +57,7 @@ const RESTRICTED_MESSAGE =
 
 // ─────────────────────────────────────────────────────────────
 // FOUNDER BYPASS
-// Boyd's user ID — skip abuse tracking entirely for this account.
+// The owner's user ID — skip abuse tracking entirely for this account.
 // Prevents false flags during heavy testing / development sessions.
 // ─────────────────────────────────────────────────────────────
 const FOUNDER_USER_ID = process.env.NEXT_PUBLIC_ADMIN_USER_ID ?? ''

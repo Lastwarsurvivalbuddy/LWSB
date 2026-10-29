@@ -4,7 +4,7 @@
 // POST /api/admin/grant-founding
 // Body: { userId: string }
 //
-// Admin-only (myersboyd@gmail.com). Grants a user Founding tier by writing
+// Admin-only. Grants a user Founding tier by writing
 // directly to subscriptions.tier and stamping comped_at. Stripe is not
 // touched — comp records bypass the billing system entirely.
 //
@@ -21,7 +21,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const ADMIN_EMAIL = 'myersboyd@gmail.com'
+const ADMIN_EMAIL = process.env.BOYD_EMAIL
 
 export async function POST(req: NextRequest) {
   const authHeader = req.headers.get('Authorization')

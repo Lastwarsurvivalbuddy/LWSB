@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-const BOYD_EMAIL = process.env.BOYD_EMAIL!
+const ADMIN_EMAIL = process.env.BOYD_EMAIL!
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get('authorization') || ''
@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  if (!userEmail || userEmail !== BOYD_EMAIL) {
+  if (!userEmail || userEmail !== ADMIN_EMAIL) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
   }
 

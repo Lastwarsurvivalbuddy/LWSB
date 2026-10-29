@@ -872,7 +872,7 @@ export default function MissionControlPage() {
               </svg>
             </div>
             <span className="text-sm font-bold tracking-wide">Mission Control</span>
-            <span className="text-zinc-600 text-xs font-mono">· Boyd</span>
+            <span className="text-zinc-600 text-xs font-mono">· Admin</span>
           </div>
           <button
             onClick={enterWarfighter}

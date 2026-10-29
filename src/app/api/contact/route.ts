@@ -6,7 +6,7 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-const BOYD_EMAIL = process.env.BOYD_EMAIL!
+const ADMIN_EMAIL = process.env.BOYD_EMAIL!
 
 async function verifyAdmin(req: NextRequest): Promise<boolean> {
   const auth = req.headers.get('Authorization')
@@ -14,7 +14,7 @@ async function verifyAdmin(req: NextRequest): Promise<boolean> {
   const token = auth.slice(7)
   const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
   if (error || !user) return false
-  return user.email === BOYD_EMAIL
+  return user.email === ADMIN_EMAIL
 }
 
 // ── User-facing: submit a contact form entry ──────────────────────────────────
@@ -94,7 +94,7 @@ ${screenshot_base64 ? `Screenshot attached: ${screenshot_name || 'screenshot.jpg
         },
         body: JSON.stringify({
           from: 'LWSB Contact <noreply@lastwarsurvivalbuddy.com>',
-          to: [BOYD_EMAIL],
+          to: [ADMIN_EMAIL],
           subject: `[LWSB] ${categoryLabels[category] ?? category} — ${email || user.email}`,
           text: emailBody,
         }),
