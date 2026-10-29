@@ -1107,7 +1107,7 @@
         Rookie Commander Guide &rarr;
       </a>
       <span style="color:var(--muted);opacity:0.5;" aria-hidden="true">·</span>
-      <a href="https://lastwarsurvivalbuddy.com/affiliate" style="font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='var(--gold)'" onmouseout="this.style.color='var(--muted)'">
+      <a href="https://lwsb.vercel.app/affiliate" style="font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='var(--gold)'" onmouseout="this.style.color='var(--muted)'">
         Content creator or community builder? Join the Affiliate Program &rarr;
       </a>
     </div>
@@ -1318,8 +1318,23 @@
   <!-- ── Referral capture — must be last ── -->
   <script>
     (function() {
+      // Same shape ReferralCapture accepts on the app: ?ref= then a 30-day lwsb_ref cookie.
+      var REF_RE = /^[a-zA-Z0-9-_]{3,32}$/;
       var ref = new URLSearchParams(window.location.search).get('ref');
-      if (ref) localStorage.setItem('lwsb_ref', ref);
+      if (ref) {
+        try { localStorage.setItem('lwsb_ref', ref); } catch (e) {}
+      } else {
+        try { ref = localStorage.getItem('lwsb_ref'); } catch (e) { ref = null; }
+      }
+      if (!ref || !REF_RE.test(ref)) return;
+      var links = document.querySelectorAll('a[href*="/signup"], a[href*="/signin"]');
+      for (var i = 0; i < links.length; i++) {
+        try {
+          var url = new URL(links[i].href);
+          if (!url.searchParams.get('ref')) url.searchParams.set('ref', ref);
+          links[i].href = url.toString();
+        } catch (e) {}
+      }
     })();
   </script>
 
