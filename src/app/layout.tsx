@@ -16,9 +16,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Last War: Survival Buddy",
+  title: {
+    default: "Last War: Survival Buddy — AI Coach for Last War Players",
+    template: "%s — Last War: Survival Buddy",
+  },
   description:
-    "Personalized AI coaching for Last War: Survival players. Daily action plans, battle report analysis, pack scanner, and more — tailored to your exact profile.",
+    "Personalized AI coaching for Last War: Survival. Daily action plans, battle report analysis, and pack advice built around your HQ, server, and goals.",
 };
 
 export default function RootLayout({
