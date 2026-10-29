@@ -26,22 +26,35 @@ export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [authLoading, setAuthLoading] = useState(true)
+  const [signedIn, setSignedIn] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
+    let cancelled = false
     async function init() {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        router.push('/signin')
-        return
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (cancelled) return
+        if (!session) {
+          setSignedIn(false)
+          setAuthLoading(false)
+          return
+        }
+        setSignedIn(true)
+        setAccessToken(session.access_token)
+        setUserEmail(session.user.email ?? '')
+        setEmail(session.user.email ?? '')
+        setAuthLoading(false)
+      } catch {
+        if (!cancelled) {
+          setSignedIn(false)
+          setAuthLoading(false)
+        }
       }
-      setAccessToken(session.access_token)
-      setUserEmail(session.user.email ?? '')
-      setEmail(session.user.email ?? '')
-      setAuthLoading(false)
     }
     init()
-  }, [router])
+    return () => { cancelled = true }
+  }, [])
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -114,6 +127,42 @@ export default function ContactPage() {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
         <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  // ── Logged out: show the support address. No unauthenticated send endpoint. ──
+  if (!signedIn) {
+    return (
+      <div className="min-h-screen bg-zinc-950 text-white">
+        <header
+          className="sticky top-0 z-20 backdrop-blur-sm"
+          style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', backgroundColor: 'rgba(9,9,11,0.95)' }}
+        >
+          <div className="max-w-lg mx-auto px-4 h-12 flex items-center">
+            <span className="text-sm font-bold tracking-wide text-white">Contact Support</span>
+          </div>
+        </header>
+        <main className="max-w-lg mx-auto px-4 py-8 space-y-4">
+          <p className="text-[10px] font-mono tracking-widest text-zinc-600 uppercase">
+            HQ Transmission
+          </p>
+          <h1 className="text-lg font-bold">Contact Buddy</h1>
+          <p className="text-sm text-zinc-400 leading-relaxed">
+            Email support and Buddy will follow up. You do not need an account to reach out.
+          </p>
+          <a
+            href="mailto:support@lastwarsurvivalbuddy.com"
+            className="block text-base font-semibold text-amber-400 break-all"
+          >
+            support@lastwarsurvivalbuddy.com
+          </a>
+          <p className="text-xs text-zinc-500 leading-relaxed">
+            Already have an account?{' '}
+            <a href="/signin" className="text-amber-400 hover:underline">Sign in</a>
+            {' '}to send a message from the form.
+          </p>
+        </main>
       </div>
     )
   }
