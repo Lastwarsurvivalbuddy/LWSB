@@ -1,12 +1,20 @@
 // src/lib/lwtSeason7Data.ts
 // Season 7 (Return to the Golden Realm) — early official guide
-// The Buddy prompt appends getSeason7UpcomingBlock() for every player, labeled
+// Buddy's prompt appends getSeason7UpcomingBlock() for every player, labeled
 // "Upcoming season (Season 7), early info". It does not replace the current-season guide.
 // getSeason7Summary() is the longer reference and is not injected (prompt size).
 //
-// EARLY INFO, updated as official details are released. Last updated Oct 29, 2026.
+// EARLY INFO, updated as official details are released. Last updated Nov 9, 2026.
 //
-// Confirmed sources only (official FirstFun). Do not add community dates or numbers.
+// Two kinds of source, kept apart:
+//   1. Official FirstFun posts (below). These are the "confirmed" sections.
+//   2. REPORTED BY CPT-HEDGE (unofficial) sections (SEASON7_COMMUNITY_*), added Nov 9, 2026,
+//      from cpt-hedge.com only. Unofficial. Buddy must say so.
+//      • https://cpt-hedge.com/guides/season-7-preseason — published 2026-11-09
+//      • https://cpt-hedge.com/guides/season-7-first-look — published 2026-10-20, updated 2026-11-05
+//      • https://cpt-hedge.com/guides/season-7-map-guide — published 2026-11-05
+//      • https://cpt-hedge.com/guides/season-7-desert-storm-changes — published 2026-11-05
+//   Do not move a fact reported by cpt-hedge.com into a confirmed section until an official post states it.
 //   • Wiki 620 "Season 7: Return to the Golden Realm is coming soon!"
 //     https://wiki.lastwar.com/en/show/620 — created 2026-10-18. Announcement image
 //     file S_VII_Wiki620_20261027_EN.png, revision dated 2026-10-27.
@@ -28,7 +36,7 @@
 export const SEASON7_EARLY_NOTE = `
 SEASON 7 — EARLY INFO
 
-Early info, updated as official details are released. Last updated Oct 29, 2026.
+Early info, updated as official details are released. Last updated Nov 9, 2026.
 
 HOW TO ANSWER A SEASON 7 QUESTION:
 - Use only the facts in this module. This is early official info, and the publisher says some of it is still in development and may change.
@@ -37,6 +45,7 @@ HOW TO ANSWER A SEASON 7 QUESTION:
 - If the player's in-game event calendar disagrees with this guide, the in-game calendar wins. Say that.
 - Use official names. If the player uses a community alias, answer with the official name and mention the alias (see Naming).
 - Where sources differ (Thunder Feathers vs Tesla Coil), say the sources differ. Do not pick a winner.
+- Sections titled REPORTED BY CPT-HEDGE (unofficial) come from cpt-hedge.com, not from the publisher. When you use one, say it is reported by cpt-hedge.com and is unofficial. Never call it confirmed.
 `;
 
 export const SEASON7_NOT_YET_CONFIRMED = `
@@ -44,18 +53,18 @@ SEASON 7 — NOT YET CONFIRMED
 
 If a player asks about any item on this list, say you do not know. Do not guess. Do not fill the gap with another season's numbers or with a community post.
 
-- Official start date
-- Server rollout (which servers, and in what order)
+- Official start date. Reported by cpt-hedge.com (unofficial): pre-season began Nov 9, 2026 on servers 3-164 (see REPORTED BY CPT-HEDGE (unofficial): Pre-season).
+- Server rollout (which servers, and in what order). Reported by cpt-hedge.com (unofficial) for the first batch only (servers 3-164). Later batches: unknown.
 - Reward details (item lists, quantities, rank cutoffs). The only confirmed reward rule is that week 8 rewards are distributed from Alliance Goldust rankings.
-- Building and tech changes (new season buildings, profession changes, season-tech trees, and their costs)
-- Pre-season length and pre-season tasks
+- Building and tech changes and their costs. Reported by cpt-hedge.com (unofficial): building names and purposes only (see REPORTED BY CPT-HEDGE (unofficial): Resources and buildings). Costs, levels, and tech trees: unknown.
+- Pre-season length and tasks. Reported by cpt-hedge.com (unofficial): 2 weeks, with a 7-day Season Preview event.
 - Names, effects, and numbers for the new Alliance Skills
-- Combat Plan names, categories, and any numeric effects
+- Combat Plan names, categories, and any numeric effects. Reported by cpt-hedge.com (unofficial): three categories and three previewed plan names (see REPORTED BY CPT-HEDGE (unofficial): Combat Plans). Full plan list and all numbers: unknown.
 - Awakening shard counts, and any awakening prerequisites beyond red stars and the Global Expedition requirements described below
-- Base skin and its buff
-- Map layout, including whether the combined multi-warzone map from recent seasons changed
+- Base skin and its buff. Reported by cpt-hedge.com (unofficial): Meow-lody (see REPORTED BY CPT-HEDGE (unofficial): Season boosts).
+- Map layout. Reported by cpt-hedge.com (unofficial): a Season 3 style square desert map, not the combined multi-warzone map (see REPORTED BY CPT-HEDGE (unofficial): Map). City names, buffs, and capture limits: unknown.
 - Migration groupings and how Factions are matched
-- Hero troop type (Aircraft, Missile, or Tank) for Carlie, McGregor, or Murphy — the Season 7 announcements do not state it
+- Hero troop type (Aircraft, Missile, or Tank) for Carlie, McGregor, or Murphy — the official Season 7 announcements do not state it. cpt-hedge.com lists Carlie Aircraft, McGregor Missile, Murphy Tank (unofficial).
 - A calendar date for any season day
 `;
 
@@ -77,7 +86,7 @@ export const SEASON7_OVERVIEW = `
 SEASON 7 — RETURN TO THE GOLDEN REALM (overview)
 
 Official name: Season 7: Return to the Golden Realm.
-Status: announced, not yet given an official start date or server list. Early info. Last updated Oct 29, 2026.
+Status: announced. No official start date or server list in the official posts. Reported by cpt-hedge.com (unofficial): the pre-season began Nov 9, 2026 on servers 3-164 (see REPORTED BY CPT-HEDGE (unofficial): Pre-season). Early info. Last updated Nov 9, 2026.
 Length: 8 weeks, labeled WK1 through WK8 on the official schedule. WK8 is the Season Summary.
 Day counts on the schedule are season days (day 1 is the season's first day on that server).
 
@@ -246,7 +255,7 @@ What is confirmed:
 - Which plans are available shifts with the day's activity. Development-focused options are for non-combat days. Combat-focused options are for battle days.
 - The announcement also describes holding the line versus chaining offensive options. It does not name those options.
 
-Do not attach a community plan name or a community effect to this system. Those details are not in the official text.
+Do not present a plan name or effect from cpt-hedge.com as official. Names and effects reported by cpt-hedge.com (unofficial) are in REPORTED BY CPT-HEDGE (unofficial): Combat Plans, and must be labeled as reported by cpt-hedge.com and unofficial. Never call them confirmed.
 `;
 
 export const SEASON7_DESERT_STORM = `
@@ -291,12 +300,146 @@ The August 3 preview also asked for feedback on Exclusive Weapons, Tactics Cards
 A separate October 21, 2026 notice (wiki 621, Oct Week 4 Updates) added a Crystal Shop tab on the Shop building and a Limited Time Check-In for Oct 26–Nov 1, server time. That notice is not a Season 7 feature list. Do not describe the Crystal Shop or that check-in as part of Season 7.
 `;
 
+// ---------------------------------------------------------------------------
+// REPORTED BY CPT-HEDGE (unofficial). Source: cpt-hedge.com public guides only, read Nov 9, 2026.
+// Buddy must label every fact below as reported by cpt-hedge.com and unofficial, never confirmed.
+// ---------------------------------------------------------------------------
+
+export const SEASON7_COMMUNITY_PRESEASON = `
+SEASON 7 — REPORTED BY CPT-HEDGE (unofficial): PRE-SEASON
+
+Reported by cpt-hedge.com on Nov 9, 2026. Unofficial. Never call it confirmed. If the player's game shows something different, the game wins.
+
+- The pre-season lasts two weeks. The first batch of servers (3-164) started the pre-season on November 9, 2026. Other servers follow later; no dates are reported for them.
+- The season itself starts after the two-week pre-season. No exact season start date is reported. Do not calculate one.
+- The pre-season hub has three parts: Season VII (Grouping, Rules, and Rewards tabs), Season Boost (Pre-Season), and Season Preview.
+- Season Preview is a 7-day event. A new task stage unlocks each day. Finishing a stage gives its rewards. A skipped stage still unlocks its preview the next day, but its rewards are missed, so check in daily.
+- Players need to download the new season pack.
+- Grouping and Faction details are not yet reported.
+- cpt-hedge.com says day 1 of the season is a Monday, so day 28 is the Sunday of week 4.
+`;
+
+export const SEASON7_COMMUNITY_BOOSTS = `
+SEASON 7 — REPORTED BY CPT-HEDGE (unofficial): SEASON BOOSTS
+
+Reported by cpt-hedge.com from the in-game pre-season screens. Unofficial. Never call it confirmed. The boosts unlock progressively as the season advances.
+
+Meow-lody (base skin, returns from Season 3). cpt-hedge.com says staff confirmed it as the Season 7 base skin. That report is unofficial. Never call it confirmed.
+- Mummy Attack +5% (Holding In Stock Attributes).
+- Unlocks the Summon Protector base skill (Holding In Stock Attributes). Its effect is not yet reported.
+- When someone Likes your base, the commander who liked it gets a Desert Gift (1 claim per commander for the same base).
+
+Warrior's Monument (decoration)
+- Raises the chance of an S7 Gift Chest from Rallies: 1% at first, +1% per level, up to 5%.
+- Comes from Taylor, a paid survivor.
+
+Hospital Enhanced
+- PvP unit death reduction +25% during the season. Applies automatically.
+
+Hero buffs during the season
+- Murphy, Carlie, and McGregor each reduce Damage Taken from Monsters by 5%.
+`;
+
+export const SEASON7_COMMUNITY_RULES = `
+SEASON 7 — REPORTED BY CPT-HEDGE (unofficial): SEASON RULES
+
+Reported by cpt-hedge.com from the in-game pre-season Rules tab. Unofficial. Never call it confirmed. Exact numbers are not yet reported. If asked for a number, say you do not know.
+
+Story: Captain Jones of the Scarlet Legion touched the Golden Necklace and became the vessel for a Pharaoh who slept for a thousand years. The Army of the Dead stirs, and the Golden Tribe, guardians of the Sacred Land, blame outsiders. Carlie and her vanguard head to the ruins.
+
+Gold Dust
+- Produced over time in captured Cities.
+- The more Gold Dust an alliance owns at the end of the season, the higher its ranking and rewards.
+- Capturing Cities turns sand into greenery ("Build an Oasis"). What that does in gameplay is not reported.
+
+Alliance Center
+- Gives bonuses to commanders and their allies, and protects bases from Sandworms. Lone commanders are more vulnerable. Advice from the season notes: keep your base inside Alliance Center range.
+
+Desert Protectors
+- After units are killed, a portion is automatically converted into Desert Protectors. The Protector Horn item gives Desert Protectors instantly.
+- The number owned decides which Protector skills unlock.
+- Once they march, they do not return to the base. They vanish at season end.
+- The Protector's Field building raises the maximum number you can hold.
+- Conversion rates and Protector skill effects: not reported.
+
+Sandworm Crisis
+- Sandworms react to the noise of frequent battles.
+- Small Sandworm: surrounds bases near the noise. Those bases cannot send troops for a while. A teleport escapes, but the sandworm flees and its rewards are lost.
+- Large Sandworm: attacks the base that made the noise and blasts it away, unless the base is inside Alliance Center range.
+- Giant Sandworm: ignores normal sounds. It can only be captured with Trap Landmines. Where Trap Landmines come from: not reported.
+- Defeating Sandworms gives Sandworm Scales, exchanged at the Desert Bazaar.
+`;
+
+export const SEASON7_COMMUNITY_RESOURCES = `
+SEASON 7 — REPORTED BY CPT-HEDGE (unofficial): RESOURCES AND BUILDINGS
+
+Reported by cpt-hedge.com from the in-game pre-season Rules tab. Unofficial. Never call it confirmed. Costs, levels, and production numbers are not reported.
+
+Resources
+- Sacred Water: builds and upgrades season buildings, mainly the Curse Research Lab.
+- Mithril: builds and upgrades season buildings, such as the Blessing Fountain.
+- Power Cell: upgrades the Combat Lab to unlock stronger Combat Plans.
+- Unused Sacred Water, Mithril, and Power Cells convert into Profession EXP at season end. Season buildings are dismantled at season end.
+- Gold Dust is the ranking resource (see Season rules).
+
+Season buildings
+- Curse Research Lab (Sacred Water): grants Curse Resistance for desert threats. Required Curse Resistance levels: not reported.
+- Blessing Fountain (Mithril): improves Sacred Water production.
+- Protector's Field (Sacred Water and Mithril): raises maximum Desert Protector capacity.
+- Combat Lab (Power Cell): apply Combat Plans; upgrade it to unlock stronger plans.
+
+The season notes recommend prioritizing Season Specializations within your profession early.
+`;
+
+export const SEASON7_COMMUNITY_COMBAT_PLANS = `
+SEASON 7 — REPORTED BY CPT-HEDGE (unofficial): COMBAT PLANS
+
+Reported by cpt-hedge.com, which says the developers previewed these. Unofficial. Never call it confirmed. Some translations call the system Operational Strategy.
+
+- Plans are applied at the Combat Lab. Upgrading the Combat Lab with Power Cells unlocks stronger plans.
+- Three categories: Development (gathering, fighting in the wild, daily activities), Support (defending, healing, helping allies), and Attack (choosing targets, troop counters, ways to attack enemy positions).
+- Three previewed plans:
+  - Sandworm Bomb: plant it on your own base or an ally's base. A countdown starts. If nobody removes it, it explodes and deals heavy durability damage to nearby enemy bases. It is removed if the host base is knocked away or teleports. Bases hit become temporarily immune to more Sandworm Bomb damage.
+  - Call for Help: other players station troops at your base, and it slowly restores durability while they stay.
+  - Mummy Army: troops you lose while attacking a building can return as projections with reduced stats. Projections from several alliance members merge and, after a short time, automatically rally the building.
+- The full plan list, unlock levels, and every number: not reported. Say you do not know.
+`;
+
+export const SEASON7_COMMUNITY_MAP = `
+SEASON 7 — REPORTED BY CPT-HEDGE (unofficial): MAP
+
+cpt-hedge.com's breakdown of the map image shared ahead of the season. Unofficial. Never call it confirmed. City names, buffs, and capture limits are not reported.
+
+- Not the 8-warzone combined map of Seasons 5 and 6. A square desert map like Season 3, with a Lv7 Capitol in the center.
+- 144 buildings in a 12 by 12 grid around the Capitol. The map is point-symmetric.
+- Cities: 100 regular cities. Lv1 32, Lv2 24, Lv3 16, Lv4 16, Lv5 8, Lv6 4 (the four Lv6 cities surround the Capitol).
+- Temples: 30, in 7 types. Lv1 Starshimmer (8) and Sandworm (8); Lv2 Fountain (4) and Tempest (4); Lv3 Lightning (2) and Inferno (2); Lv4 Moonlight (2), closest to the Capitol. Which Alliance Skill each temple gives: not reported.
+- Trade Posts: 10, Lv1-4, on the top-left to bottom-right diagonal. Alliances cannot own them.
+- Consoles: 4, in the top-right and bottom-left corners. Alliances cannot own them. cpt-hedge.com guesses they are probably the Season 6 mini-game buildings; that part is cpt-hedge.com's guess.
+- Strongholds: levels rise from Lv1 at the edge to Lv6 around the Capitol.
+`;
+
+export const SEASON7_COMMUNITY_DESERT_STORM_AND_REWARDS = `
+SEASON 7 — REPORTED BY CPT-HEDGE (unofficial): DESERT STORM DETAILS AND REWARD TABS
+
+Desert Storm, reported by cpt-hedge.com. Unofficial. Never call it confirmed. cpt-hedge.com says these changes were not live yet as of Nov 5, 2026.
+- Recon Plane rescues: some badly wounded units wait in your main city instead of the hospital. Teammates send Recon Planes to restore some of them. The rescuer earns Battle Points. If your main city is in the Safe Area, they slowly Auto Repair.
+- Faster garrison: extra march speed when garrisoning a friendly main city. Faster rally deployment and return.
+- Battlefield Achievements cover offense, garrisoning, rescuing, healing, and support.
+- Units restored per rescue, Battle Points per rescue, and achievement rewards: not reported.
+
+Season rewards tabs, from the in-game pre-season screens:
+- Rewards are split into Alliance and Faction rewards.
+- The Faction tab shows two tiers of Faction Member Rewards, based on how the Faction performs.
+- Alliance ranking conditions are shown as "Announced after the season begins." Reward items and amounts: not reported.
+`;
+
 // SUMMARY ASSEMBLER — injected into buildSystemPrompt() when player.season === 7
 export function getSeason7Summary(): string {
   return `## Season 7 Guide — Return to the Golden Realm
 
-Early info, updated as official details are released. Last updated Oct 29, 2026.
-You have the confirmed Season 7 facts below, taken from the official wiki and the official account. Use them for Season 7 questions. If a fact is not written here, or it is on the Not yet confirmed list, say you do not know. Do not guess. Do not invent dates, server groups, reward amounts, buildings, tech, or skill numbers. Where sources differ, say so.
+Early info, updated as official details are released. Last updated Nov 9, 2026.
+You have the confirmed Season 7 facts below, taken from the official wiki and the official account. Sections marked REPORTED BY CPT-HEDGE (unofficial) come from cpt-hedge.com and are unofficial; when you use one, say it is reported by cpt-hedge.com and is unofficial, never confirmed. Use them for Season 7 questions. If a fact is not written here, or it is on the Not yet confirmed list, say you do not know. Do not guess. Do not invent dates, server groups, reward amounts, buildings, tech, or skill numbers. Where sources differ, say so.
 
 ${SEASON7_EARLY_NOTE}
 
@@ -324,11 +467,25 @@ ${SEASON7_REWARDS}
 
 ${SEASON7_OTHER_CONFIRMED}
 
-— End of Season 7 guide data. Early info, updated as official details are released. Last updated Oct 29, 2026. —`;
+${SEASON7_COMMUNITY_PRESEASON}
+
+${SEASON7_COMMUNITY_BOOSTS}
+
+${SEASON7_COMMUNITY_RULES}
+
+${SEASON7_COMMUNITY_RESOURCES}
+
+${SEASON7_COMMUNITY_COMBAT_PLANS}
+
+${SEASON7_COMMUNITY_MAP}
+
+${SEASON7_COMMUNITY_DESERT_STORM_AND_REWARDS}
+
+— End of Season 7 guide data. Early info, updated as official details are released. Last updated Nov 9, 2026. —`;
 }
 
 // Returns the Season 7 summary when season === 7, otherwise an empty string.
-// Not used by the Buddy prompt. The prompt appends getSeason7UpcomingBlock() for every player.
+// Not used by Buddy's prompt. The prompt appends getSeason7UpcomingBlock() for every player.
 export function getSeasonDataSummary7(season: number): string {
   return season === 7 ? getSeason7Summary() : '';
 }
@@ -337,13 +494,13 @@ export function getSeasonDataSummary7(season: number): string {
 export function getSeason7UpcomingBlock(): string {
   return `## Upcoming season (Season 7), early info
 
-Early info, updated as official details are released. Last updated Oct 29, 2026.
+Early info, updated as official details are released. Last updated Nov 9, 2026.
 This block is for every commander. It is not their current season. Do not replace the current-season guide above with it. Use it only for Season 7 questions.
 Official name: Season 7: Return to the Golden Realm (also Season VII: Return to the Golden Realm). Community alias: Return to the Golden Empire. Use the official name, and mention the alias if the player says it.
 No official start date or server list. Season days (D3, D28, and the rest) count from that server's season start. Do not turn them into a calendar date. If the in-game calendar disagrees, the game wins. The publisher says some of this is still in development and may change.
 If a fact is not in this block, say you do not know. Do not guess.
 
-NOT YET CONFIRMED — say you do not know: official start date; server rollout; reward items, amounts, and rank cutoffs (the only rule is week 8 rewards follow Alliance Goldust rankings); building and tech changes; pre-season length and tasks; names and numbers of the new Alliance Skills; Combat Plan names and numbers; awakening shard counts and any prerequisite beyond red stars and Global Expedition; base skin; map layout; migration groups and Faction matchmaking; troop type for Carlie, McGregor, or Murphy.
+NOT YET CONFIRMED — say you do not know: official start date; server rollout; reward items, amounts, and rank cutoffs (the only rule is week 8 rewards follow Alliance Goldust rankings); building and tech changes; pre-season length and tasks; names and numbers of the new Alliance Skills; Combat Plan names and numbers; awakening shard counts and any prerequisite beyond red stars and Global Expedition; base skin; map layout; migration groups and Faction matchmaking; troop type for Carlie, McGregor, or Murphy. cpt-hedge.com reports some of these (see REPORTED BY CPT-HEDGE (unofficial) below). Officially they are still unconfirmed, so label any answer from cpt-hedge.com as unofficial, never confirmed.
 
 Length: 8 weeks, WK1–WK8. WK8 is the Season Summary. Theme: return to the golden sands and pyramids. Official lines: warzones return to the golden sands; old rivalries reignite while new battlefield rules reshape the land; deep beneath the pyramids, something seems to be watching.
 
@@ -379,6 +536,16 @@ CURRENCY
 War Merit is the season currency on the official schedule. The shop's item list is not published.
 An October 21, 2026 notice added a Crystal Shop tab and a check-in for October 26–November 1 (server time). That notice is not a Season 7 feature. Do not describe it as part of Season 7.
 
-Sources: wiki.lastwar.com/en/show/620 (October 18, 2026; image revised October 27), the Season VII schedule at wiki.lastwar.com/en/show/623 (October 26, 2026), the August 3, 2026 progression preview (wiki 575), and the @lastwarsurvival post on October 22, 2026.
+REPORTED BY CPT-HEDGE (unofficial), Nov 9, 2026. Always say these facts are reported by cpt-hedge.com and are unofficial, never confirmed.
+Pre-season: 2 weeks; servers 3-164 started Nov 9, 2026; other servers later. Season start follows the pre-season; no exact date reported. 7-day Season Preview event, one stage a day.
+Boosts: Meow-lody base skin (Mummy Attack +5%, Summon Protector base skill, Desert Gift when liked). Warrior's Monument (S7 Gift Chest chance from Rallies, 1% up to 5%; from the paid survivor Taylor). Hospital Enhanced (PvP unit death reduction +25%). Murphy, Carlie, McGregor: Damage Taken from Monsters -5%.
+Rules: Gold Dust is produced in captured Cities; alliance Gold Dust at season end decides ranking. Desert Protectors: part of killed units return as Protectors, one-way march, gone at season end. Sandworms react to battle noise: Small ones stop bases sending troops, Large ones blast away bases outside Alliance Center range, Giant ones need Trap Landmines; Sandworm Scales go to the Desert Bazaar. Stay inside Alliance Center range.
+Resources and buildings: Sacred Water (Curse Research Lab, Curse Resistance), Mithril (Blessing Fountain), Protector's Field, Power Cells (Combat Lab, unlocks stronger Combat Plans). Leftovers become Profession EXP.
+Combat Plans: Development, Support, Attack. Previewed: Sandworm Bomb, Call for Help, Mummy Army. Also called Operational Strategy.
+Map: square desert map like Season 3, Lv7 Capitol, 100 cities, 30 temples in 7 types, 10 trade posts, 4 Consoles. Not the 8-warzone combined map.
+Troop types listed by cpt-hedge.com (unofficial): Carlie Aircraft, McGregor Missile, Murphy Tank.
+No numbers beyond these. If asked for one, say you do not know.
+
+Sources: wiki.lastwar.com/en/show/620 (October 18, 2026; image revised October 27), the Season VII schedule at wiki.lastwar.com/en/show/623 (October 26, 2026), the August 3, 2026 progression preview (wiki 575), and the @lastwarsurvival post on October 22, 2026. Lines reported by cpt-hedge.com (unofficial): public guides on cpt-hedge.com (Oct 20 to Nov 9, 2026).
 `;
 }
